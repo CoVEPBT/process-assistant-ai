@@ -1,0 +1,37 @@
+# Firebase App Hosting runtime configuration
+# Docs: https://firebase.google.com/docs/app-hosting/configure
+#
+# Before the first deploy, create the OPENAI_API_KEY secret in Google Cloud
+# Secret Manager so this config can reference it at runtime:
+#
+#   firebase apphosting:secrets:set OPENAI_API_KEY
+#
+# Then in the Firebase console connect this repo as the App Hosting backend.
+# Each push to main triggers a new build + deploy.
+
+runConfig:
+  # Single instance is plenty for an internal tool; scale to 10 if it picks up.
+  minInstances: 0
+  maxInstances: 5
+  # Memory bump above the 256 MiB default — mammoth + bpmn imports add weight.
+  memoryMiB: 512
+  cpu: 1
+  # Allow long-running OpenAI calls
+  timeoutSeconds: 60
+  concurrency: 80
+
+env:
+  # OpenAI model — overridable via Secret Manager or here directly.
+  - variable: OPENAI_MODEL
+    value: gpt-4o-mini
+    availability:
+      - RUNTIME
+
+  # API key lives in Secret Manager; never commit the real value.
+  - variable: OPENAI_API_KEY
+    secret: OPENAI_API_KEY
+    availability:
+      - RUNTIME
+
+  # Node sees PORT injected by Cloud Run; the server already honours it
+  # (server/index.js: const PORT = parseInt(process.env.PORT || '3001', 10);)
