@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CoVE Process Writing Assistant</title>
+<title>PAT — Process Assistant Tool</title>
 
 <!-- External libraries (loaded from CDNs that SharePoint typically allows) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -326,6 +326,118 @@
   }
   .auto-fix-banner-dismiss:hover { background: #C8E6C9; }
   .auto-fix-banner.hidden { display: none; }
+
+  /* Copilot Studio embed stub */
+  .pat-side-action-experimental {
+    border-style: dashed !important;
+    color: #6B5117 !important;
+  }
+  .experimental-badge {
+    display: inline-block;
+    font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+    background: #FFF8E6; color: #6B5117; border: 1px solid #F1D788;
+    padding: 1px 7px; border-radius: 4px; margin-left: 8px;
+    vertical-align: middle;
+  }
+  .copilot-studio-frame-wrap {
+    position: relative;
+    width: 100%; height: 60vh;
+    border: 1px solid var(--rmit-grey-mid); border-radius: 6px;
+    overflow: hidden; background: #FAFBFD;
+  }
+  .copilot-studio-placeholder {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 32px; text-align: center; color: var(--rmit-text);
+    background: linear-gradient(135deg, #FFF8E6 0%, #FAFBFD 100%);
+    pointer-events: none;
+  }
+  .copilot-studio-placeholder p { margin: 0 0 8px; max-width: 480px; line-height: 1.5; }
+  .copilot-studio-placeholder code {
+    font-family: 'Courier New', monospace; background: #FFFFFF;
+    padding: 2px 6px; border-radius: 3px; border: 1px solid var(--rmit-grey-mid);
+    font-size: 12.5px;
+  }
+  /* Hide the placeholder when the iframe is actually configured (has a real URL) */
+  #copilotStudioFrame:not([src="PASTE_COPILOT_STUDIO_URL_HERE"]) + .copilot-studio-placeholder {
+    display: none;
+  }
+
+  /* Auto-apply consent modal — checklist items */
+  .consent-list {
+    list-style: none; padding: 0; margin: 0 0 8px;
+  }
+  .consent-list li {
+    display: flex; gap: 12px; align-items: flex-start;
+    padding: 12px 14px; margin: 0 0 10px;
+    background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px;
+  }
+  .consent-list input[type="checkbox"] {
+    flex-shrink: 0; width: 18px; height: 18px; margin: 2px 0 0;
+    cursor: pointer; accent-color: var(--rmit-red);
+  }
+  .consent-list label {
+    flex: 1; cursor: pointer; font-size: 13.5px; color: #1F2937; line-height: 1.55;
+  }
+  .consent-list label strong {
+    display: block; color: #0F172A; font-weight: 600; margin-bottom: 2px;
+  }
+  #autoApplyConsentProceed:disabled {
+    opacity: 0.5; cursor: not-allowed;
+  }
+
+  /* Discreet auto-fix note — green text + tick icon, sits beneath the flag
+     headline. The 'what changed?' button opens a modal with the full list. */
+  .auto-fix-note {
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: 6px;
+    margin: -6px auto 18px;
+    padding: 0;
+    font-size: 12.5px; color: #2E7D32; line-height: 1.5;
+    text-align: center;
+    width: 100%;
+  }
+  .auto-fix-note.hidden { display: none; }
+  .auto-fix-note-tick {
+    width: 14px; height: 14px;
+    color: #2E7D32; flex-shrink: 0;
+  }
+  .auto-fix-note-text strong { color: #1B5E20; font-weight: 600; }
+  .autofix-modal-trigger {
+    background: transparent; border: none; padding: 0 2px;
+    color: #2E7D32; font: inherit; font-size: 12.5px; font-weight: 500;
+    cursor: pointer; text-decoration: underline;
+    margin-left: 2px;
+  }
+  .autofix-modal-trigger:hover { color: #1B5E20; }
+  .autofix-modal-trigger:focus-visible {
+    outline: 2px solid #2E7D32; outline-offset: 2px; border-radius: 3px;
+  }
+  .autofix-modal-trigger::before { content: '\203A '; font-weight: 700; }
+  /* Modal change list (inside #autofixModal) */
+  .autofix-modal-body {
+    max-height: 50vh; overflow-y: auto;
+    border: 1px solid #E2E8F0; border-radius: 6px;
+    padding: 10px 14px; background: #F8FAFC;
+  }
+  .autofix-changelist {
+    margin: 0; padding: 0; list-style: none;
+  }
+  .autofix-changelist > li {
+    margin: 8px 0; padding: 0;
+    font-size: 13px;
+  }
+  .autofix-changelist > li > strong {
+    display: block; color: #0F172A; font-weight: 600; margin-bottom: 4px;
+  }
+  .autofix-changelist ul {
+    margin: 4px 0 8px; padding: 0 0 0 16px; list-style: disc;
+  }
+  .autofix-changelist ul li { font-size: 12.5px; margin: 2px 0; }
+  .autofix-changelist code {
+    background: #FFFFFF; padding: 1px 4px; border-radius: 3px;
+    border: 1px solid #E2E8F0; font-size: 11.5px;
+  }
   .auto-fix-banner.manual {
     background: #EFF6FF; border-color: #C7DBF2; color: #1E3A5F;
   }
@@ -387,6 +499,115 @@
     .doc-with-issues > .doc-sidebar {
       flex: 1 1 auto; max-height: none; position: static; width: 100%;
     }
+  }
+
+  /* Sidebar header — smaller, quieter */
+  .doc-sidebar .doc-sidebar-header h4 {
+    margin: 0; font-size: 13px; font-weight: 600;
+    color: #475569; text-transform: uppercase; letter-spacing: 0.6px;
+  }
+  .doc-sidebar .doc-sidebar-header { padding: 10px 12px; }
+
+  /* Severity sub-headings (Errors / Warnings / Suggestions) — keep but very quiet */
+  #issuesOut h3 {
+    margin: 14px 0 6px; padding: 0;
+    font-size: 11px; font-weight: 600;
+    color: #94A3B8; text-transform: uppercase; letter-spacing: 0.8px;
+  }
+  #issuesOut h3:first-child { margin-top: 0; }
+
+  /* Sidebar / Inline view toggle */
+  .flags-view-toggle {
+    display: inline-flex; background: #FFFFFF;
+    border: 1px solid var(--rmit-grey-mid); border-radius: 999px;
+    padding: 2px; margin: 0 8px;
+  }
+  .flags-view-btn {
+    background: transparent; border: none;
+    padding: 4px 12px; font: inherit; font-size: 12px; font-weight: 500;
+    color: #475569; cursor: pointer; border-radius: 999px;
+    transition: all 0.15s ease;
+  }
+  .flags-view-btn:hover { color: var(--rmit-text); }
+  .flags-view-btn.is-active {
+    background: var(--rmit-red); color: #FFFFFF;
+  }
+  .flags-view-btn:focus-visible {
+    outline: 2px solid var(--rmit-red); outline-offset: 2px;
+  }
+
+  /* Inline flag markers — sit immediately after the flagged element */
+  .inline-flag-marker {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 18px; height: 18px; border-radius: 50%;
+    font-size: 11px; font-weight: 700;
+    margin-left: 6px; vertical-align: middle;
+    cursor: pointer; border: 1px solid;
+    transition: transform 0.1s ease;
+  }
+  .inline-flag-marker:hover { transform: scale(1.15); }
+  .inline-flag-marker:focus-visible {
+    outline: 2px solid var(--rmit-red); outline-offset: 2px;
+  }
+  .inline-flag-marker.severity-error {
+    background: #FCEBEB; color: #791F1F; border-color: #F09595;
+  }
+  .inline-flag-marker.severity-warning {
+    background: #FAEEDA; color: #633806; border-color: #EF9F27;
+  }
+  .inline-flag-marker.severity-info {
+    background: #E6F1FB; color: #0C447C; border-color: #85B7EB;
+  }
+
+  /* Inline callout — appears when a marker is clicked */
+  .inline-flag-callout {
+    display: flex; gap: 10px; margin: 6px 0; padding: 10px 12px;
+    border-radius: 6px; font-size: 12.5px; line-height: 1.5;
+    border: 1px solid;
+  }
+  .inline-flag-callout.severity-error {
+    background: #FCEBEB; border-color: #F09595; color: #791F1F;
+  }
+  .inline-flag-callout.severity-warning {
+    background: #FAEEDA; border-color: #EF9F27; color: #633806;
+  }
+  .inline-flag-callout.severity-info {
+    background: #E6F1FB; border-color: #85B7EB; color: #0C447C;
+  }
+  .inline-flag-callout .ifc-badge {
+    flex-shrink: 0; font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.5px; padding: 2px 7px; border-radius: 4px; height: 18px;
+    line-height: 14px;
+  }
+  .inline-flag-callout.severity-error .ifc-badge { background: #E24B4A; color: #FFFFFF; }
+  .inline-flag-callout.severity-warning .ifc-badge { background: #EF9F27; color: #412402; }
+  .inline-flag-callout.severity-info .ifc-badge { background: #378ADD; color: #FFFFFF; }
+  .inline-flag-callout .ifc-body { flex: 1; min-width: 0; }
+  .inline-flag-callout .ifc-body strong { font-weight: 600; display: block; margin-bottom: 2px; color: inherit; }
+  .inline-flag-callout .ifc-dismiss {
+    background: transparent; border: 0; color: inherit; cursor: pointer;
+    opacity: 0.6; font-size: 16px; line-height: 1; padding: 0 4px;
+  }
+  .inline-flag-callout .ifc-dismiss:hover { opacity: 1; }
+
+  /* Process-wide flags banner — sits above the procedure when inline mode is on */
+  .inline-process-flags {
+    margin: 0 0 14px; padding: 10px 14px;
+    background: #F4F8FE; border: 1px solid #DCE7F5; border-radius: 6px;
+    font-size: 12.5px; color: #1F3A5F; line-height: 1.5;
+  }
+  .inline-process-flags.hidden { display: none; }
+  .inline-process-flags ul { margin: 4px 0 0; padding: 0 0 0 20px; }
+  .inline-process-flags li { margin: 2px 0; }
+  .inline-process-flags strong { color: #0F172A; }
+
+  /* When inline mode is active, hide the sidebar's flag list (but keep the header) */
+  .doc-sidebar.inline-mode #issuesOut,
+  .doc-sidebar.inline-mode #issuesModalIntro {
+    display: none;
+  }
+  .doc-sidebar.inline-mode .doc-sidebar-header {
+    border-bottom: 0;
   }
 
   /* Active-flag highlight — shows which sidebar flag the user just clicked */
@@ -634,10 +855,59 @@
     .workflow-zoom, .workflow-download { justify-content: center; }
   }
 
+  /* Diff markers for the inline 'View updated' view */
+  .doc-preview .diff-ins {
+    background: #DCFCE7; color: #14532D;
+    border-bottom: 2px solid #16A34A;
+    padding: 0 2px; border-radius: 2px;
+    text-decoration: none;
+  }
+  .doc-preview .diff-del {
+    background: #FEE2E2; color: #7F1D1D;
+    text-decoration: line-through; text-decoration-color: #DC2626;
+    padding: 0 2px; border-radius: 2px; opacity: 0.85;
+  }
+  .doc-preview .diff-activity-added {
+    border-left-color: #16A34A !important;
+    background: #F0FDF4 !important;
+  }
+  .doc-preview .diff-activity-removed {
+    border-left-color: #DC2626 !important;
+    background: #FEF2F2 !important;
+    opacity: 0.75;
+  }
+  .doc-preview .diff-task-added {
+    background: #F0FDF4; border-left: 3px solid #16A34A;
+    padding-left: 8px; margin-left: -8px;
+  }
+  .doc-preview .diff-task-removed {
+    background: #FEF2F2; border-left: 3px solid #DC2626;
+    padding-left: 8px; margin-left: -8px; opacity: 0.85;
+  }
+  .doc-preview .diff-tag {
+    display: inline-block; font-size: 10.5px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.4px;
+    padding: 1px 8px; border-radius: 999px;
+    margin-left: 8px; vertical-align: middle;
+  }
+  .doc-preview .diff-tag-added { background: #16A34A; color: #FFFFFF; }
+  .doc-preview .diff-tag-removed { background: #DC2626; color: #FFFFFF; }
+
+  /* Doc-pane toolbar — sits above the doc preview, holds Tip + Save changes */
+  .doc-pane-toolbar {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; flex-wrap: wrap; margin: 0 0 8px;
+  }
+  .doc-pane-save-btn {
+    padding: 6px 12px; font-size: 13px;
+    flex-shrink: 0;
+  }
+
   /* Generated doc preview — also used for PDF export */
   .doc-preview {
     background: #FFFFFF; padding: 32px; border: 1px solid var(--rmit-grey-mid);
-    border-radius: 4px; max-height: 600px; overflow-y: auto;
+    border-radius: 4px;
+    min-height: 520px; max-height: calc(100vh - 220px); overflow-y: auto;
     font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.5; color: #1D1D1D;
   }
   .doc-preview h1 {
@@ -1106,22 +1376,267 @@
   .primary-actions-row .btn-large {
     padding: 14px 32px; font-size: 16px; min-height: 48px;
   }
-  .primary-actions-alt {
-    text-align: center; margin: 8px 0 0;
-    font-size: 13px; color: #64748B;
+
+
+  /* Helpers strip — single line of starter links below the split panel */
+  .helpers-strip {
+    display: flex; align-items: center; justify-content: center;
+    flex-wrap: wrap; gap: 8px;
+    padding: 10px 14px;
+    background: linear-gradient(135deg, #F4F8FE 0%, #FFF6F6 100%);
+    border: 1px solid #DCE7F5; border-radius: 8px;
+    font-size: 12.5px;
   }
-  .primary-actions-alt .text-link {
-    color: var(--rmit-red); font-weight: 500;
-    background: transparent; border: none; padding: 2px 4px;
-    text-decoration: underline; cursor: pointer; font-family: inherit;
-    font-size: 13px;
+  /* Inline variant — sits inside the draft panel column, flush with its edges.
+     min-height matches the chat form so the dividers above line up across columns. */
+  .helpers-strip-inline {
+    margin: 0; border-radius: 0;
+    border-left: 0; border-right: 0; border-bottom: 0;
+    border-top: 1px solid var(--rmit-grey-mid);
+    min-height: 82px;
+    box-sizing: border-box;
   }
-  .primary-actions-alt .text-link:hover { color: #B01A26; }
-  .primary-actions-alt .text-link:focus-visible {
-    outline: 2px solid var(--rmit-red); outline-offset: 2px; border-radius: 3px;
+  .helpers-label {
+    font-weight: 700; color: var(--rmit-navy); text-transform: uppercase;
+    letter-spacing: 1px; margin-right: 4px;
+  }
+  .helpers-dot { color: #CBD5E1; }
+  .helper-link {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: transparent; border: none; padding: 4px 8px;
+    color: var(--rmit-red); font: inherit; font-size: 13px; font-weight: 500;
+    cursor: pointer; border-radius: 4px;
+    transition: background 0.15s ease;
+  }
+  .helper-link:hover { background: #FFFFFF; text-decoration: underline; }
+  .helper-link:focus-visible {
+    outline: 2px solid var(--rmit-red); outline-offset: 2px;
+  }
+  .helper-link svg { width: 14px; height: 14px; flex-shrink: 0; }
+  @media (max-width: 560px) {
+    .helpers-strip { flex-direction: column; gap: 6px; }
+    .helpers-dot { display: none; }
   }
 
-  /* ORIENTATION section — "First time here?" group of secondary actions.
+  /* ============================================================
+     PAT HERO + TWO-PATH ENTRY
+     ============================================================ */
+  .pat-hero {
+    display: flex; align-items: center; gap: 16px;
+    margin: 0 0 28px; padding: 0;
+  }
+  .pat-avatar {
+    flex-shrink: 0;
+    width: 48px; height: 48px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, var(--rmit-red), #B01A26);
+    color: #FFFFFF; border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(230,30,42,0.25);
+  }
+  .pat-avatar svg { width: 28px; height: 28px; }
+  .pat-hero-text { flex: 1; min-width: 0; }
+  .pat-hero-title {
+    margin: 0; padding: 0; border: 0; text-align: left;
+    font-size: 22px; font-weight: 700; color: #0F172A; line-height: 1.3;
+  }
+  .pat-hero-sub {
+    margin: 4px 0 0; font-size: 15px; color: #475569; line-height: 1.5;
+  }
+  .pat-prompt {
+    margin: 22px 0 12px;
+    font-size: 15px; font-weight: 600; color: #0F172A;
+    text-align: center;
+  }
+  .pat-paths {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+    margin: 0 0 14px;
+  }
+  @media (max-width: 720px) {
+    .pat-paths { grid-template-columns: 1fr; }
+  }
+  .pat-path {
+    display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
+    padding: 22px 22px 20px;
+    background: #FFFFFF; color: var(--rmit-text);
+    border: 1.5px solid var(--rmit-grey-mid); border-radius: 10px;
+    cursor: pointer; font-family: inherit; text-align: left;
+    transition: all 0.15s ease;
+    min-height: 150px;
+    position: relative;
+  }
+  .pat-path:hover {
+    border-color: var(--rmit-red); transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(230,30,42,0.18);
+  }
+  .pat-path:focus-visible {
+    outline: 2px solid var(--rmit-red); outline-offset: 2px;
+  }
+  .pat-path-icon {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 44px; height: 44px; border-radius: 10px;
+    margin-bottom: 4px;
+  }
+  .pat-path-chat .pat-path-icon { background: #FFF5F5; color: var(--rmit-red); border: 1px solid #FED7DA; }
+  .pat-path-draft .pat-path-icon { background: #EFF6FF; color: #1F6FB5; border: 1px solid #BAD4F0; }
+  .pat-path-icon svg { width: 22px; height: 22px; }
+  .pat-path-title {
+    font-size: 16px; font-weight: 700; color: #0F172A; line-height: 1.35;
+  }
+  .pat-path-sub {
+    font-size: 13.5px; color: #475569; line-height: 1.45;
+  }
+  .pat-path-cta {
+    margin-top: 8px; font-size: 13.5px; font-weight: 600;
+    color: var(--rmit-red); align-self: flex-end;
+  }
+  .pat-path:hover .pat-path-cta { text-decoration: underline; }
+  .pat-path-text { display: flex; flex-direction: column; gap: 4px; }
+
+  /* Split layout — chat on left, draft on right. Stacks on narrow widths. */
+  .pat-split {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+    margin: 0 0 16px;
+    align-items: stretch;
+  }
+  @media (max-width: 880px) {
+    .pat-split { grid-template-columns: 1fr; }
+  }
+  .pat-chat-panel, .pat-draft-panel {
+    display: flex; flex-direction: column;
+    background: #FFFFFF;
+    border: 1px solid var(--rmit-grey-mid); border-radius: 10px;
+    overflow: hidden;
+  }
+  .pat-side-header {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--rmit-grey-mid);
+    min-height: 52px;
+    box-sizing: border-box;
+  }
+  .pat-side-header-chat {
+    background: #FFF8F8;
+    border-bottom-color: #FED7DA;
+  }
+  .pat-side-header-draft {
+    background: #F5F9FF;
+    border-bottom-color: #BAD4F0;
+  }
+  .pat-side-title {
+    margin: 0; padding: 0; border: 0;
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 14px; font-weight: 700; color: #0F172A;
+  }
+  .pat-side-title svg { width: 16px; height: 16px; flex-shrink: 0; }
+  .pat-side-header-chat .pat-side-title svg { color: var(--rmit-red); }
+  .pat-side-header-draft .pat-side-title svg { color: #1F6FB5; }
+
+  /* 'Browse FAQs' button in the chat header */
+  .pat-side-action {
+    flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px;
+    background: #FFFFFF; border: 1px solid var(--rmit-grey-mid);
+    color: var(--rmit-text); font: inherit; font-size: 12.5px; font-weight: 500;
+    padding: 6px 10px; border-radius: 999px; cursor: pointer;
+    transition: all 0.15s ease;
+    align-self: center;
+  }
+  .pat-side-action:hover { border-color: var(--rmit-red); color: var(--rmit-red); }
+  .pat-side-action:focus-visible {
+    outline: 2px solid var(--rmit-red); outline-offset: 2px;
+  }
+  .pat-side-action svg { width: 14px; height: 14px; }
+
+  /* FAQ overlay — covers the messages area when open. The panel is absolutely
+     positioned inside the chat panel so it doesn't push other elements. */
+  .pat-chat-panel { position: relative; }
+  .faq-overlay {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 10;
+    background: #FFFFFF;
+    display: flex; flex-direction: column;
+    border-radius: 10px; overflow: hidden;
+  }
+  .faq-overlay[hidden] { display: none; }
+  .faq-overlay-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px;
+    background: linear-gradient(135deg, #FFF5F5 0%, #FFFFFF 70%);
+    border-bottom: 1px solid #FED7DA;
+  }
+  .faq-overlay-header h4 { margin: 0; font-size: 15px; color: #0F172A; }
+  .faq-overlay-close {
+    background: transparent; border: none;
+    font-size: 22px; line-height: 1; color: #475569; cursor: pointer;
+    padding: 0 4px; border-radius: 4px;
+  }
+  .faq-overlay-close:hover { color: var(--rmit-red); }
+  .faq-overlay-intro {
+    margin: 10px 14px 4px; font-size: 12.5px; color: #475569;
+  }
+  .faq-overlay-body {
+    flex: 1; overflow-y: auto; padding: 4px 12px 14px;
+  }
+  .faq-cat { margin: 8px 0; border: 1px solid var(--rmit-grey-mid); border-radius: 6px; }
+  .faq-cat summary {
+    cursor: pointer; padding: 8px 12px;
+    font-weight: 600; font-size: 13.5px; color: #0F172A;
+    background: #F8FAFC; border-radius: 6px;
+    list-style: none;
+  }
+  .faq-cat[open] summary {
+    background: #FFF5F5; color: var(--rmit-red);
+    border-bottom: 1px solid var(--rmit-grey-mid);
+    border-bottom-left-radius: 0; border-bottom-right-radius: 0;
+  }
+  .faq-cat summary::-webkit-details-marker { display: none; }
+  .faq-cat summary::before {
+    content: '\203A'; margin-right: 6px; font-weight: 700;
+    transition: transform 0.15s ease;
+    display: inline-block;
+  }
+  .faq-cat[open] summary::before { transform: rotate(90deg); }
+  .faq-item {
+    display: block; width: 100%;
+    background: #FFFFFF; border: 0; border-top: 1px solid #F1F5F9;
+    padding: 8px 12px; font: inherit; font-size: 13px;
+    text-align: left; color: var(--rmit-text); cursor: pointer;
+  }
+  .faq-item:first-of-type { border-top: 0; }
+  .faq-item:hover { background: #FFF5F5; color: var(--rmit-red); }
+  .faq-item:focus-visible {
+    outline: 2px solid var(--rmit-red); outline-offset: -2px;
+  }
+
+  /* Inline chat sizing — message thread is scrollable, form sits at bottom. */
+  .inline-chat-messages {
+    flex: 1; min-height: 200px; max-height: 300px;
+    padding: 10px 14px; overflow-y: auto;
+    background: #FAFBFD;
+  }
+  .inline-chat-form {
+    padding: 12px 14px; border-top: 1px solid var(--rmit-grey-mid);
+    background: #FFFFFF;
+    min-height: 82px;
+    box-sizing: border-box;
+    display: flex; gap: 8px; align-items: flex-end;
+  }
+  .inline-chat-form textarea { flex: 1; min-height: 50px; }
+
+  /* Draft panel — wrap the existing input-zone so it slots into the column */
+  .pat-draft-panel .input-zone {
+    border: 0; border-radius: 0; margin: 0;
+  }
+  .pat-draft-panel .primary-actions-row {
+    padding: 14px 16px;
+    background: #FFFFFF;
+    border-top: 1px solid var(--rmit-grey-mid);
+    margin: 0;
+  }
+  .pat-draft-panel .primary-actions-row .btn-large {
+    width: 100%;
+  }
+
+
+  /* ORIENTATION section — "Need a starter?" group of secondary actions.
      Given a soft navy-tinted background so it feels inviting, not lost. */
   .orientation-section {
     margin-top: 28px; padding: 22px 22px 20px;
@@ -1174,6 +1689,9 @@
   .orientation-action:nth-child(3) .oa-icon {
     background: #FFF8E6; color: #C77700; border-color: #F1D788;
   }
+  .orientation-action:nth-child(4) .oa-icon {
+    background: #ECFDF5; color: #2E7D32; border-color: #B7EBD0;
+  }
   .orientation-action .oa-icon svg { width: 17px; height: 17px; }
   .orientation-action .oa-text {
     display: flex; flex-direction: column; gap: 2px; min-width: 0;
@@ -1217,8 +1735,8 @@
 
   /* DROP-ZONE HEADER — centred coloured affordance for file upload */
   .dropzone-header {
-    display: flex; align-items: center; justify-content: center; gap: 14px;
-    padding: 14px 18px 12px;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    padding: 10px 14px 8px;
     background: linear-gradient(to bottom, #FFF5F5 0%, #FAFBFD 100%);
     border-bottom: 1px solid #FED7DA;
     transition: background 0.15s ease, border-color 0.15s ease;
@@ -1226,11 +1744,11 @@
   }
   .dropzone-icon {
     flex-shrink: 0;
-    width: 36px; height: 36px;
+    width: 28px; height: 28px;
     color: var(--rmit-red);
     background: #FFFFFF; border-radius: 50%;
-    padding: 8px;
-    border: 2px solid var(--rmit-red);
+    padding: 6px;
+    border: 1.5px solid var(--rmit-red);
     box-sizing: border-box;
   }
   .dropzone-text { flex: 0 1 auto; min-width: 0; text-align: center; }
@@ -1556,6 +2074,31 @@
     cursor: pointer; font-family: inherit;
   }
   .ai-quick:hover { background: #F1E5C8; }
+  /* Welcome message — compact: override pre-wrap from .ai-message so the HTML
+     whitespace doesn't render as extra blank lines, and tighten margins. */
+  .ai-message-welcome {
+    background: #F4F8FE; border-color: #DCE7F5;
+    white-space: normal; padding: 12px 14px 10px;
+    line-height: 1.45;
+  }
+  .ai-message-welcome p { margin: 0 0 6px; line-height: 1.45; }
+  .ai-message-welcome p:last-of-type { margin: 8px 0 8px; font-size: 13px; color: #475569; }
+  .ai-welcome-list { margin: 0 0 6px 0; padding: 0 0 0 20px; line-height: 1.4; }
+  .ai-welcome-list li { margin: 1px 0; }
+  .ai-message-welcome .ai-disclaimer {
+    margin: 6px 0 10px; padding: 8px 10px;
+    background: #FFFFFF; border: 1px dashed #BAD4F0; border-radius: 6px;
+    font-size: 12px; color: #475569; line-height: 1.45;
+  }
+  /* Path-matching chips read like numbered options */
+  .ai-quick-prompts-paths { gap: 8px; }
+  .ai-quick-prompts-paths .ai-quick {
+    background: #FFFFFF; border: 1px solid var(--rmit-grey-mid);
+    color: var(--rmit-text); font-weight: 600;
+  }
+  .ai-quick-prompts-paths .ai-quick:hover {
+    background: #FFF5F5; border-color: var(--rmit-red); color: var(--rmit-red);
+  }
   .ai-chat-form {
     display: flex; gap: 8px; padding: 12px;
     border-top: 1px solid var(--rmit-grey-mid); background: #FFFFFF;
@@ -1689,6 +2232,126 @@
   .results-summary-line .summary-issues.zero { color: #2E7D32; }
   .results-summary-line .summary-dot { color: #CBD5E1; margin: 0 6px; }
 
+  /* Auto-apply loading state (replaces the cards while the AI is working) */
+  .auto-apply-loading {
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    padding: 40px 24px; text-align: center;
+    background: linear-gradient(135deg, #F4F8FE 0%, #FFF6F6 100%);
+    border: 1px solid #DCE7F5; border-radius: 10px;
+    margin: 18px auto 12px; max-width: 560px;
+  }
+  .auto-apply-loading.hidden { display: none; }
+  .auto-apply-spinner {
+    width: 40px; height: 40px;
+    border: 3px solid #DCE7F5; border-top-color: var(--rmit-red);
+    border-radius: 50%; animation: auto-apply-spin 0.9s linear infinite;
+    margin-bottom: 8px;
+  }
+  @keyframes auto-apply-spin { to { transform: rotate(360deg); } }
+  .auto-apply-loading-title {
+    margin: 0; font-size: 16px; font-weight: 600; color: #0F172A;
+  }
+  .auto-apply-loading-sub {
+    margin: 0; font-size: 13.5px; color: #475569; max-width: 420px;
+  }
+
+  /* Banner that sits above the doc once auto-apply has completed.
+     Contains the result summary + a View updated / View original toggle. */
+  .updated-banner {
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    background: #ECFDF5; border: 1px solid #B7EBD0; border-radius: 8px;
+    padding: 14px 18px; margin: 18px 0 0;
+  }
+  .updated-banner.hidden { display: none; }
+  .updated-banner-icon {
+    flex-shrink: 0; width: 30px; height: 30px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: #FFFFFF; color: #2E7D32; border: 1.5px solid #B7EBD0;
+    border-radius: 50%; font-size: 16px; font-weight: 700;
+  }
+  .updated-banner-text { flex: 1; font-size: 14px; color: #1B5E20; line-height: 1.5; min-width: 240px; }
+  .updated-banner-text strong { color: #0E4F1A; }
+  .updated-banner-toggle {
+    display: inline-flex; background: #FFFFFF;
+    border: 1px solid #B7EBD0; border-radius: 999px; padding: 3px;
+  }
+  .updated-banner-toggle .toggle-btn {
+    background: transparent; border: none;
+    padding: 6px 14px; font: inherit; font-size: 13px; font-weight: 500;
+    color: #2E7D32; cursor: pointer;
+    border-radius: 999px;
+  }
+  .updated-banner-toggle .toggle-btn:hover { background: #ECFDF5; }
+  .updated-banner-toggle .toggle-btn.is-active {
+    background: #2E7D32; color: #FFFFFF;
+  }
+  .updated-banner-toggle .toggle-btn:focus-visible {
+    outline: 2px solid var(--rmit-red); outline-offset: 2px;
+  }
+
+  /* Post-analyse headline — quiet, no card container, just centred text */
+  .flag-headline {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    margin: 18px auto 24px; padding: 0;
+    color: #6B5117; max-width: 720px;
+    font-size: 14.5px; line-height: 1.5; text-align: center;
+  }
+  .flag-headline strong { color: #4A3700; font-weight: 600; }
+  .flag-headline-icon {
+    flex-shrink: 0; width: 22px; height: 22px;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: #C77700; font-size: 15px; font-weight: 700;
+  }
+  .flag-headline-text { flex: 0 1 auto; }
+  .flag-headline.flag-headline-clear { color: #2E7D32; }
+  .flag-headline.flag-headline-clear strong { color: #1B5E20; }
+  .flag-headline.flag-headline-clear .flag-headline-icon { color: #2E7D32; }
+
+  /* Discreet summary chips — sit in the top-right above the doc area */
+  .summary-chips {
+    display: flex; justify-content: flex-end; gap: 6px;
+    margin: 0 0 8px;
+  }
+  .summary-chips.hidden { display: none; }
+  .summary-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: #FFFFFF; border: 1px solid var(--rmit-grey-mid); border-radius: 999px;
+    padding: 3px 10px 3px 8px;
+    font: inherit; font-size: 12px; font-weight: 500;
+    color: #475569; cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .summary-chip:hover { border-color: var(--rmit-red); }
+  .summary-chip:focus-visible { outline: 2px solid var(--rmit-red); outline-offset: 2px; }
+  .summary-chip svg { width: 13px; height: 13px; flex-shrink: 0; }
+  .summary-chip-opps { color: #6B5117; border-color: #F1D788; background: #FFFCF5; }
+  .summary-chip-opps:hover { background: #FFF8E6; }
+  .summary-chip-opps svg { color: #C77700; }
+  .summary-chip-fixes { color: #1B5E20; border-color: #B7EBD0; background: #F4FCF7; }
+  .summary-chip-fixes:hover { background: #ECFDF5; }
+  .summary-chip-fixes svg { color: #2E7D32; }
+
+  /* Slim status strip shown after a path is chosen */
+  .path-status {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    margin: 18px auto 22px; padding: 8px 16px;
+    background: #F4F8FE; border: 1px solid #DCE7F5; border-radius: 999px;
+    font-size: 13px; color: #1F3A5F;
+    max-width: 480px;
+  }
+  .path-status.hidden { display: none; }
+  .path-status-icon { color: #1F6FB5; font-weight: 700; }
+  .path-status-text strong { color: #0F172A; }
+  .path-status-switch {
+    background: transparent; border: none; padding: 2px 6px;
+    color: var(--rmit-red); font: inherit; font-size: 13px; font-weight: 500;
+    cursor: pointer; text-decoration: underline; margin-left: 4px;
+  }
+  .path-status-switch:hover { color: #B01A26; }
+  .path-status-switch:focus-visible {
+    outline: 2px solid var(--rmit-red); outline-offset: 2px; border-radius: 3px;
+  }
+
   .results-action-cards {
     display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
     margin: 0 0 16px;
@@ -1767,6 +2430,15 @@
   }
 
   /* Export modal — soft-gate warning + format grid */
+  .export-review-note {
+    display: flex; gap: 10px; align-items: flex-start;
+    margin: 0 0 14px; padding: 10px 14px;
+    background: #F4F8FE; border: 1px solid #DCE7F5; border-radius: 6px;
+    color: #1F3A5F; font-size: 13px; line-height: 1.55;
+  }
+  .export-review-note svg { width: 18px; height: 18px; color: #1F6FB5; flex-shrink: 0; margin-top: 1px; }
+  .export-review-note strong { display: block; color: #0F172A; font-weight: 600; margin-bottom: 2px; }
+
   .export-warning {
     background: #FFEFD5; border: 1px solid #FED7AA; border-left: 4px solid #C77700;
     border-radius: 6px; padding: 12px 14px; margin: 0 0 8px;
@@ -1843,15 +2515,15 @@
 <body>
 
 <header class="app-header">
-  <a href="#" class="header-brand-link" aria-label="CoVE Process Assistant home">
+  <a href="#" class="header-brand-link" aria-label="PAT home">
     <div class="header-logo" id="brandLogoWrap" aria-hidden="true">
       <img id="brandLogoImg" src="rmit-logo.svg" alt=""
            onerror="document.getElementById('brandLogoWrap').classList.add('no-image');">
       <span class="header-logo-fallback">VE</span>
     </div>
     <div class="header-text">
-      <div class="brand">CoVE Process Assistant</div>
-      <div class="sub">RMIT University &middot; Vocational Education</div>
+      <div class="brand">PAT</div>
+      <div class="sub">Process Assistant Tool</div>
     </div>
   </a>
   <div class="header-actions">
@@ -2131,13 +2803,18 @@ NOTE: What if access is delayed? Escalate to the IT lead and update the new star
     <p style="font-size:14px;color:#475569;margin:0 0 12px;">Powered by OpenAI gpt-4o-mini, running through your local server. Your draft and flagged issues are sent as context with each message.</p>
     <div id="aiChatPanel" class="ai-chat-panel">
       <div id="aiChatMessages" class="ai-chat-messages">
-        <div class="ai-message ai-message-system">
-          <strong>Try one of these:</strong>
-          <div class="ai-quick-prompts">
-            <button type="button" class="ai-quick" data-prompt="Review my existing process against the standards and tell me what to improve.">Review my process</button>
-            <button type="button" class="ai-quick" data-prompt="Rewrite this process applying every flagged issue. Keep my structure and content; just fix what was flagged.">Apply all the fixes</button>
-            <button type="button" class="ai-quick" data-prompt="Help me think through a new process from scratch — what should I capture first?">Help me start a new process</button>
-            <button type="button" class="ai-quick" data-prompt="Convert this content into Nintex import format — three blocks (title, supporting fields, process map).">Convert to Nintex format</button>
+        <div class="ai-message ai-message-assistant ai-message-welcome">
+          <p>Hi! I'm your process writing assistant. What would you like to work on today?</p>
+          <ol class="ai-welcome-list">
+            <li>Create a new process map from scratch</li>
+            <li>Convert an existing document into a process map</li>
+            <li>Review and improve an existing process map</li>
+          </ol>
+          <p>Just pick a number below &mdash; or describe what you're after and I'll figure it out.</p>
+          <div class="ai-quick-prompts ai-quick-prompts-paths">
+            <button type="button" class="ai-quick" data-prompt="I need to create a new process map from scratch.">1. New process map</button>
+            <button type="button" class="ai-quick" data-prompt="I have a procedure document I want to convert.">2. Convert a document</button>
+            <button type="button" class="ai-quick" data-prompt="Can you review my existing process map?">3. Review existing map</button>
           </div>
         </div>
       </div>
@@ -2174,13 +2851,143 @@ NOTE: What if access is delayed? Escalate to the IT lead and update the new star
 
   <!-- ==================== INPUT ==================== -->
   <section class="card" id="inputCard">
-    <div class="input-heading">
-      <h2>Enhance your process documentation</h2>
-      <p>Provide your draft process. We'll review it against RMIT standards and generate a polished version.</p>
+    <div class="pat-hero">
+      <div class="pat-avatar" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="6" width="18" height="13" rx="3"/>
+          <line x1="12" y1="3" x2="12" y2="6"/>
+          <circle cx="12" cy="3" r="1.2" fill="currentColor"/>
+          <circle cx="9" cy="12" r="1.3" fill="currentColor"/>
+          <circle cx="15" cy="12" r="1.3" fill="currentColor"/>
+          <path d="M9 16h6"/>
+        </svg>
+      </div>
+      <div class="pat-hero-text">
+        <h2 class="pat-hero-title">Hi! I'm PAT.</h2>
+        <p class="pat-hero-sub">I can help you get started with writing a process, or convert your draft process into a polished process document.</p>
+      </div>
     </div>
 
-    
+    <div class="pat-split">
+      <section class="pat-chat-panel" aria-labelledby="patChatLabel">
+        <header class="pat-side-header pat-side-header-chat">
+          <h3 id="patChatLabel" class="pat-side-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M9 9h6M9 13h4"/></svg>
+            Chat with me
+          </h3>
+          <button type="button" class="pat-side-action" id="browseFaqsBtn" aria-label="Browse frequently asked questions">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <span>Browse FAQs</span>
+          </button>
+          <button type="button" class="pat-side-action pat-side-action-experimental" id="copilotStudioBtn" aria-label="Open the Copilot Studio agent (experimental)" title="Experimental — Copilot Studio agent embed">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 10v6M4.22 4.22l4.24 4.24m7.08 7.08l4.24 4.24M1 12h6m10 0h6M4.22 19.78l4.24-4.24m7.08-7.08l4.24-4.24"/></svg>
+            <span>Copilot agent</span>
+          </button>
+        </header>
+        <div id="inlineChatMessages" class="ai-chat-messages inline-chat-messages">
+          <div class="ai-message ai-message-assistant ai-message-welcome">
+            <p>Pick a prompt below, or tell me what you're working on.</p>
+            <p class="ai-disclaimer">A heads-up: I can make mistakes and I don't know how your process actually runs day-to-day. Always review what I suggest before using it.</p>
+            <div class="ai-quick-prompts ai-quick-prompts-paths">
+              <button type="button" class="ai-quick" data-prompt="Can you review my process?">Review my process</button>
+              <button type="button" class="ai-quick" data-prompt="I need to create a new process map from scratch. Walk me through what to capture first.">Help me plan a new process</button>
+              <button type="button" class="ai-quick" data-prompt="How do I know whether my content should be a process or a user guide / knowledge article? Help me decide which one fits.">Process or user guide?</button>
+              <button type="button" class="ai-quick" data-prompt="I have a process and need help breaking it into 3-7 high-level activities. Ask me what the process is, then suggest activities.">Suggest activities</button>
+            </div>
+          </div>
+        </div>
+        <form id="inlineChatForm" class="ai-chat-form inline-chat-form">
+          <textarea id="inlineChatInput" placeholder="Ask me a question, or paste a snippet for feedback..." rows="2"></textarea>
+          <button type="submit" class="btn btn-primary" id="inlineChatSendBtn">Send</button>
+        </form>
 
+        <!-- FAQ overlay — slides over the messages area when 'Browse FAQs' is clicked -->
+        <div id="faqOverlay" class="faq-overlay" hidden aria-labelledby="faqOverlayTitle">
+          <div class="faq-overlay-header">
+            <h4 id="faqOverlayTitle">Browse common questions</h4>
+            <button type="button" class="faq-overlay-close" id="faqOverlayCloseBtn" aria-label="Close FAQs">&times;</button>
+          </div>
+          <p class="faq-overlay-intro">Click a question to send it into the chat. PAT will answer from the curated knowledge.</p>
+          <div class="faq-overlay-body">
+            <details class="faq-cat" open>
+              <summary>Getting started</summary>
+              <button type="button" class="faq-item" data-prompt="What exactly is a process?">What exactly is a process?</button>
+              <button type="button" class="faq-item" data-prompt="Why do we need to document a process?">Why do we need to document a process?</button>
+              <button type="button" class="faq-item" data-prompt="Where do I start when documenting a process?">Where do I start?</button>
+              <button type="button" class="faq-item" data-prompt="Who should be involved in documenting the process?">Who should be involved in documenting the process?</button>
+              <button type="button" class="faq-item" data-prompt="How long should process documentation take?">How long should process documentation take?</button>
+            </details>
+
+            <details class="faq-cat">
+              <summary>Scope &amp; boundaries</summary>
+              <button type="button" class="faq-item" data-prompt="What should be included in a process?">What should be included in the process?</button>
+              <button type="button" class="faq-item" data-prompt="What should be left out of a process?">What should be left out?</button>
+              <button type="button" class="faq-item" data-prompt="How do I define the start and end points of a process?">How do I define the start and end points?</button>
+              <button type="button" class="faq-item" data-prompt="Should exceptions and edge cases be included in a process?">Should exceptions and edge cases be included?</button>
+              <button type="button" class="faq-item" data-prompt="How many steps in a process is too many?">How many steps is too many?</button>
+            </details>
+
+            <details class="faq-cat">
+              <summary>Roles &amp; responsibilities</summary>
+              <button type="button" class="faq-item" data-prompt="Who owns the process?">Who owns the process?</button>
+              <button type="button" class="faq-item" data-prompt="What's the difference between a process owner and a process expert?">Process owner vs process expert?</button>
+              <button type="button" class="faq-item" data-prompt="Who approves the process?">Who approves the process?</button>
+              <button type="button" class="faq-item" data-prompt="Who is responsible for keeping a process updated?">Who keeps it updated?</button>
+            </details>
+
+            <details class="faq-cat">
+              <summary>Systems &amp; tools</summary>
+              <button type="button" class="faq-item" data-prompt="What tools or software should I use to document processes?">What tools should I use?</button>
+              <button type="button" class="faq-item" data-prompt="Can I use Word, Visio, SharePoint, or Nintex/Promapp?">Can I use Word, Visio, SharePoint or Nintex?</button>
+              <button type="button" class="faq-item" data-prompt="Where should process documents be stored?">Where should process documents be stored?</button>
+              <button type="button" class="faq-item" data-prompt="How do staff access the latest version of a process?">How do staff access the latest version?</button>
+            </details>
+
+            <details class="faq-cat">
+              <summary>Writing the process</summary>
+              <button type="button" class="faq-item" data-prompt="What format should I use to write a process?">What format should I use?</button>
+              <button type="button" class="faq-item" data-prompt="Should I use a flowchart, procedure, checklist, or all three?">Flowchart, procedure or checklist?</button>
+              <button type="button" class="faq-item" data-prompt="How do I write process steps clearly?">How do I write steps clearly?</button>
+              <button type="button" class="faq-item" data-prompt="What level of language should I use in a process?">What level of language should I use?</button>
+              <button type="button" class="faq-item" data-prompt="How do I avoid making the process too technical?">How do I avoid making it too technical?</button>
+              <button type="button" class="faq-item" data-prompt="Should I document the current process or the ideal future process?">Current process or future state?</button>
+            </details>
+
+            <details class="faq-cat">
+              <summary>Quality &amp; consistency</summary>
+              <button type="button" class="faq-item" data-prompt="How do I know if a process is good enough?">How do I know if it's good enough?</button>
+              <button type="button" class="faq-item" data-prompt="How do I make documentation consistent across teams?">How do I make documentation consistent?</button>
+              <button type="button" class="faq-item" data-prompt="What are the most common mistakes in process documentation?">Common mistakes in documentation?</button>
+              <button type="button" class="faq-item" data-prompt="How do I make a process easier to follow?">How do I make a process easier to follow?</button>
+              <button type="button" class="faq-item" data-prompt="When should I use decision points in a process?">When do I use decision points?</button>
+              <button type="button" class="faq-item" data-prompt="How do I handle loops or repeated steps in a process?">How do I handle loops or repeated steps?</button>
+            </details>
+
+            <details class="faq-cat">
+              <summary>Improvement &amp; maintenance</summary>
+              <button type="button" class="faq-item" data-prompt="What if the process changes frequently?">What if the process changes frequently?</button>
+              <button type="button" class="faq-item" data-prompt="How often should processes be reviewed?">How often should processes be reviewed?</button>
+              <button type="button" class="faq-item" data-prompt="How do I identify improvement opportunities while documenting a process?">How do I spot improvement opportunities?</button>
+              <button type="button" class="faq-item" data-prompt="Should pain points and risks be documented in a process?">Should pain points and risks be documented?</button>
+            </details>
+
+            <details class="faq-cat">
+              <summary>User adoption</summary>
+              <button type="button" class="faq-item" data-prompt="How do I get staff to actually use documented processes?">How do I get staff to actually use them?</button>
+              <button type="button" class="faq-item" data-prompt="What if different teams do the same process differently?">What if teams do it differently?</button>
+              <button type="button" class="faq-item" data-prompt="How do I make documentation engaging instead of bureaucratic?">How do I make it engaging not bureaucratic?</button>
+            </details>
+          </div>
+        </div>
+      </section>
+
+      <section class="pat-draft-panel" aria-labelledby="patDraftLabel">
+        <header class="pat-side-header pat-side-header-draft">
+          <h3 id="patDraftLabel" class="pat-side-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            Give me your draft
+          </h3>
+        </header>
     <div class="input-zone" id="inputZone">
       <input type="file" id="fileInput" accept=".pdf,.docx,.doc,.txt" hidden>
 
@@ -2193,10 +3000,8 @@ NOTE: What if access is delayed? Escalate to the IT lead and update the new star
         </div>
       </div>
 
-      <div class="dropzone-divider"><span>OR PASTE YOUR DRAFT BELOW</span></div>
-
       <div class="input-paste" id="inputPaste">
-        <textarea id="pasteArea" placeholder="Process name: Create new TeachVE Hub Site Page&#10;Owner: Deanne Roze&#10;Expert: Natalie Gray&#10;Trigger: New content required&#10;Inputs: None&#10;Outputs: New page published&#10;&#10;1.0 Plan and write content&#10;Role: Subject Matter Expert&#10;a Define the purpose and scope&#10;b Write the content" aria-label="Process content"></textarea>
+        <textarea id="pasteArea" placeholder="Process name: ...&#10;Owner: ...&#10;Trigger: ...&#10;&#10;1. First activity&#10;- task a&#10;- task b" aria-label="Process content"></textarea>
         <div class="file-name" id="fileName"></div>
       </div>
 
@@ -2220,82 +3025,170 @@ NOTE: What if access is delayed? Escalate to the IT lead and update the new star
     <div class="primary-actions-row">
       <button class="btn btn-primary btn-large" id="analyseBtn" type="button">Analyse content</button>
     </div>
-    <p class="primary-actions-alt">
-      Don't have a draft yet?
-      <button type="button" class="text-link" id="toggleFormLink">
-        <span id="toggleFormLabel">Build with a form instead</span>
+    <div class="helpers-strip helpers-strip-inline" aria-labelledby="helpersLabel">
+      <span id="helpersLabel" class="helpers-label">Need a starter?</span>
+      <button type="button" class="helper-link" id="trySampleLink">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        Try the sample
       </button>
-    </p>
-
-    <div class="orientation-section" aria-labelledby="orientationLabel">
-      <div class="orientation-divider"><span id="orientationLabel">First time here?</span></div>
-      <div class="orientation-actions">
-        <button type="button" class="orientation-action" id="trySampleLink">
-          <span class="oa-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span>
-          <span class="oa-text">
-            <strong>Try the sample</strong>
-            <span class="oa-sub">See what the tool does, no input needed</span>
-          </span>
-        </button>
-        <button type="button" class="orientation-action" id="downloadTemplateLink">
-          <span class="oa-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/></svg></span>
-          <span class="oa-text">
-            <strong>Download a blank template</strong>
-            <span class="oa-sub">Word doc with the format already set up</span>
-          </span>
-        </button>
-        <button type="button" class="orientation-action" id="homeAskCopilotBtn">
-          <span class="oa-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M9 9h6M9 13h4"/></svg></span>
-          <span class="oa-text">
-            <strong>Ask AI for help</strong>
-            <span class="oa-sub">Chat with the agent before you draft</span>
-          </span>
-        </button>
-      </div>
+      <span class="helpers-dot">&middot;</span>
+      <button type="button" class="helper-link" id="downloadTemplateLink">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/></svg>
+        Download a template
+      </button>
+      <span class="helpers-dot">&middot;</span>
+      <button type="button" class="helper-link" id="buildFormCardBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="7" y1="8" x2="17" y2="8"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="7" y1="16" x2="13" y2="16"/></svg>
+        <span id="buildFormCardLabel">Build with a form</span>
+      </button>
     </div>
+      </section>
+    </div><!-- /.pat-split -->
+
   </section>
 
   <!-- ==================== RESULTS ==================== -->
   <section class="card hidden" id="resultsCard">
     <div class="results-header-row">
-      <h2 style="margin:0; text-align:center; padding:0; border:none;">Your draft has been analysed</h2>
+      <h2 style="margin:0; text-align:center; padding:0; border:none;">I've reviewed your process</h2>
     </div>
 
-    <div class="auto-fix-banner hidden" id="combinedFixBanner" role="status" aria-live="polite">
-      <div class="auto-fix-icon" aria-hidden="true">&#10003;</div>
-      <div class="auto-fix-text" id="combinedFixBannerText"></div>
-      <button class="auto-fix-banner-dismiss" type="button" id="combinedFixBannerDismiss" aria-label="Dismiss">&times;</button>
+    <p class="flag-headline" id="flagHeadline"></p>
+
+    <div class="auto-fix-note hidden" id="combinedFixBanner" role="status" aria-live="polite">
+      <svg class="auto-fix-note-tick" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="#FFFFFF"/><path d="M5 8.5l2 2 4-5"/></svg>
+      <span class="auto-fix-note-text" id="combinedFixBannerText"></span>
     </div>
 
-    <p class="results-summary-line" id="resultsSummaryLine"></p>
+    <!-- Copilot Studio agent embed — paste the iframe src URL into the placeholder below -->
+    <div class="modal-backdrop" id="copilotStudioModal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="copilotStudioTitle">
+      <div class="modal modal-wide modal-tall">
+        <button class="modal-close" id="copilotStudioClose" type="button" aria-label="Close">&times;</button>
+        <h2 id="copilotStudioTitle">Copilot Studio agent <span class="experimental-badge">Experimental</span></h2>
+        <p style="font-size:13px;color:#475569;margin:0 0 12px;">Testing an embedded Copilot Studio agent alongside the local AI. If it doesn't load, the iframe URL probably needs the Custom Website channel published or the X-Frame-Options unblocked.</p>
+        <div class="copilot-studio-frame-wrap">
+          <!-- =============== PASTE COPILOT STUDIO EMBED URL BELOW =============== -->
+          <iframe id="copilotStudioFrame"
+                  src="PASTE_COPILOT_STUDIO_URL_HERE"
+                  title="Copilot Studio agent"
+                  style="width: 100%; height: 100%; border: 0;"
+                  allow="microphone"></iframe>
+          <!-- =============== END PASTE AREA =============== -->
+          <div class="copilot-studio-placeholder" id="copilotStudioPlaceholder">
+            <p><strong>No URL configured yet.</strong></p>
+            <p>Paste your Copilot Studio Custom Website embed URL into the iframe's <code>src</code> attribute in <code>public/index.html</code>, then refresh.</p>
+            <p style="font-size:12px;color:#64748B;">Search the file for <code>PASTE_COPILOT_STUDIO_URL_HERE</code>.</p>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-primary" id="copilotStudioCloseFooter" type="button">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Auto-apply acknowledgement modal — shown before the AI rewrite starts -->
+    <div class="modal-backdrop" id="autoApplyConsentModal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="autoApplyConsentTitle">
+      <div class="modal">
+        <button class="modal-close" id="autoApplyConsentClose" type="button" aria-label="Close">&times;</button>
+        <h2 id="autoApplyConsentTitle">Before I make changes</h2>
+        <p style="font-size:14px;color:#475569;margin:0 0 14px;line-height:1.55;">I'm about to use AI to rewrite your draft against the quality opportunities. A couple of quick things to confirm first:</p>
+        <ul class="consent-list">
+          <li>
+            <input type="checkbox" id="consentSensitive" />
+            <label for="consentSensitive">
+              <strong>I haven't pasted anything sensitive.</strong>
+              No names of individual staff or students, personal information, login credentials, or other confidential content.
+            </label>
+          </li>
+        </ul>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="autoApplyConsentCancel" type="button">Cancel</button>
+          <button class="btn btn-primary" id="autoApplyConsentProceed" type="button" disabled>Continue with auto-apply</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 'What changed' modal — opened from the auto-fix note -->
+    <div class="modal-backdrop" id="autofixModal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="autofixModalTitle">
+      <div class="modal">
+        <button class="modal-close" id="autofixModalClose" type="button" aria-label="Close">&times;</button>
+        <h2 id="autofixModalTitle">What I changed automatically</h2>
+        <p style="font-size:13.5px;color:#475569;margin:0 0 16px;">These are the small mechanical fixes I applied before flagging quality opportunities. Spelling corrections, banned-term removals, whitespace cleanup, NOTE punctuation and task re-lettering.</p>
+        <div class="autofix-modal-body" id="autofixModalBody"></div>
+        <div class="modal-footer">
+          <button class="btn btn-primary" id="autofixModalCloseFooter" type="button">Close</button>
+        </div>
+      </div>
+    </div>
     <p class="recommendation-inline hidden" id="recommendationInline">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v4"/><circle cx="12" cy="16" r="0.6" fill="currentColor"/></svg>
       <span id="recommendationInlineText"></span>
       <button type="button" class="text-link recommendation-inline-link" id="recommendationInlineBtn">See why</button>
     </p>
 
-    <p class="decision-prompt">What would you like to do?</p>
-    <div class="results-action-cards results-decision-cards">
-      <button type="button" class="action-card action-card-apply" id="actionAskCopilotBtn">
+    <div class="results-action-cards results-decision-cards" id="resultsActionCards">
+      <button type="button" class="action-card action-card-apply" id="autoApplyBtn">
         <span class="action-card-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
         </span>
-        <span class="action-card-title">Apply the changes with AI</span>
-        <span class="action-card-sub">The AI will apply the suggested fixes for you to review.</span>
-        <span class="action-card-cta">Open AI &rarr;</span>
+        <span class="action-card-title">Auto-apply quality enhancements</span>
+        <span class="action-card-sub">The AI rewrites your draft applying every flag, in-place. You review the result before exporting.</span>
+        <span class="action-card-cta">Auto-apply &rarr;</span>
       </button>
 
       <button type="button" class="action-card action-card-review" id="reviewIssuesBtn">
         <span class="action-card-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
         </span>
-        <span class="action-card-title">Review the flags myself</span>
-        <span class="action-card-sub" id="reviewIssuesSub">See each flag and edit the document yourself.</span>
-        <span class="action-card-cta">Open the flags &rarr;</span>
+        <span class="action-card-title">Review opportunities &amp; update yourself</span>
+        <span class="action-card-sub" id="reviewIssuesSub">Step through each flag and edit the document directly.</span>
+        <span class="action-card-cta">Review yourself &rarr;</span>
       </button>
     </div>
 
-    <!-- secondary links removed — workflow now lives next to the doc heading, recommendation shows inline above when relevant -->
+    <!-- Slim status strip — shown once a path has been chosen (replaces the cards above) -->
+    <div class="path-status hidden" id="pathStatus" role="status">
+      <span class="path-status-icon" aria-hidden="true">&rarr;</span>
+      <span class="path-status-text" id="pathStatusText">Reviewing flags yourself.</span>
+      <button type="button" class="path-status-switch" id="pathStatusSwitch">Switch path</button>
+    </div>
+
+    <!-- Inline loading state while the AI rewrites the draft -->
+    <div class="auto-apply-loading hidden" id="autoApplyLoading" role="status" aria-live="polite">
+      <div class="auto-apply-spinner" aria-hidden="true"></div>
+      <p class="auto-apply-loading-title">Applying quality enhancements…</p>
+      <p class="auto-apply-loading-sub">The AI is rewriting your draft against every flagged issue. This usually takes 15&ndash;30 seconds.</p>
+    </div>
+
+    <!-- Banner shown above the doc once the AI has applied updates; lets the
+         user toggle between the AI-updated view and the original. -->
+    <div class="updated-banner hidden" id="updatedBanner">
+      <span class="updated-banner-icon" aria-hidden="true">&#10003;</span>
+      <div class="updated-banner-text" id="updatedBannerText">
+        <strong>Quality enhancements applied.</strong> The AI updated your process based on the flagged items.
+      </div>
+      <div class="updated-banner-toggle" role="tablist" aria-label="View mode">
+        <button type="button" class="toggle-btn is-active" id="viewUpdatedBtn" role="tab" aria-selected="true">Updated</button>
+        <button type="button" class="toggle-btn" id="viewChangesBtn" role="tab" aria-selected="false">Show changes</button>
+        <button type="button" class="toggle-btn" id="viewOriginalBtn" role="tab" aria-selected="false">Original</button>
+      </div>
+    </div>
+
+    <!-- Doc preview + tabs + sidebar stay hidden until the user picks a card.
+         Container revealed via JS in the card click handlers. -->
+    <div id="postAnalyseDetail" hidden>
+
+    <!-- Discreet summary chips — visible once a path has been chosen -->
+    <div class="summary-chips hidden" id="summaryChips" aria-label="Analysis summary">
+      <button type="button" class="summary-chip summary-chip-opps" id="summaryChipOpps" title="Opportunities identified">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span id="summaryChipOppsCount">0</span>
+      </button>
+      <button type="button" class="summary-chip summary-chip-fixes" id="summaryChipFixes" title="Small changes applied automatically">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M8 12.5l2.5 2.5 5-5.5"/></svg>
+        <span id="summaryChipFixesCount">0</span>
+      </button>
+    </div>
 
     <div class="doc-with-sidebar">
       <div class="doc-main">
@@ -2311,7 +3204,13 @@ NOTE: What if access is delayed? Escalate to the IT lead and update the new star
         </div>
 
         <div class="output-pane is-active" id="outputPaneDoc" role="tabpanel" aria-labelledby="outputTabDoc">
-          <p class="hint" style="margin-bottom:6px;"><strong>Tip:</strong> click anywhere in the document to edit. Edits flow into your downloads.</p>
+          <div class="doc-pane-toolbar">
+            <p class="hint" style="margin:0;"><strong>Tip:</strong> click anywhere in the document to edit. Edits flow into your downloads.</p>
+            <button class="btn btn-secondary doc-pane-save-btn" id="saveEditsTopBtn" type="button" title="Save your edits — re-render the workflow + refresh opportunities">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:13px;height:13px;vertical-align:-2px;margin-right:4px;"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+              Save changes
+            </button>
+          </div>
           <div class="doc-preview" id="docPreview" contenteditable="true" spellcheck="true" lang="en-AU" aria-label="Editable process document"></div>
           <div id="docLiveRegion" aria-live="polite" aria-atomic="true" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;"></div>
         </div>
@@ -2336,6 +3235,10 @@ NOTE: What if access is delayed? Escalate to the IT lead and update the new star
         <div class="doc-next-step-row">
           <div class="doc-next-step-secondary">
             <button class="btn btn-secondary" id="resetEditsBtn" type="button">Reset edits</button>
+            <button class="btn btn-secondary" id="saveEditsBtn" type="button" title="Re-render the visual workflow with your latest edits">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:13px;height:13px;vertical-align:-2px;margin-right:4px;"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+              Save changes
+            </button>
           </div>
           <div class="doc-next-step-primary">
             <button class="btn btn-secondary" id="analyseAnotherBtn" type="button">&uarr; Analyse another</button>
@@ -2349,13 +3252,17 @@ NOTE: What if access is delayed? Escalate to the IT lead and update the new star
       </div>
       <aside class="doc-sidebar" id="docSidebar" hidden aria-labelledby="docSidebarHeading">
         <div class="doc-sidebar-header">
-          <h4 id="docSidebarHeading">Quality flags</h4>
-          <button type="button" class="doc-sidebar-close" id="docSidebarClose" aria-label="Close quality flags panel">&times;</button>
+          <h4 id="docSidebarHeading">Opportunities</h4>
+          <div class="flags-view-toggle" role="tablist" aria-label="View mode">
+            <button type="button" class="flags-view-btn is-active" id="flagsViewSidebarBtn" role="tab" aria-selected="true">Sidebar</button>
+            <button type="button" class="flags-view-btn" id="flagsViewInlineBtn" role="tab" aria-selected="false">Inline</button>
+          </div>
+          <button type="button" class="doc-sidebar-close" id="docSidebarClose" aria-label="Close opportunities panel">&times;</button>
         </div>
-        <p class="doc-sidebar-intro" id="issuesModalIntro"></p>
         <div id="issuesOut"></div>
       </aside>
     </div>
+    </div><!-- /#postAnalyseDetail -->
   </section>
 
 <!-- Export modal (NEW — replaces inline export dropdown, includes soft-gate confirmation) -->
@@ -2363,6 +3270,14 @@ NOTE: What if access is delayed? Escalate to the IT lead and update the new star
   <div class="modal">
     <button class="modal-close" id="exportModalClose" type="button" aria-label="Close">&times;</button>
     <h2 id="exportModalTitle">Export your document</h2>
+
+    <div class="export-review-note">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r="0.6" fill="currentColor"/></svg>
+      <div>
+        <strong>Review your process before publishing.</strong>
+        I don't know how your process actually runs day-to-day, so it's worth a final read for accuracy before you upload it into Nintex Process Manager or share it with your team.
+      </div>
+    </div>
 
     <div class="export-warning hidden" id="exportWarning" role="alert">
       <strong>This draft has <span id="exportWarningCount">0</span> errors.</strong>
@@ -2431,7 +3346,7 @@ NOTE: What if access is delayed? Escalate to the IT lead and update the new star
 
 <footer>
   <div class="footer-inner">
-    <span class="footer-tagline">CoVE Process Writing Assistant &middot; Projects and Business Transformation</span>
+    <span class="footer-tagline">RMIT University &middot; Vocational Education &middot; Projects and Business Transformation</span>
     <a class="footer-link" href="https://forms.office.com/r/PBT-BUGS" target="_blank" rel="noopener">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
       Report an issue with this tool
@@ -2885,7 +3800,7 @@ document.getElementById('analyseBtn').addEventListener('click', async () => {
   const hasActivities = Array.isArray(model.activities) &&
     model.activities.some(a => (a.title && a.title.trim()) || (a.tasks && a.tasks.length > 0));
   if (!hasTitle && !hasActivities) {
-    showToast('Nothing to analyse. Add a process name and at least one activity, or paste/upload content with the expected headings.', 'error', 6000);
+    showToast('Nothing to analyse yet. Paste content that starts with "Process name:" (or Title:/Name:) and includes at least one activity.', 'error', 6000);
     return;
   }
 
@@ -3384,11 +4299,15 @@ function parseStructuredText(text) {
   let currentNote = null;
   let inNote = false;
 
-  const fieldRe = /^(Process name|Title|Owner|Expert|Trigger|Inputs?|Outputs?|Objective|Background)\s*[:\-]\s*(.+)$/i;
+  // Accept a wide range of labels users actually type. Order matters — longer
+  // patterns first so "Process name" doesn't get caught by "Process".
+  const fieldRe = /^(Process\s+name|Process\s+title|Process\s+owner|Process\s+expert|Process\s+trigger|Process|Title|Name|Owner|Author|Responsible|Expert|SME|Subject\s+matter\s+expert|Trigger|Triggered\s+by|Starts\s+when|Inputs?|Outputs?|Objective|Purpose|Aim|Goal|Background|Scope|Context|Overview)\s*[:\-\u2013\u2014]\s*(.+)$/i;
   // Liberal activity numbering: matches "1.0", "1.", "1,", "(1)", "1)", "1:", "1 -" plus title.
   const activityRe = /^\(?\s*(\d+)(\.\d+|\.|,|\)|:|\s+-)\s+(.+)$/;
   const roleRe = /^Role\s*[:\-]\s*(.+)$/i;
   const taskRe = /^([a-z])[\.\)]?\s+(.+)$/;
+  // Bullet-style tasks ("- identify content", "* review", "• approve", "+ notify")
+  const bulletTaskRe = /^[\-\*\u2022\+]\s+(.+)$/;
   const noteRe = /^NOTE\s+(.+)$/i;
 
   for (const raw of lines) {
@@ -3398,16 +4317,45 @@ function parseStructuredText(text) {
     if (!inProcedure) {
       const fm = line.match(fieldRe);
       if (fm) {
-        const key = fm[1].toLowerCase();
+        // Normalise label — collapse internal whitespace + lowercase
+        const key = fm[1].toLowerCase().replace(/\s+/g, ' ').trim();
         const val = fm[2].trim();
-        if (key.startsWith('process') || key === 'title') model.title = val;
-        else if (key === 'owner') model.owner = val;
-        else if (key === 'expert') model.expert = val;
-        else if (key === 'trigger') model.trigger = val;
-        else if (key.startsWith('input')) model.inputs = val;
-        else if (key.startsWith('output')) model.outputs = val;
-        else if (key === 'objective') model.objective = val;
-        else if (key === 'background') model.background = val;
+        // Title-like labels
+        if (key === 'process name' || key === 'process title' || key === 'title'
+            || key === 'name' || key === 'process') {
+          if (!model.title) model.title = val;
+        }
+        // Owner
+        else if (key === 'owner' || key === 'process owner' || key === 'author'
+                 || key === 'responsible') {
+          if (!model.owner) model.owner = val;
+        }
+        // Expert
+        else if (key === 'expert' || key === 'process expert' || key === 'sme'
+                 || key === 'subject matter expert') {
+          if (!model.expert) model.expert = val;
+        }
+        // Trigger
+        else if (key === 'trigger' || key === 'process trigger'
+                 || key === 'triggered by' || key === 'starts when') {
+          if (!model.trigger) model.trigger = val;
+        }
+        // Inputs / outputs (handle the optional plural already in the regex)
+        else if (key === 'input' || key === 'inputs') {
+          if (!model.inputs) model.inputs = val;
+        }
+        else if (key === 'output' || key === 'outputs') {
+          if (!model.outputs) model.outputs = val;
+        }
+        // Objective / purpose / aim / goal
+        else if (key === 'objective' || key === 'purpose' || key === 'aim' || key === 'goal') {
+          if (!model.objective) model.objective = val;
+        }
+        // Background / scope / context / overview
+        else if (key === 'background' || key === 'scope' || key === 'context'
+                 || key === 'overview') {
+          if (!model.background) model.background = val;
+        }
         continue;
       }
     }
@@ -3444,11 +4392,42 @@ function parseStructuredText(text) {
       continue;
     }
 
+    const bm2 = line.match(bulletTaskRe);
+    if (bm2) {
+      // Auto-assign a letter — a, b, c… capped at 'z' for the rare edge case
+      const n = current.tasks.length;
+      const letter = (n < 26) ? String.fromCharCode(97 + n) : 'z';
+      current.tasks.push({ letter, text: bm2[1] });
+      inNote = false;
+      continue;
+    }
+
     if (inNote && currentNote) {
       currentNote.body += (currentNote.body ? ' ' : '') + line;
     }
   }
   if (current) model.activities.push(current);
+
+  // Inference fallback: if the user pasted content without a "Process name:" prefix,
+  // treat the first plausible line as the title and flag it for confirmation.
+  if (!model.title) {
+    for (const raw of lines) {
+      const l = raw.trim();
+      if (!l) continue;
+      // Skip activity-numbered lines and field-prefix lines we already failed to match
+      if (/^\(?\s*\d+[\.\,\)\:]/.test(l)) break;
+      if (/^[a-z][\.\)]?\s/.test(l)) break;
+      if (/^[\-\*\u2022\+]\s/.test(l)) break;
+      if (/^(NOTE|Role)\b/i.test(l)) break;
+      // Use this line — strip any markdown heading hashes
+      const cleaned = l.replace(/^#+\s*/, '').trim();
+      if (cleaned.length > 0 && cleaned.length <= 120) {
+        model.title = cleaned;
+        model.titleInferred = true;
+      }
+      break;
+    }
+  }
 
   model.roles = Array.from(new Set(
     model.activities.flatMap(a => (a.role || '').split(',').map(r => r.trim()).filter(Boolean))
@@ -3884,8 +4863,16 @@ function runRulesEngine(model) {
   if (!model.title) {
     push({ id:'title-missing', source:'CoVE', severity:'error',
       message:'Process is missing a title.',
-      suggestion:'Add a verb-first title, e.g. "Create new TeachVE Hub Site Page".' });
+      suggestion:'Add a verb-first title, e.g. "Create new TeachVE Hub Site Page". Tip: start your draft with "Process name: ..." so the tool picks it up.' });
   } else {
+    // If we had to guess the title (no "Process name:" prefix), flag it gently
+    // so the user confirms or replaces it.
+    if (model.titleInferred) {
+      push({ id:'title-inferred', source:'CoVE', severity:'info',
+        message:'Title was inferred from the first line of your draft.',
+        location: model.title,
+        suggestion:'If "' + model.title + '" isn\'t the right title, start your draft with "Process name: <your title>" or edit the heading in the generated document.' });
+    }
     // Required prefix check (e.g. "CoVE - ").
     if (REQUIRED_TITLE_PREFIXES.length > 0) {
       const startsOk = REQUIRED_TITLE_PREFIXES.some(p => model.title.startsWith(p));
@@ -3909,7 +4896,7 @@ function runRulesEngine(model) {
 
   // ---------- TRIGGER / INPUTS / OUTPUTS (CoVE 1) ----------
   if (!model.trigger) {
-    push({ id:'no-trigger', source:'CoVE', severity:'error',
+    push({ id:'no-trigger', source:'CoVE', severity:'warning',
       message:'Trigger is not defined.',
       suggestion:'State exactly what starts the process (e.g. "Staff member requests a new laptop via ServiceNow").' });
   }
@@ -3950,11 +4937,58 @@ function runRulesEngine(model) {
   } else if (actCount > 10) {
     push({ id:'too-many-activities', source:'Nintex', severity:'warning',
       message:`Process has ${actCount} activities. Aim for a maximum of 10.`,
-      suggestion:'Look for a logical break to split into sub-processes (Nintex Technique 4).' });
+      suggestion:'Look for a logical break to split into sub-processes.' });
   } else if (actCount === 1 || actCount === 2) {
     push({ id:'too-few-activities', source:'Nintex', severity:'info',
       message:`Process has only ${actCount} activit${actCount===1?'y':'ies'}.`,
       suggestion:'If this only has a couple of steps, consider whether a knowledge article or guide would be more useful than a process.' });
+  }
+
+  // ---------- ACTIVITY NUMBERING (RMIT) — detect gaps + duplicates ----------
+  // Each a.number is a string like "1.0", "2.0", "3.0". Extract the major
+  // number (the part before the first dot). If the major numbers don't form a
+  // contiguous 1..N sequence, flag it — an activity may be missing or renumbered.
+  if (actCount >= 2) {
+    const majors = model.activities.map(a => {
+      const m = String(a.number || '').match(/^(\d+)/);
+      return m ? parseInt(m[1], 10) : NaN;
+    }).filter(n => !isNaN(n));
+
+    // Duplicates (same major number on two activities)
+    const seen = new Set();
+    const dups = [];
+    for (const n of majors) {
+      if (seen.has(n) && !dups.includes(n)) dups.push(n);
+      seen.add(n);
+    }
+    if (dups.length > 0) {
+      push({ id:'activity-number-duplicate', source:'RMIT', severity:'warning',
+        message:`Activity number${dups.length===1?'':'s'} ${dups.join(', ')} ${dups.length===1?'is':'are'} used more than once.`,
+        suggestion:'Each activity should have a unique number (1.0, 2.0, 3.0…). Renumber so the sequence is clear.' });
+    }
+
+    // Gaps — sort unique majors then look for missing values between min and max
+    const uniqueSorted = Array.from(new Set(majors)).sort((x, y) => x - y);
+    if (uniqueSorted.length >= 2) {
+      const gaps = [];
+      for (let v = uniqueSorted[0] + 1; v < uniqueSorted[uniqueSorted.length - 1]; v++) {
+        if (!seen.has(v)) gaps.push(v);
+      }
+      if (gaps.length > 0) {
+        const presentList = uniqueSorted.join(', ');
+        const gapList = gaps.join(', ');
+        push({ id:'activity-number-gap', source:'RMIT', severity:'warning',
+          message:`Activity numbering has a gap (found ${presentList}, missing ${gapList}). An activity may be missing or mis-numbered.`,
+          suggestion:'Check that all activities are listed in order. Renumber so they run sequentially: 1.0, 2.0, 3.0…' });
+      }
+    }
+
+    // Sequence doesn't start at 1 — gentle info nudge
+    if (uniqueSorted.length > 0 && uniqueSorted[0] !== 1) {
+      push({ id:'activity-number-start', source:'RMIT', severity:'info',
+        message:`Activity numbering starts at ${uniqueSorted[0]} rather than 1.`,
+        suggestion:'Convention is to number activities from 1.0 upwards.' });
+    }
   }
 
   // ---------- PER-ACTIVITY CHECKS ----------
@@ -3991,7 +5025,7 @@ function runRulesEngine(model) {
         push({ id:`act-multirole-${idx}`, source:'CoVE', severity:'info',
           message:`Activity ${a.number} lists ${roles.length} roles: ${roles.join('; ')}.`,
           location: loc,
-          suggestion:'CoVE Golden Rule 3 recommends one accountable role per activity. Confirm one is primary.' });
+          suggestion:'One accountable role per activity is the standard. Confirm one is primary.' });
       }
     }
 
@@ -4025,16 +5059,16 @@ function runRulesEngine(model) {
 
     // Tasks: verb-first + length (RMIT, Nintex 5)
     if (a.tasks.length === 0) {
-      push({ id:`no-tasks-${idx}`, source:'Nintex', severity:'info',
+      push({ id:`no-tasks-${idx}`, source:'Nintex', severity:'error',
         message:`Activity ${a.number} has no tasks.`,
         location: loc,
-        suggestion:'Either add 1–10 tasks, or consider whether this activity is needed.' });
+        suggestion:'Add 1–10 tasks describing how this activity is carried out, or remove the activity if it isn\'t needed.' });
     }
     if (a.tasks.length > 10) {
       push({ id:`too-many-tasks-${idx}`, source:'Nintex', severity:'warning',
         message:`Activity ${a.number} has ${a.tasks.length} tasks. Recommended max is ~10.`,
         location: loc,
-        suggestion:'Consider splitting this activity, or attaching a guide for transactional detail (Nintex Technique 7).' });
+        suggestion:'Consider splitting this activity, or attaching a guide for transactional detail.' });
     }
     a.tasks.forEach((t, ti) => {
       if (!startsWithApprovedVerb(t.text)) {
@@ -4049,7 +5083,7 @@ function runRulesEngine(model) {
         push({ id:`task-long-${idx}-${ti}`, source:'CoVE', severity:'info',
           message:`Task ${a.number}${t.letter} is ${tw} words.`,
           location: `Task ${a.number}${t.letter}`,
-          suggestion:'Keep language concise (CoVE Rule 5). If this is system click-through detail, move it into an attached guide (Nintex Technique 7).' });
+          suggestion:'Keep language concise. If this is system click-through detail, move it into an attached guide.' });
       }
     });
 
@@ -4059,7 +5093,7 @@ function runRulesEngine(model) {
         push({ id:`note-question-${idx}-${ni}`, source:'RMIT', severity:'warning',
           message:`Note "${truncate(n.title,60)}" is not phrased as a question.`,
           location: loc,
-          suggestion:'NOTE titles must always be a question. The reader can then skip the body if they know the answer (RMIT, Nintex Technique 1).' });
+          suggestion:'NOTE titles must always be a question. The reader can then skip the body if they know the answer.' });
       }
       if (!n.body || n.body.length < 10) {
         push({ id:`note-empty-${idx}-${ni}`, source:'RMIT', severity:'info',
@@ -4084,7 +5118,7 @@ function runRulesEngine(model) {
           push({ id:`decision-paths-${a.number}-${t.letter}`, source:'CoVE', severity:'warning',
             message:`Decision in ${a.number}${t.letter} may not show both Yes and No paths.`,
             location: `Task ${a.number}${t.letter} – ${t.text}`,
-            suggestion:'Yes/No questions need both branches. The "No" path should lead to one follow-up action then end (CoVE Rule 7).' });
+            suggestion:'Yes/No questions need both branches. The "No" path should lead to one follow-up action then end.' });
         }
       }
     });
@@ -4102,7 +5136,7 @@ function runRulesEngine(model) {
         push({ id:`handover-${i}`, source:'CoVE', severity:'warning',
           message:`Role change between ${prevAct.number} (${roleSequence[i-1]}) and ${model.activities[i].number} (${roleSequence[i]}) — handover may be unclear.`,
           location: `${prevAct.number} → ${model.activities[i].number}`,
-          suggestion:'Make the handover explicit, e.g. a "Notify..." or "Send..." task at the end of the previous activity (CoVE Rule 11).' });
+          suggestion:'Make the handover explicit, e.g. a "Notify..." or "Send..." task at the end of the previous activity.' });
       }
     }
   }
@@ -4114,9 +5148,9 @@ function runRulesEngine(model) {
     a.links.forEach(l => totalAttachments++);
   });
   if (model.activities.length > 0 && totalAttachments === 0) {
-    push({ id:'no-attachments', source:'Nintex', severity:'info',
-      message:'No supporting guides, links or sub-process references attached.',
-      suggestion:'If your process refers to a system, form or detailed instruction, attach a guide or web link (CoVE Rule 8 / Nintex Technique 7).' });
+    push({ id:'no-attachments', source:'Nintex', severity:'info', informational: true,
+      message:'Tip: attach supporting guides where useful.',
+      suggestion:'If your process refers to a system, form or detailed instruction, attach a guide or web link within your final process.' });
   }
 
   // ---------- DUPLICATE / SIMILAR ACTIVITY TITLES ----------
@@ -4140,7 +5174,7 @@ function runRulesEngine(model) {
     if (avgSentLen > 22) {
       push({ id:'readability-long', source:'CoVE', severity:'info',
         message:`Average sentence length is ${avgSentLen.toFixed(1)} words.`,
-        suggestion:'CoVE Rule 5: keep language concise. Aim for sentences under 20 words; break long ones into separate steps.' });
+        suggestion:'Keep language concise. Aim for sentences under 20 words; break long ones into separate steps.' });
     }
   }
 
@@ -4781,6 +5815,26 @@ async function renderResults() {
   clearActiveFlag();
   // Reset to the document tab on each new analyse
   if (typeof window.switchOutputTab === 'function') window.switchOutputTab('doc');
+  // Bring the post-analyse view back to its initial state on every render:
+  //   - the two cards visible, flag headline visible
+  //   - loading + updated banner hidden
+  //   - detail area hidden until the user picks a card
+  const cards = document.getElementById('resultsActionCards');
+  if (cards) cards.classList.remove('hidden');
+  const pathStatusReset = document.getElementById('pathStatus');
+  if (pathStatusReset) pathStatusReset.classList.add('hidden');
+  const summaryChipsReset = document.getElementById('summaryChips');
+  if (summaryChipsReset) summaryChipsReset.classList.add('hidden');
+  const flagElReset = document.getElementById('flagHeadline');
+  if (flagElReset) flagElReset.classList.remove('hidden');
+  const loading = document.getElementById('autoApplyLoading');
+  if (loading) loading.classList.add('hidden');
+  const updatedBanner = document.getElementById('updatedBanner');
+  if (updatedBanner) updatedBanner.classList.add('hidden');
+  const detail = document.getElementById('postAnalyseDetail');
+  // Show the generated document immediately after analyse — the action cards
+  // sit above it as choices, but users see the output straight away.
+  if (detail) detail.hidden = false;
   // No tabs to switch in the simplified UI — the document is always front-and-centre
 
   // Combined "what changed automatically" banner — covers BOTH the AU-spelling
@@ -4821,11 +5875,13 @@ async function renderResults() {
         }).join('');
         return '<li><strong>' + cat + '</strong> &mdash; ' + items.reduce((s,i)=>s+i.count,0) + ' change' + (items.length===1?'':'s') + '<ul>' + list + '</ul></li>';
       }).join('');
+      // Stash the full change list in the modal body for on-demand viewing
+      const modalBody = document.getElementById('autofixModalBody');
+      if (modalBody) modalBody.innerHTML = '<ul class="autofix-changelist">' + sections + '</ul>';
       cText.innerHTML =
-        '<strong>We tidied a few things automatically.</strong> ' +
-        total + ' small change' + (total===1?'':'s') +
-        ' applied (Australian spelling, banned terms, whitespace, NOTE punctuation, task re-lettering).' +
-        '<details><summary>What changed</summary><ul>' + sections + '</ul></details>';
+        '<strong>I applied ' + total + ' small change' + (total===1?'':'s') +
+        ' automatically.</strong>' +
+        ' <button type="button" class="autofix-modal-trigger" id="autofixModalOpen">what I changed</button>';
       cBanner.classList.remove('hidden');
     } else {
       cBanner.classList.add('hidden');
@@ -4833,25 +5889,30 @@ async function renderResults() {
   }
 
   // Summary — single line + 3 action cards (no more process-shape / findings cards)
-  const counts = currentIssues.reduce((acc, i) => { acc[i.severity] = (acc[i.severity]||0)+1; return acc; }, {});
+  // Count only actionable flags toward the opportunities tally — exclude
+  // informational tips that don't require the user to do anything in this tool.
+  const actionableIssues = currentIssues.filter(i => !i.informational);
+  const counts = actionableIssues.reduce((acc, i) => { acc[i.severity] = (acc[i.severity]||0)+1; return acc; }, {});
   const taskTotal = currentModel.activities.reduce(function(s,a){return s+a.tasks.length;},0);
-  const totalIssues = currentIssues.length;
+  const totalIssues = actionableIssues.length;
   const errorCount = counts.error || 0;
   const warningCount = counts.warning || 0;
   const suggestionCount = counts.info || 0;
 
-  // Summary line — concise stats with issue total highlighted when present
-  const summaryEl = document.getElementById('resultsSummaryLine');
-  if (summaryEl) {
-    const issuesPart = totalIssues === 0
-      ? '<span class="summary-issues zero">&#10003; No quality flags</span>'
-      : '<span class="summary-issues">' + totalIssues + ' quality flag' + (totalIssues===1?'':'s') + ' to review</span>';
-    summaryEl.innerHTML =
-      '<strong>' + currentModel.activities.length + '</strong> activities' +
-      '<span class="summary-dot">&middot;</span>' +
-      '<strong>' + taskTotal + '</strong> tasks' +
-      '<span class="summary-dot">&middot;</span>' +
-      issuesPart;
+  // Flag headline — one focused line so users know what they're looking at
+  const flagEl = document.getElementById('flagHeadline');
+  if (flagEl) {
+    if (totalIssues === 0) {
+      flagEl.innerHTML = '<span class="flag-headline-icon" aria-hidden="true">&#10003;</span>' +
+        '<span class="flag-headline-text"><strong>No opportunities to flag.</strong> Your draft already meets the standards I check against.</span>';
+      flagEl.classList.add('flag-headline-clear');
+    } else {
+      const word = totalIssues === 1 ? 'opportunity' : 'opportunities';
+      flagEl.innerHTML = '<span class="flag-headline-icon" aria-hidden="true">&#9888;</span>' +
+        '<span class="flag-headline-text"><strong>I\'ve identified ' + totalIssues + ' ' + word +
+        ' to enhance your process.</strong> Choose how you want to apply the updates.</span>';
+      flagEl.classList.remove('flag-headline-clear');
+    }
   }
 
   // Review issues action-card subtitle
@@ -4941,7 +6002,6 @@ async function renderResults() {
         affordance +
       '</div>' +
       '<div class="message">' + i.message + '</div>' +
-      (i.location ? '<div class="location">' + i.location + '</div>' : '') +
       (i.suggestion ? '<div class="suggestion"><strong>Try:</strong> ' + i.suggestion + '</div>' : '') +
       '</div>';
   };
@@ -5001,6 +6061,31 @@ async function renderResults() {
     // Unknown location — treat as process-wide, no jump
     return null;
   }
+  // Expose so the inline-flags view (separate script) can resolve targets too
+  window.resolveJumpTarget = resolveJumpTarget;
+  // Expose so saveEditsAndRefresh (separate script) can call the rules engine
+  if (typeof runRulesEngine === 'function') window.runRulesEngine = runRulesEngine;
+  if (typeof buildMermaid === 'function') window.buildMermaid = buildMermaid;
+  if (typeof buildBpmnXml === 'function') window.buildBpmnXml = buildBpmnXml;
+  if (typeof recommendArtefactType === 'function') window.recommendArtefactType = recommendArtefactType;
+
+  // Expose so saveEditsAndRefresh can rebuild the sidebar after re-running rules
+  window.refreshIssuesSidebar = function () {
+    const out = document.getElementById('issuesOut');
+    if (!out || typeof currentIssues === 'undefined') return;
+    const g = { error: [], warning: [], info: [] };
+    currentIssues.forEach((i, idx) => { i._idx = idx; (g[i.severity] || g.info).push(i); });
+    out.innerHTML = currentIssues.length === 0
+      ? '<p>No opportunities &mdash; your draft already meets the standards.</p>'
+      : '<div class="issues-scroll">' +
+          (g.error.length   ? '<h3 data-severity="error">Errors</h3>'      + g.error.map(renderIssue).join('')   : '') +
+          (g.warning.length ? '<h3 data-severity="warning">Warnings</h3>'  + g.warning.map(renderIssue).join('') : '') +
+          (g.info.length    ? '<h3 data-severity="info">Suggestions</h3>'  + g.info.map(renderIssue).join('')    : '') +
+        '</div>';
+    attachIssueNav();
+    if (typeof window.refreshInlineFlags === 'function') window.refreshInlineFlags();
+  };
+
   // Issues panel — fixes are now applied silently, so no manual button at the top.
   document.getElementById('issuesOut').innerHTML = currentIssues.length === 0
     ? '<p>No quality flags — your draft meets the encoded standards.</p>'
@@ -5058,6 +6143,7 @@ async function renderResults() {
   document.getElementById('docPreview').innerHTML = originalDocHtml;
   // Wire up click-to-navigate on issue cards
   attachIssueNav();
+  if (typeof window.refreshInlineFlags === 'function') window.refreshInlineFlags();
 
 }
 
@@ -5104,6 +6190,194 @@ function renderDocPreview(m) {
   });
   return html;
 }
+
+// ============================================================
+// DIFF HELPERS — used by auto-apply to render the updated document
+// with inline change markers (strikethrough + highlight).
+// ============================================================
+
+// LCS-based word diff. Returns an array of {type, text} where type is
+// 'eq' | 'del' | 'ins'. Whitespace is preserved as separate tokens.
+function wordDiff(a, b) {
+  a = (a == null ? '' : String(a));
+  b = (b == null ? '' : String(b));
+  if (a === b) return [{ type: 'eq', text: a }];
+  // Tokenise keeping whitespace
+  const aw = a.split(/(\s+)/);
+  const bw = b.split(/(\s+)/);
+  const m = aw.length, n = bw.length;
+  // Cap big strings — LCS is O(m*n). Beyond this just show both versions
+  // stacked instead of trying to inline-diff.
+  if (m * n > 600 * 600) {
+    return [
+      { type: 'del', text: a },
+      { type: 'eq', text: ' ' },
+      { type: 'ins', text: b }
+    ];
+  }
+  // Build LCS table
+  const lcs = Array(m + 1);
+  for (let i = 0; i <= m; i++) lcs[i] = new Int32Array(n + 1);
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      if (aw[i-1] === bw[j-1]) lcs[i][j] = lcs[i-1][j-1] + 1;
+      else lcs[i][j] = Math.max(lcs[i-1][j], lcs[i][j-1]);
+    }
+  }
+  // Walk back to extract diff
+  const out = [];
+  let i = m, j = n;
+  while (i > 0 || j > 0) {
+    if (i > 0 && j > 0 && aw[i-1] === bw[j-1]) {
+      out.unshift({ type: 'eq', text: aw[i-1] });
+      i--; j--;
+    } else if (j > 0 && (i === 0 || lcs[i][j-1] >= lcs[i-1][j])) {
+      out.unshift({ type: 'ins', text: bw[j-1] });
+      j--;
+    } else {
+      out.unshift({ type: 'del', text: aw[i-1] });
+      i--;
+    }
+  }
+  // Coalesce adjacent runs of the same type for cleaner HTML
+  const coalesced = [];
+  for (const p of out) {
+    if (coalesced.length && coalesced[coalesced.length-1].type === p.type) {
+      coalesced[coalesced.length-1].text += p.text;
+    } else {
+      coalesced.push({ ...p });
+    }
+  }
+  return coalesced;
+}
+
+// Render a word-diff between two strings as inline HTML.
+function renderWordDiff(a, b) {
+  return wordDiff(a, b).map(p => {
+    if (p.type === 'eq') return escapeHtml(p.text);
+    if (p.type === 'ins') return '<ins class="diff-ins">' + escapeHtml(p.text) + '</ins>';
+    return '<del class="diff-del">' + escapeHtml(p.text) + '</del>';
+  }).join('');
+}
+
+// Helper: diff-or-plain. Returns escaped HTML when values are equal, otherwise
+// the inline diff. Used inside renderDiffPreview for every field.
+function diffOrPlain(oldVal, newVal) {
+  oldVal = (oldVal || '').toString();
+  newVal = (newVal || '').toString();
+  if (oldVal === newVal) return escapeHtml(newVal);
+  return renderWordDiff(oldVal, newVal);
+}
+
+// Render the updated document with inline diff markers against the original.
+// Activities/tasks are matched by position (the AI generally preserves order
+// when rewriting an existing process).
+function renderDiffPreview(newModel, oldModel) {
+  const o = oldModel || { activities: [] };
+  const n = newModel || { activities: [] };
+  const metaDiff = (label, oldVal, newVal) => {
+    const oldV = (oldVal || '').trim();
+    const newV = (newVal || '').trim();
+    if (oldV === newV) {
+      return '<p><strong>' + label + ':</strong> ' + (escapeHtml(newV) || '&mdash;') + '</p>';
+    }
+    return '<p><strong>' + label + ':</strong> ' + diffOrPlain(oldV, newV) + '</p>';
+  };
+
+  let html = '<h1 id="doc-title">' + diffOrPlain(o.title, n.title || 'Untitled process') + '</h1>';
+  html += '<p class="generated-line">Generated: ' + formatAusDate(new Date()) + '</p>';
+  html += '<div class="meta" id="doc-meta">';
+  html += '<p id="doc-meta-owner"><strong>Owner:</strong> ' + diffOrPlain(o.owner || '—', n.owner || '—') + '</p>';
+  html += '<p id="doc-meta-expert"><strong>Expert:</strong> ' + diffOrPlain(o.expert || '—', n.expert || '—') + '</p>';
+  html += '<div id="doc-meta-trigger">' + metaDiff('Trigger', o.trigger, n.trigger) + '</div>';
+  html += '<div id="doc-meta-inputs">' + metaDiff('Inputs', o.inputs, n.inputs) + '</div>';
+  html += '<div id="doc-meta-outputs">' + metaDiff('Outputs', o.outputs, n.outputs) + '</div>';
+  html += '</div>';
+  if (n.objective || o.objective) {
+    html += '<h2 id="doc-objective">Objective</h2><p>' + diffOrPlain(o.objective, n.objective) + '</p>';
+  }
+  if (n.background || o.background) {
+    html += '<h2 id="doc-background">Background</h2><p>' + diffOrPlain(o.background, n.background) + '</p>';
+  }
+  html += '<h2 id="doc-procedure">Procedure</h2>';
+
+  const newActs = n.activities || [];
+  const oldActs = o.activities || [];
+  const maxLen = Math.max(newActs.length, oldActs.length);
+
+  for (let i = 0; i < maxLen; i++) {
+    const newA = newActs[i];
+    const oldA = oldActs[i];
+
+    if (newA && !oldA) {
+      // Added activity — wrap whole block in green
+      html += '<div class="activity diff-activity-added" id="doc-activity-' + escapeHtml(newA.number).replace('.', '-') + '">';
+      html += '<div><span class="num">' + escapeHtml(newA.number) + '</span> <strong>' + escapeHtml(newA.title) + '</strong> <span class="diff-tag diff-tag-added">added</span></div>';
+      if (newA.role) html += '<div class="role">Role: ' + escapeHtml(newA.role) + '</div>';
+      (newA.tasks || []).forEach(t => {
+        html += '<div class="task"><strong>' + escapeHtml(t.letter) + '.</strong> ' + escapeHtml(t.text) + '</div>';
+      });
+      (newA.notes || []).forEach(nt => {
+        html += '<div class="note"><strong>NOTE:</strong> ' + escapeHtml(nt.title) + '<br>' + escapeHtml(nt.body || '') + '</div>';
+      });
+      html += '</div>';
+      continue;
+    }
+
+    if (oldA && !newA) {
+      // Removed activity — wrap whole block in red strikethrough
+      html += '<div class="activity diff-activity-removed">';
+      html += '<div><span class="num">' + escapeHtml(oldA.number) + '</span> <strong><del class="diff-del">' + escapeHtml(oldA.title) + '</del></strong> <span class="diff-tag diff-tag-removed">removed</span></div>';
+      if (oldA.role) html += '<div class="role"><del class="diff-del">Role: ' + escapeHtml(oldA.role) + '</del></div>';
+      (oldA.tasks || []).forEach(t => {
+        html += '<div class="task"><strong>' + escapeHtml(t.letter) + '.</strong> <del class="diff-del">' + escapeHtml(t.text) + '</del></div>';
+      });
+      html += '</div>';
+      continue;
+    }
+
+    // Both exist — diff their titles, roles, tasks, notes
+    const actId = escapeHtml(newA.number).replace('.', '-');
+    html += '<div class="activity" id="doc-activity-' + actId + '">';
+    html += '<div><span class="num">' + escapeHtml(newA.number) + '</span> <strong>' + diffOrPlain(oldA.title, newA.title) + '</strong></div>';
+    if (newA.role || oldA.role) {
+      html += '<div class="role">Role: ' + diffOrPlain(oldA.role || '', newA.role || '') + '</div>';
+    }
+    const newTasks = newA.tasks || [];
+    const oldTasks = oldA.tasks || [];
+    const taskMax = Math.max(newTasks.length, oldTasks.length);
+    for (let ti = 0; ti < taskMax; ti++) {
+      const nt = newTasks[ti];
+      const ot = oldTasks[ti];
+      if (nt && !ot) {
+        html += '<div class="task diff-task-added"><strong>' + escapeHtml(nt.letter) + '.</strong> <ins class="diff-ins">' + escapeHtml(nt.text) + '</ins> <span class="diff-tag diff-tag-added">added</span></div>';
+      } else if (ot && !nt) {
+        html += '<div class="task diff-task-removed"><strong>' + escapeHtml(ot.letter) + '.</strong> <del class="diff-del">' + escapeHtml(ot.text) + '</del> <span class="diff-tag diff-tag-removed">removed</span></div>';
+      } else {
+        const taskId = 'doc-task-' + actId + '-' + escapeHtml(nt.letter);
+        html += '<div class="task" id="' + taskId + '"><strong>' + escapeHtml(nt.letter) + '.</strong> ' + diffOrPlain(ot.text, nt.text) + '</div>';
+      }
+    }
+    // Notes — simple matched-by-position diff
+    const newNotes = newA.notes || [];
+    const oldNotes = oldA.notes || [];
+    const noteMax = Math.max(newNotes.length, oldNotes.length);
+    for (let ni = 0; ni < noteMax; ni++) {
+      const nn = newNotes[ni];
+      const on = oldNotes[ni];
+      if (nn && !on) {
+        html += '<div class="note diff-task-added"><strong>NOTE:</strong> <ins class="diff-ins">' + escapeHtml(nn.title) + '</ins><br><ins class="diff-ins">' + escapeHtml(nn.body || '') + '</ins></div>';
+      } else if (on && !nn) {
+        html += '<div class="note diff-task-removed"><strong>NOTE:</strong> <del class="diff-del">' + escapeHtml(on.title) + '</del><br><del class="diff-del">' + escapeHtml(on.body || '') + '</del></div>';
+      } else {
+        html += '<div class="note"><strong>NOTE:</strong> ' + diffOrPlain(on.title, nn.title) + '<br>' + diffOrPlain(on.body || '', nn.body || '') + '</div>';
+      }
+    }
+    html += '</div>';
+  }
+  return html;
+}
+
 function escapeHtml(s) {
   return (s == null ? '' : String(s))
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -5853,8 +7127,8 @@ function loadSampleIntoPaste() {
   const inputPaste = document.getElementById('inputPaste');
   if (inputForm) inputForm.hidden = true;
   if (inputPaste) inputPaste.hidden = false;
-  const toggleLabel = document.getElementById('toggleFormLabel');
-  if (toggleLabel) toggleLabel.textContent = 'Build with a form instead';
+  const toggleLabel = document.getElementById('buildFormCardLabel');
+  if (toggleLabel) toggleLabel.textContent = 'Build with a form';
   // Make sure the user actually SEES the sample load
   const inputZone = document.getElementById('inputZone');
   if (inputZone) {
@@ -5877,19 +7151,19 @@ function loadSampleIntoPaste() {
 function toggleInputForm() {
   const inputForm = document.getElementById('inputForm');
   const inputPaste = document.getElementById('inputPaste');
-  const toggleLabel = document.getElementById('toggleFormLabel');
+  const toggleLabel = document.getElementById('buildFormCardLabel');
   if (!inputForm || !inputPaste) return;
   const showingForm = !inputForm.hidden;
   if (showingForm) {
     // Toggle back to paste view
     inputForm.hidden = true;
     inputPaste.hidden = false;
-    if (toggleLabel) toggleLabel.textContent = 'Build with form';
+    if (toggleLabel) toggleLabel.textContent = 'Build with a form';
   } else {
     // Toggle to form view (textarea hidden, form fields shown)
     inputForm.hidden = false;
     inputPaste.hidden = true;
-    if (toggleLabel) toggleLabel.textContent = 'Back to paste';
+    if (toggleLabel) toggleLabel.textContent = 'Back to paste view';
   }
 }
 
@@ -5903,10 +7177,14 @@ if (trySampleLink) trySampleLink.addEventListener('click', (e) => {
   if (!tourSeen) startTour();
 });
 
-const toggleFormLink = document.getElementById('toggleFormLink');
-if (toggleFormLink) toggleFormLink.addEventListener('click', (e) => {
+// 'Build with a form' card in the orientation section — same toggle as before
+const buildFormCardBtn = document.getElementById('buildFormCardBtn');
+if (buildFormCardBtn) buildFormCardBtn.addEventListener('click', (e) => {
   e.preventDefault();
   toggleInputForm();
+  // Scroll up to the input zone so the user sees the form appear
+  const inputZone = document.getElementById('inputZone');
+  if (inputZone) inputZone.scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
 
 const downloadTemplateLink = document.getElementById('downloadTemplateLink');
@@ -6325,6 +7603,9 @@ if (restoreBtn) {
   const reviewIssuesBtn = document.getElementById('reviewIssuesBtn');
   function openFlagsSidebar() {
     if (!docSidebar) return;
+    // Reveal the detail area (doc + tabs + sidebar)
+    const detail = document.getElementById('postAnalyseDetail');
+    if (detail) detail.hidden = false;
     docSidebar.hidden = false;
     // Set the intro text based on the current flag count
     const intro = document.getElementById('issuesModalIntro');
@@ -6344,19 +7625,32 @@ if (restoreBtn) {
     if (docSidebar) docSidebar.hidden = true;
     if (reviewIssuesBtn) reviewIssuesBtn.classList.remove('is-active');
   }
-  if (reviewIssuesBtn) reviewIssuesBtn.addEventListener('click', openFlagsSidebar);
+  if (reviewIssuesBtn) reviewIssuesBtn.addEventListener('click', () => {
+    openFlagsSidebar();
+    // Hide the action cards and show the status strip
+    const cards = document.getElementById('resultsActionCards');
+    if (cards) cards.classList.add('hidden');
+    const ps = document.getElementById('pathStatus');
+    const pst = document.getElementById('pathStatusText');
+    if (pst) pst.innerHTML = '<strong>Reviewing opportunities</strong> yourself.';
+    if (ps) ps.classList.remove('hidden');
+    if (typeof window.showSummaryChips === 'function') window.showSummaryChips();
+  });
+  // Expose so the auto-apply flow can reuse it when flags remain
+  window.openFlagsSidebar = openFlagsSidebar;
   if (docSidebarClose) docSidebarClose.addEventListener('click', closeFlagsSidebar);
 
-  // Action card "Ask Copilot" — same behaviour as the burger-menu Ask Copilot
-  const actionAsk = document.getElementById('actionAskCopilotBtn');
-  const copilotModal = document.getElementById('copilotModal');
-  if (actionAsk && copilotModal) {
-    actionAsk.addEventListener('click', () => {
-      const modalWrap = document.getElementById('copilotModalWrap');
-      if (modalWrap && typeof launchPanelForCopilot === 'function') {
-        modalWrap.innerHTML = launchPanelForCopilot();
-      }
-      copilotModal.setAttribute('aria-hidden', 'false');
+  // Auto-apply quality enhancements — show consent modal first, then run.
+  const autoApplyBtn = document.getElementById('autoApplyBtn');
+  if (autoApplyBtn) {
+    autoApplyBtn.addEventListener('click', () => {
+      const modal = document.getElementById('autoApplyConsentModal');
+      // Reset checkbox + disable Continue every time the modal opens
+      const cb1 = document.getElementById('consentSensitive');
+      const proceed = document.getElementById('autoApplyConsentProceed');
+      if (cb1) cb1.checked = false;
+      if (proceed) proceed.disabled = true;
+      if (modal) modal.setAttribute('aria-hidden', 'false');
     });
   }
 
@@ -6592,17 +7886,20 @@ function launchPanelForCopilot() {
 const AI_BACKEND_URL = '/api/chat';
 
 // AI chat panel — replaces the Copilot launch panel with inline chat against /api/chat
-(function wireAIChat() {
-  const modal      = document.getElementById('copilotModal');
-  const askBtn     = document.getElementById('askCopilotBtn');
-  const closeBtn   = document.getElementById('copilotModalClose');
-  const closeFoot  = document.getElementById('copilotModalCloseFooter');
-  const messagesEl = document.getElementById('aiChatMessages');
-  const formEl     = document.getElementById('aiChatForm');
-  const inputEl    = document.getElementById('aiChatInput');
-  const sendBtn    = document.getElementById('aiChatSendBtn');
+// Factory — wires up a chat surface (modal OR inline). Each surface keeps its
+// own conversation history. The optional modalCfg connects open/close behaviour
+// to a modal wrapper; pass null for an inline surface.
+function createChatSurface(cfg) {
+  const messagesEl = document.getElementById(cfg.messagesId);
+  const formEl     = document.getElementById(cfg.formId);
+  const inputEl    = document.getElementById(cfg.inputId);
+  const sendBtn    = document.getElementById(cfg.sendBtnId);
+  if (!messagesEl || !formEl || !inputEl || !sendBtn) {
+    console.warn('[chat] surface elements missing for', cfg);
+    return;
+  }
 
-  // Conversation history kept in memory (cleared when the modal opens fresh)
+  // Conversation history kept in memory (cleared when the surface opens fresh)
   let history = [];
   let busy = false;
 
@@ -6796,37 +8093,985 @@ const AI_BACKEND_URL = '/api/chat';
     });
   }
 
-  // Modal open/close — same pattern as before
-  function openModal() {
-    if (!modal) return;
-    modal.setAttribute('aria-hidden', 'false');
-    setTimeout(() => { if (inputEl) inputEl.focus(); }, 60);
+  // Modal open/close — only wired if cfg.modal is supplied
+  const modal = cfg.modal ? document.getElementById(cfg.modal) : null;
+  if (modal) {
+    const openTrigger = cfg.openTrigger ? document.getElementById(cfg.openTrigger) : null;
+    const closeBtn = cfg.closeBtn ? document.getElementById(cfg.closeBtn) : null;
+    const closeFoot = cfg.closeFoot ? document.getElementById(cfg.closeFoot) : null;
+    const openModal = () => { modal.setAttribute('aria-hidden', 'false'); setTimeout(() => inputEl.focus(), 60); };
+    const closeModal = () => modal.setAttribute('aria-hidden', 'true');
+    if (openTrigger) openTrigger.addEventListener('click', openModal);
+    if (closeBtn) closeBtn.addEventListener('click', closeModal);
+    if (closeFoot) closeFoot.addEventListener('click', closeModal);
+    modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && modal.getAttribute('aria-hidden') === 'false') closeModal();
+    });
   }
-  function closeModal() { if (modal) modal.setAttribute('aria-hidden', 'true'); }
-  if (askBtn) askBtn.addEventListener('click', openModal);
-  if (closeBtn) closeBtn.addEventListener('click', closeModal);
-  if (closeFoot) closeFoot.addEventListener('click', closeModal);
-  if (modal) modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && modal && modal.getAttribute('aria-hidden') === 'false') closeModal();
-  });
-})();
+}
 
-// Auto-prime the AI when the "Apply the changes with AI" action card is clicked
-// — fires the "Review my process" quick prompt so the AI starts reviewing
-// straight away rather than waiting for the user to type.
-(function wireApplyCardAutoPrompt() {
-  const actionBtn = document.getElementById('actionAskCopilotBtn');
-  if (!actionBtn) return;
-  actionBtn.addEventListener('click', () => {
-    // Wait a tick for the modal to be visible + chips to be wired, then click the first quick prompt
-    setTimeout(() => {
-      const firstQuick = document.querySelector('.ai-quick');
-      if (firstQuick) firstQuick.click();
-    }, 180);
-  });
-})();
+// Wire both surfaces — modal (for the burger menu Ask AI) and inline (home page split).
+createChatSurface({
+  messagesId: 'aiChatMessages',
+  formId:     'aiChatForm',
+  inputId:    'aiChatInput',
+  sendBtnId:  'aiChatSendBtn',
+  modal:      'copilotModal',
+  openTrigger:'askCopilotBtn',
+  closeBtn:   'copilotModalClose',
+  closeFoot:  'copilotModalCloseFooter',
+});
+createChatSurface({
+  messagesId: 'inlineChatMessages',
+  formId:     'inlineChatForm',
+  inputId:    'inlineChatInput',
+  sendBtnId:  'inlineChatSendBtn',
+});
+
+// Auto-prime IIFE removed — Auto-apply is now inline (see startAutoApply).
+// Users can still open the chat modal manually via the burger menu / Ask AI.
 
 </script>
-</body>
-</html>
+
+<script>
+// ============================================================
+// AUTO-APPLY (inline) — calls /api/chat to get a rewritten version of the
+// draft, parses the AI's three code blocks, rebuilds the model preserving
+// original metadata (owner/expert/trigger/inputs/outputs), re-runs the rules
+// engine and re-renders the doc preview. Users can toggle between the
+// updated and original view.
+// ============================================================
+(function wireAutoApply() {
+  let originalSnapshot = null;   // { model, issues, mermaid, bpmnXml, recommendation, docHtml }
+  let updatedSnapshot = null;
+  let viewMode = 'updated';      // 'updated' or 'original'
+
+  // Parse three triple-backtick fenced blocks from a markdown reply.
+  function parseAiThreeBlocks(reply) {
+    const re = /```[a-zA-Z]*\n([\s\S]*?)```/g;
+    const blocks = [];
+    let m;
+    while ((m = re.exec(reply || '')) !== null) blocks.push(m[1].trim());
+    return blocks;
+  }
+
+  // Parse the Supporting Fields block — two headers (Process Objective,
+  // Process Background) with text underneath each.
+  function parseSupporting(block) {
+    const lines = (block || '').split('\n');
+    let obj = '', bg = '', mode = null;
+    for (const raw of lines) {
+      const line = raw.trim();
+      if (!line) continue;
+      if (/^process\s+objective/i.test(line)) { mode = 'obj'; continue; }
+      if (/^process\s+background/i.test(line)) { mode = 'bg'; continue; }
+      if (mode === 'obj') obj += (obj ? ' ' : '') + line;
+      else if (mode === 'bg') bg += (bg ? ' ' : '') + line;
+    }
+    return { objective: obj.trim(), background: bg.trim() };
+  }
+
+  // Convert the AI's Process Map block (activity [Role] + tab-indented tasks
+  // + NOTE/answer) into our parser's expected format. We rely on the parser's
+  // bullet-task support: each tab-indented task becomes '- task'.
+  function processMapToParserLines(block) {
+    const lines = (block || '').split('\n');
+    const out = [];
+    let actNum = 0;
+    let lastWasNote = false;
+    for (const raw of lines) {
+      if (!raw.trim()) { out.push(''); lastWasNote = false; continue; }
+      const isIndented = raw.startsWith('\t') || raw.startsWith('    ');
+      const trimmed = raw.trim();
+      if (isIndented) {
+        // Task — prefix with bullet so the parser auto-assigns letters
+        out.push('- ' + trimmed);
+        lastWasNote = false;
+        continue;
+      }
+      // NOTE: line
+      const nm = trimmed.match(/^NOTE\s*[:\s]+\s*(.+)$/i);
+      if (nm) {
+        out.push('NOTE ' + nm[1]);
+        lastWasNote = true;
+        continue;
+      }
+      // Activity line — "name [Role]"
+      const am = trimmed.match(/^(.+?)\s*\[(.+?)\]\s*$/);
+      if (am) {
+        actNum++;
+        if (out.length && out[out.length-1] !== '') out.push('');
+        out.push(actNum + '.0 ' + am[1].trim());
+        out.push('Role: ' + am[2].trim());
+        lastWasNote = false;
+        continue;
+      }
+      // Bare line — most likely a NOTE answer continuing the previous line
+      if (lastWasNote) {
+        out.push(trimmed);
+      } else {
+        out.push(trimmed);
+      }
+    }
+    return out.join('\n');
+  }
+
+  // Build a parser-compatible text input from the AI's three blocks plus the
+  // original metadata fields (which the AI doesn't re-emit).
+  function reconstructInputFromAi(blocks, originalModel) {
+    const aiTitle = (blocks[0] || '').split('\n')[0].trim();
+    const { objective, background } = parseSupporting(blocks[1] || '');
+    const mapText = processMapToParserLines(blocks[2] || '');
+    const header = [];
+    header.push('Process name: ' + (aiTitle || originalModel.title || 'Updated process'));
+    if (originalModel.owner) header.push('Owner: ' + originalModel.owner);
+    if (originalModel.expert) header.push('Expert: ' + originalModel.expert);
+    if (originalModel.trigger) header.push('Trigger: ' + originalModel.trigger);
+    if (originalModel.inputs) header.push('Inputs: ' + originalModel.inputs);
+    if (originalModel.outputs) header.push('Outputs: ' + originalModel.outputs);
+    if (objective) header.push('Objective: ' + objective);
+    if (background) header.push('Background: ' + background);
+    return header.join('\n') + '\n\n' + mapText;
+  }
+
+  function snapshotCurrentState() {
+    return {
+      model: currentModel ? JSON.parse(JSON.stringify(currentModel)) : null,
+      issues: Array.isArray(currentIssues) ? currentIssues.slice() : [],
+      mermaid: currentMermaid || '',
+      bpmnXml: currentBpmnXml || '',
+      recommendation: currentRecommendation || null,
+      docHtml: (document.getElementById('docPreview') || {}).innerHTML || ''
+    };
+  }
+
+  async function startAutoApply() {
+    // Hide cards, show loading state
+    const cards = document.getElementById('resultsActionCards');
+    const loading = document.getElementById('autoApplyLoading');
+    const detail = document.getElementById('postAnalyseDetail');
+    if (cards) cards.classList.add('hidden');
+    if (loading) loading.classList.remove('hidden');
+    if (detail) detail.hidden = true;
+    // Show the path-status strip (hidden during loading, shown alongside results)
+    const pathStatus = document.getElementById('pathStatus');
+    const pathStatusText = document.getElementById('pathStatusText');
+    if (pathStatusText) pathStatusText.innerHTML = '<strong>Auto-apply</strong> is running.';
+    if (pathStatus) pathStatus.classList.add('hidden');
+
+    // Snapshot the original state for the toggle
+    originalSnapshot = snapshotCurrentState();
+
+    // Pull the current doc text + issues to send as context
+    let documentText = '';
+    try {
+      const dp = document.getElementById('docPreview');
+      documentText = dp ? (dp.innerText || dp.textContent || '') : '';
+    } catch (e) {}
+    const issues = (Array.isArray(currentIssues) ? currentIssues : []).map(i => ({
+      severity: i.severity, message: i.message, suggestion: i.suggestion, location: i.location, id: i.id
+    }));
+
+    const prompt =
+      'SYSTEM OVERRIDE \u2014 Auto-apply tool action.\n\n' +
+      'This request comes from the tool\'s in-place "Auto-apply quality enhancements" button, ' +
+      'NOT a conversational chat. Bypass the NINTEX EXPORT confirmation flow entirely. ' +
+      'Do NOT ask whether the user wants the result exported \u2014 they have already chosen ' +
+      'auto-apply via the UI.\n\n' +
+      'Apply every flagged quality update to the supplied process. Output ONLY three fenced ' +
+      'code blocks in this exact order: (1) Process Title \u2014 single line; (2) Supporting Fields ' +
+      '\u2014 "Process Objective\\n<one-two sentences>\\n\\nProcess Background\\n<two-three sentences>"; ' +
+      '(3) Process Map \u2014 activity name followed by [Role Name], each task on its own line indented ' +
+      'with a single tab character, NOTE: question + answer on the next line, blank line between activities.\n\n' +
+      'TITLE PREFIX REQUIREMENT: The process title MUST begin with "CoVE - " (with the space-dash-space). ' +
+      'If the original title already has a "CoVE - <Dept> - " prefix (e.g. "CoVE - PBT - "), preserve ' +
+      'that exact prefix verbatim and only rewrite the part after it. If the original is missing the ' +
+      'prefix entirely, prepend "CoVE - " to your rewritten title. The verb-first rule applies to the ' +
+      'part AFTER the prefix, never to the prefix itself.\n\n' +
+      'SENTENCE LENGTH REQUIREMENT (CoVE Rule 5): Keep every sentence in the Objective, Background, and ' +
+      'task descriptions under 20 words. The tool averages sentence length across all of this content ' +
+      'and flags anything over 22 words. Break compound sentences using "and", "which", "so that", ' +
+      '"because" into two shorter sentences. Each task description should be a single short imperative ' +
+      'clause (e.g. "Verify the staff member\'s details" not "Verify the staff member\'s details ' +
+      'against the HR system to confirm they have completed all pre-onboarding requirements"). ' +
+      'Before you emit the blocks, scan your Objective + Background + tasks and shorten anything over ' +
+      '20 words.\n\n' +
+      'No preamble. No commentary. No "Here are the blocks" sentence. No closing question. ' +
+      'No <<nintex-ready>> marker. The very first character of your reply must be the opening ``` of the first block.';
+
+    try {
+      const resp = await fetch(AI_BACKEND_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [{ role: 'user', content: prompt }],
+          document: documentText,
+          issues,
+          temperature: 0.2,
+          max_tokens: 3000
+        })
+      });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        throw new Error(err.error || ('HTTP ' + resp.status));
+      }
+      const data = await resp.json();
+      const reply = data.reply || '';
+      let blocks = parseAiThreeBlocks(reply);
+      // Diagnostic — log the raw reply + block count so we can see what the AI returned
+      console.log('[auto-apply] AI reply blocks:', blocks.length, blocks);
+      console.log('[auto-apply] AI raw reply:', reply);
+      if (blocks.length === 2) {
+        // Most common collapse: title in block 1, supporting+process map combined in block 2.
+        // Try to split block 2 on the first activity-with-role line.
+        const combined = blocks[1];
+        const splitMatch = combined.match(/(^|\n)([^\n]+\[[^\]]+\])\s*$/m);
+        if (splitMatch) {
+          const idx = combined.indexOf(splitMatch[2]);
+          if (idx > 0) {
+            const supporting = combined.slice(0, idx).trim();
+            const processMap = combined.slice(idx).trim();
+            blocks = [blocks[0], supporting, processMap];
+            console.log('[auto-apply] recovered 3 blocks from 2 by splitting on first activity');
+          }
+        }
+      }
+      if (blocks.length < 3) {
+        const preview = (reply || '').slice(0, 240).replace(/\s+/g, ' ');
+        throw new Error('AI returned ' + blocks.length + ' code block' +
+          (blocks.length === 1 ? '' : 's') + ' (need 3). Reply preview: "' + preview + '…"');
+      }
+
+      // Rebuild the input text and re-parse
+      const rebuiltInput = reconstructInputFromAi(blocks, originalSnapshot.model || {});
+      const newModel = parseStructuredText(rebuiltInput);
+      if (!newModel || !newModel.activities || newModel.activities.length === 0) {
+        throw new Error('Could not parse the AI rewrite into a valid process model.');
+      }
+
+      // Re-run the full pipeline
+      currentModel = newModel;
+      currentIssues = runRulesEngine(newModel);
+      currentRecommendation = recommendArtefactType(newModel);
+      currentMermaid = buildMermaid(newModel);
+      currentBpmnXml = buildBpmnXml(newModel);
+
+      // Snapshot the updated state too, so the toggle can swap to it again
+      // after the user has flipped to original.
+      await renderResults();
+      updatedSnapshot = snapshotCurrentState();
+      viewMode = 'updated';
+
+      // Tailor the banner text to whether all flags were resolved
+      // Compare only actionable flags (informational tips aren't counted)
+      const remainingFlags = currentIssues.filter(i => !i.informational);
+      const originalFlags = (originalSnapshot.issues || []).filter(i => !i.informational);
+      const remaining = remainingFlags.length;
+      const original = originalFlags.length;
+      const resolved = Math.max(0, original - remaining);
+      const bannerText = document.getElementById('updatedBannerText');
+      if (bannerText) {
+        if (remaining === 0) {
+          bannerText.innerHTML =
+            '<strong>All ' + original + ' flag' + (original===1?'':'s') + ' resolved.</strong> ' +
+            'The AI applied every quality enhancement. Review the updated process below.';
+        } else {
+          bannerText.innerHTML =
+            '<strong>Quality enhancements applied.</strong> The AI addressed ' + resolved +
+            ' of ' + original + ' flags. ' + remaining + ' still need your input \u2014 see the sidebar.';
+        }
+      }
+
+      // Show the detail area + the toggle banner.
+      // Hide the pre-apply summary lines (flag headline + auto-fix note) since
+      // they describe the original state, not the updated one.
+      const flagEl = document.getElementById('flagHeadline');
+      if (flagEl) flagEl.classList.add('hidden');
+      const autoFix = document.getElementById('combinedFixBanner');
+      if (autoFix) autoFix.classList.add('hidden');
+      const updatedBanner = document.getElementById('updatedBanner');
+      if (updatedBanner) updatedBanner.classList.remove('hidden');
+      if (detail) detail.hidden = false;
+      setActiveToggle('updated');
+      // Show the path-status strip — user chose Auto-apply
+      const ps = document.getElementById('pathStatus');
+      const pst = document.getElementById('pathStatusText');
+      if (pst) pst.innerHTML = '<strong>Auto-apply</strong> complete.';
+      if (ps) ps.classList.remove('hidden');
+      if (typeof window.showSummaryChips === 'function') window.showSummaryChips();
+
+      // Precompute the diff HTML so the 'Show changes' toggle is instant.
+      // The default view is the clean updated doc \u2014 renderResults already wrote that
+      // to docPreview, so we just stash it on the snapshot.
+      try {
+        updatedSnapshot.diffHtml = renderDiffPreview(currentModel, originalSnapshot.model);
+      } catch (e) {
+        console.warn('[auto-apply] diff render failed; Show changes toggle disabled:', e);
+        updatedSnapshot.diffHtml = '';
+      }
+      // Re-capture the clean updated HTML now that renderResults has run
+      updatedSnapshot.docHtml = (document.getElementById('docPreview') || {}).innerHTML || '';
+
+      // Open the flag sidebar so users can see what still needs their input
+      if (Array.isArray(currentIssues) && currentIssues.length > 0
+          && typeof window.openFlagsSidebar === 'function') {
+        window.openFlagsSidebar();
+      }
+    } catch (err) {
+      console.error('[auto-apply] failed:', err);
+      if (typeof showToast === 'function') {
+        // Surface a longer error toast that includes a snippet so the user can
+        // tell us what went wrong if they want.
+        const msg = (err.message || String(err)).slice(0, 320);
+        showToast('Auto-apply failed: ' + msg + ' \u2014 Try the manual review, or paste this error to the team.', 'error', 12000);
+      }
+      // Re-show the cards so the user can retry or choose the manual path
+      if (cards) cards.classList.remove('hidden');
+    } finally {
+      if (loading) loading.classList.add('hidden');
+    }
+  }
+
+  function setActiveToggle(which) {
+    const u = document.getElementById('viewUpdatedBtn');
+    const c = document.getElementById('viewChangesBtn');
+    const o = document.getElementById('viewOriginalBtn');
+    const set = (el, on) => {
+      if (!el) return;
+      el.classList.toggle('is-active', on);
+      el.setAttribute('aria-selected', String(on));
+    };
+    set(u, which === 'updated');
+    set(c, which === 'changes');
+    set(o, which === 'original');
+  }
+
+  async function applySnapshot(snap) {
+    if (!snap || !snap.model) return;
+    currentModel = JSON.parse(JSON.stringify(snap.model));
+    currentIssues = snap.issues.slice();
+    currentRecommendation = snap.recommendation;
+    currentMermaid = snap.mermaid;
+    currentBpmnXml = snap.bpmnXml;
+    await renderResults();
+    const dp = document.getElementById('docPreview');
+    if (dp && snap.docHtml) dp.innerHTML = snap.docHtml;
+    // Keep the banner + cards-hidden state intact across the toggle
+    const detail = document.getElementById('postAnalyseDetail');
+    if (detail) detail.hidden = false;
+    const cards = document.getElementById('resultsActionCards');
+    if (cards) cards.classList.add('hidden');
+    const updatedBanner = document.getElementById('updatedBanner');
+    if (updatedBanner) updatedBanner.classList.remove('hidden');
+  }
+
+  // Wire the toggle buttons. Three views:
+  //   - Updated (default): clean updated doc, no diff markers
+  //   - Show changes: inline diff view (strikethroughs + highlights)
+  //   - Original: clean original (pre-AI) doc
+  document.addEventListener('DOMContentLoaded', () => {
+    const u = document.getElementById('viewUpdatedBtn');
+    const c = document.getElementById('viewChangesBtn');
+    const o = document.getElementById('viewOriginalBtn');
+    if (u) u.addEventListener('click', () => {
+      if (!updatedSnapshot) return;
+      viewMode = 'updated';
+      setActiveToggle('updated');
+      const dp = document.getElementById('docPreview');
+      if (dp && updatedSnapshot.docHtml) dp.innerHTML = updatedSnapshot.docHtml;
+    });
+    if (c) c.addEventListener('click', () => {
+      if (!updatedSnapshot || !updatedSnapshot.diffHtml) {
+        if (typeof showToast === 'function') {
+          showToast('No change-tracking available for this update.', 'info', 4500);
+        }
+        return;
+      }
+      viewMode = 'changes';
+      setActiveToggle('changes');
+      const dp = document.getElementById('docPreview');
+      if (dp) dp.innerHTML = updatedSnapshot.diffHtml;
+    });
+    if (o) o.addEventListener('click', () => {
+      if (!originalSnapshot) return;
+      viewMode = 'original';
+      setActiveToggle('original');
+      const dp = document.getElementById('docPreview');
+      if (dp && originalSnapshot.docHtml) dp.innerHTML = originalSnapshot.docHtml;
+    });
+  });
+
+  // Expose for the card click handler
+  window.startAutoApply = startAutoApply;
+})();
+</script>
+
+
+<script>
+// PAT home — both panels visible at once now; no two-path chooser to wire.
+</script>
+
+
+<script>
+// FAQ overlay — show curated questions, click to send into the inline chat
+(function wireFaqOverlay() {
+  document.addEventListener('DOMContentLoaded', () => {
+    const openBtn = document.getElementById('browseFaqsBtn');
+    const closeBtn = document.getElementById('faqOverlayCloseBtn');
+    const overlay = document.getElementById('faqOverlay');
+    const messagesEl = document.getElementById('inlineChatMessages');
+    if (!openBtn || !overlay) return;
+
+    const open = () => { overlay.hidden = false; };
+    const close = () => { overlay.hidden = true; };
+
+    openBtn.addEventListener('click', open);
+    if (closeBtn) closeBtn.addEventListener('click', close);
+
+    // Esc closes the overlay
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && !overlay.hidden) close();
+    });
+
+    // Click any FAQ item -> send into chat (uses the existing quick-prompt
+    // delegated handler on inlineChatMessages by injecting a synthetic chip).
+    overlay.addEventListener('click', e => {
+      const item = e.target.closest('.faq-item');
+      if (!item || !item.dataset.prompt) return;
+      const prompt = item.dataset.prompt;
+      close();
+      // Trigger the same click path the welcome chips use
+      const fakeChip = document.createElement('button');
+      fakeChip.className = 'ai-quick';
+      fakeChip.dataset.prompt = prompt;
+      fakeChip.style.display = 'none';
+      if (messagesEl) {
+        messagesEl.appendChild(fakeChip);
+        fakeChip.click();
+        // Clean up the synthetic chip after a tick
+        setTimeout(() => fakeChip.remove(), 50);
+      }
+    });
+  });
+})();
+</script>
+
+
+<script>
+// Auto-fix 'what changed?' modal — opens when the user clicks the inline button
+(function wireAutofixModal() {
+  document.addEventListener('DOMContentLoaded', () => {
+    const modal = document.getElementById('autofixModal');
+    const closeBtn = document.getElementById('autofixModalClose');
+    const closeFoot = document.getElementById('autofixModalCloseFooter');
+    if (!modal) return;
+    const open = () => modal.setAttribute('aria-hidden', 'false');
+    const close = () => modal.setAttribute('aria-hidden', 'true');
+    // Delegated click — the trigger button is created dynamically by renderResults
+    document.addEventListener('click', e => {
+      if (e.target && e.target.id === 'autofixModalOpen') open();
+    });
+    if (closeBtn) closeBtn.addEventListener('click', close);
+    if (closeFoot) closeFoot.addEventListener('click', close);
+    modal.addEventListener('click', e => { if (e.target === modal) close(); });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && modal.getAttribute('aria-hidden') === 'false') close();
+    });
+  });
+})();
+</script>
+
+
+<script>
+// Auto-apply acknowledgement modal — must tick both boxes before the AI runs
+(function wireAutoApplyConsent() {
+  document.addEventListener('DOMContentLoaded', () => {
+    const modal = document.getElementById('autoApplyConsentModal');
+    if (!modal) return;
+    const closeBtn = document.getElementById('autoApplyConsentClose');
+    const cancelBtn = document.getElementById('autoApplyConsentCancel');
+    const proceedBtn = document.getElementById('autoApplyConsentProceed');
+    const cb1 = document.getElementById('consentSensitive');
+
+    function close() { modal.setAttribute('aria-hidden', 'true'); }
+    function refreshProceed() {
+      if (proceedBtn) proceedBtn.disabled = !(cb1 && cb1.checked);
+    }
+    if (cb1) cb1.addEventListener('change', refreshProceed);
+    if (closeBtn) closeBtn.addEventListener('click', close);
+    if (cancelBtn) cancelBtn.addEventListener('click', close);
+    if (proceedBtn) proceedBtn.addEventListener('click', () => {
+      close();
+      if (typeof window.startAutoApply === 'function') {
+        // Tiny delay so the modal animates out cleanly before the loading state appears
+        setTimeout(() => window.startAutoApply(), 80);
+      }
+    });
+    modal.addEventListener('click', e => { if (e.target === modal) close(); });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && modal.getAttribute('aria-hidden') === 'false') close();
+    });
+  });
+})();
+</script>
+
+
+<script>
+// Inline flags view toggle — sidebar (default) or inline markers on the doc
+(function wireInlineFlagsView() {
+  const KEY = 'pat-flags-view-mode'; // localStorage key
+  let mode = 'sidebar';
+  try { const saved = localStorage.getItem(KEY); if (saved === 'inline') mode = 'inline'; } catch (e) {}
+
+  function getIssues() {
+    return (typeof currentIssues !== 'undefined' && Array.isArray(currentIssues)) ? currentIssues : [];
+  }
+
+  function severityClass(sev) { return 'severity-' + (sev || 'info'); }
+  function severityChar(sev) {
+    if (sev === 'error') return '!';
+    if (sev === 'warning') return '\u25B2';   // ▲
+    return 'i';
+  }
+
+  function clearInlineFlags() {
+    document.querySelectorAll('.inline-flag-marker, .inline-flag-callout').forEach(n => n.remove());
+    const banner = document.getElementById('inlineProcessFlags');
+    if (banner) banner.remove();
+  }
+
+  function applyInlineFlags() {
+    clearInlineFlags();
+    const docPreview = document.getElementById('docPreview');
+    if (!docPreview) return;
+    const issues = getIssues();
+    if (issues.length === 0) return;
+
+    // Process-wide flags get a banner above the procedure section
+    const procEl = document.getElementById('doc-procedure');
+    const processWide = [];
+
+    issues.forEach((issue, idx) => {
+      issue._idx = idx;
+      const resolver = window.resolveJumpTarget;
+      const targetId = (typeof resolver === 'function')
+        ? resolver(issue.location || '', issue.message || '', issue.id || '')
+        : null;
+      if (!targetId) {
+        processWide.push(issue);
+        return;
+      }
+      const target = document.getElementById(targetId);
+      if (!target) {
+        processWide.push(issue);
+        return;
+      }
+      // Inject a marker into the target element
+      const marker = document.createElement('span');
+      marker.className = 'inline-flag-marker ' + severityClass(issue.severity);
+      marker.setAttribute('role', 'button');
+      marker.setAttribute('tabindex', '0');
+      marker.setAttribute('aria-label', issue.severity + ': ' + issue.message);
+      marker.title = issue.message;
+      marker.textContent = severityChar(issue.severity);
+      marker.dataset.issueIdx = String(idx);
+      target.appendChild(marker);
+
+      const expand = () => {
+        // Toggle: if a callout already exists for this issue, remove it
+        const existing = document.querySelector('.inline-flag-callout[data-issue-idx="' + idx + '"]');
+        if (existing) { existing.remove(); return; }
+        const callout = document.createElement('div');
+        callout.className = 'inline-flag-callout ' + severityClass(issue.severity);
+        callout.dataset.issueIdx = String(idx);
+        const sevWord = issue.severity === 'error' ? 'Error'
+                        : issue.severity === 'warning' ? 'Warning'
+                        : 'Suggestion';
+        callout.innerHTML =
+          '<span class="ifc-badge">' + sevWord + '</span>' +
+          '<div class="ifc-body"><strong>' + issue.message + '</strong>' +
+          (issue.suggestion ? '<em>' + issue.suggestion + '</em>' : '') + '</div>' +
+          '<button class="ifc-dismiss" type="button" aria-label="Close">&times;</button>';
+        callout.querySelector('.ifc-dismiss').addEventListener('click', e => { e.stopPropagation(); callout.remove(); });
+        // Insert callout after the target's parent activity block, or after the target itself
+        target.insertAdjacentElement('afterend', callout);
+      };
+      marker.addEventListener('click', expand);
+      marker.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); expand(); }
+      });
+    });
+
+    // Render process-wide banner
+    if (processWide.length > 0 && procEl) {
+      const banner = document.createElement('div');
+      banner.id = 'inlineProcessFlags';
+      banner.className = 'inline-process-flags';
+      banner.innerHTML = '<strong>' + processWide.length + ' process-wide ' +
+        (processWide.length === 1 ? 'item' : 'items') + ':</strong><ul>' +
+        processWide.map(i => '<li>' + i.message + (i.suggestion ? ' — <em>' + i.suggestion + '</em>' : '') + '</li>').join('') +
+        '</ul>';
+      procEl.insertAdjacentElement('beforebegin', banner);
+    }
+  }
+
+  function setMode(next) {
+    mode = next;
+    try { localStorage.setItem(KEY, mode); } catch (e) {}
+    const sidebarBtn = document.getElementById('flagsViewSidebarBtn');
+    const inlineBtn  = document.getElementById('flagsViewInlineBtn');
+    const sidebar = document.getElementById('docSidebar');
+    if (sidebarBtn) { sidebarBtn.classList.toggle('is-active', mode === 'sidebar'); sidebarBtn.setAttribute('aria-selected', String(mode === 'sidebar')); }
+    if (inlineBtn)  { inlineBtn.classList.toggle('is-active', mode === 'inline');  inlineBtn.setAttribute('aria-selected', String(mode === 'inline')); }
+    if (sidebar) sidebar.classList.toggle('inline-mode', mode === 'inline');
+    if (mode === 'inline') applyInlineFlags();
+    else clearInlineFlags();
+  }
+
+  // Expose so re-renders can re-apply
+  window.refreshInlineFlags = function () { if (mode === 'inline') applyInlineFlags(); };
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const sidebarBtn = document.getElementById('flagsViewSidebarBtn');
+    const inlineBtn  = document.getElementById('flagsViewInlineBtn');
+    if (sidebarBtn) sidebarBtn.addEventListener('click', () => setMode('sidebar'));
+    if (inlineBtn)  inlineBtn.addEventListener('click',  () => setMode('inline'));
+    // Restore saved mode visually (rendering happens after analyse)
+    setMode(mode);
+  });
+})();
+</script>
+
+
+<script>
+// 'Switch path' button — brings the two action cards back so the user can pick again
+(function wirePathStatusSwitch() {
+  document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('pathStatusSwitch');
+    if (!btn) return;
+    btn.addEventListener('click', () => {
+      const cards = document.getElementById('resultsActionCards');
+      const ps = document.getElementById('pathStatus');
+      if (cards) cards.classList.remove('hidden');
+      if (ps) ps.classList.add('hidden');
+      // Scroll to the cards so the user sees them again
+      if (cards) cards.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  });
+})();
+</script>
+
+
+<script>
+// Discreet summary chips — show counts in the corner instead of inline banners
+(function wireSummaryChips() {
+  function showChips() {
+    const flagEl = document.getElementById('flagHeadline');
+    const autoFix = document.getElementById('combinedFixBanner');
+    const chipsWrap = document.getElementById('summaryChips');
+    const chipOpps = document.getElementById('summaryChipOpps');
+    const chipFixes = document.getElementById('summaryChipFixes');
+    const oppsCount = document.getElementById('summaryChipOppsCount');
+    const fixesCount = document.getElementById('summaryChipFixesCount');
+
+    // Read counts from existing data
+    const issues = (typeof currentIssues !== 'undefined' ? currentIssues : [])
+      .filter(i => !i.informational);
+    const totalOpps = issues.length;
+    const autoFixHidden = autoFix && autoFix.classList.contains('hidden');
+    const fixesText = (document.getElementById('combinedFixBannerText') || {}).innerText || '';
+    const fixesMatch = fixesText.match(/(\d+)/);
+    const fixesNum = fixesMatch ? parseInt(fixesMatch[1], 10) : 0;
+
+    // Populate chip counts
+    if (oppsCount) oppsCount.textContent = String(totalOpps);
+    if (fixesCount) fixesCount.textContent = String(fixesNum);
+
+    // Hide chips that have nothing to report
+    if (chipOpps) chipOpps.style.display = (totalOpps > 0) ? '' : 'none';
+    if (chipFixes) chipFixes.style.display = (!autoFixHidden && fixesNum > 0) ? '' : 'none';
+
+    // Hide the inline banners
+    if (flagEl) flagEl.classList.add('hidden');
+    if (autoFix) autoFix.classList.add('hidden');
+
+    // Show the chips wrap only if at least one chip is visible
+    if (chipsWrap) {
+      const anyVisible = (totalOpps > 0) || (!autoFixHidden && fixesNum > 0);
+      chipsWrap.classList.toggle('hidden', !anyVisible);
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    // Opps chip — scroll to the sidebar / inline flag area
+    const chipOpps = document.getElementById('summaryChipOpps');
+    if (chipOpps) chipOpps.addEventListener('click', () => {
+      const sidebar = document.getElementById('docSidebar');
+      if (sidebar && !sidebar.hidden) {
+        sidebar.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else if (typeof window.openFlagsSidebar === 'function') {
+        window.openFlagsSidebar();
+      }
+    });
+    // Fixes chip — open the 'what I changed' modal
+    const chipFixes = document.getElementById('summaryChipFixes');
+    if (chipFixes) chipFixes.addEventListener('click', () => {
+      const m = document.getElementById('autofixModal');
+      if (m) m.setAttribute('aria-hidden', 'false');
+    });
+  });
+
+  window.showSummaryChips = showChips;
+})();
+</script>
+
+
+<script>
+// Save edits — extract the edited model from the doc preview DOM and re-render
+// the workflow (BPMN + Mermaid) so it reflects the user's text changes.
+(function wireSaveEdits() {
+  function extractText(el) {
+    if (!el) return '';
+    return (el.innerText || el.textContent || '').replace(/\s+/g, ' ').trim();
+  }
+  function stripLabel(text, label) {
+    // "Owner: Sarah Chen" -> "Sarah Chen". Tolerates dash separators too.
+    const re = new RegExp('^\\s*' + label + '\\s*[:\\-\\u2013\\u2014]\\s*', 'i');
+    return text.replace(re, '').trim();
+  }
+
+  function extractModelFromDocPreview() {
+    const dp = document.getElementById('docPreview');
+    if (!dp || typeof currentModel === 'undefined' || !currentModel) return null;
+    const m = JSON.parse(JSON.stringify(currentModel));
+
+    const titleEl = dp.querySelector('#doc-title');
+    if (titleEl) m.title = extractText(titleEl);
+
+    // Meta fields — strip the bold label prefix, treat '—' as empty
+    const metaFields = [
+      { id: 'doc-meta-owner', label: 'Owner', key: 'owner' },
+      { id: 'doc-meta-expert', label: 'Expert', key: 'expert' },
+      { id: 'doc-meta-trigger', label: 'Trigger', key: 'trigger' },
+      { id: 'doc-meta-inputs', label: 'Inputs', key: 'inputs' },
+      { id: 'doc-meta-outputs', label: 'Outputs', key: 'outputs' }
+    ];
+    metaFields.forEach(({ id, label, key }) => {
+      const el = dp.querySelector('#' + id);
+      if (!el) {
+        console.warn('[save-edits] missing element for', id, '— keeping previous value:', m[key]);
+        return;
+      }
+      let txt = stripLabel(extractText(el), label);
+      // Collapse internal whitespace + strip Unicode dashes used for placeholder
+      txt = txt.replace(/\s+/g, ' ').trim();
+      if (txt === '\u2014' || txt === '-' || txt === '\u2013') txt = '';
+      m[key] = txt;
+    });
+
+    // Objective + Background — h2 followed by <p>
+    const obj = dp.querySelector('#doc-objective');
+    if (obj && obj.nextElementSibling) m.objective = extractText(obj.nextElementSibling);
+    const bg = dp.querySelector('#doc-background');
+    if (bg && bg.nextElementSibling) m.background = extractText(bg.nextElementSibling);
+
+    // Activities — rebuild from the DOM
+    const actEls = dp.querySelectorAll('.activity');
+    if (actEls.length > 0) {
+      m.activities = [];
+      actEls.forEach((actEl, idx) => {
+        const numEl = actEl.querySelector('.num');
+        const number = numEl ? extractText(numEl) : (idx + 1) + '.0';
+        // First .div containing the activity title — find the first <strong> that isn't the number
+        let title = '';
+        const firstDiv = actEl.querySelector(':scope > div');
+        if (firstDiv) {
+          // Strip the .num text from the start
+          let fullText = extractText(firstDiv);
+          if (numEl) fullText = fullText.replace(number, '').trim();
+          title = fullText;
+        }
+        const roleEl = actEl.querySelector('.role');
+        const role = roleEl ? stripLabel(extractText(roleEl), 'Role') : '';
+
+        const tasks = [];
+        actEl.querySelectorAll('.task').forEach(taskEl => {
+          const fullText = extractText(taskEl);
+          // Letter prefix like "a." or "a"
+          const match = fullText.match(/^([a-z])\.?\s+(.+)$/i);
+          if (match) {
+            tasks.push({ letter: match[1].toLowerCase(), text: match[2] });
+          } else if (fullText) {
+            const next = String.fromCharCode(97 + tasks.length);
+            tasks.push({ letter: next, text: fullText });
+          }
+        });
+
+        const notes = [];
+        actEl.querySelectorAll('.note').forEach(noteEl => {
+          // NOTE block has <strong>NOTE:</strong> question <br> body
+          const html = noteEl.innerHTML.replace(/<strong>NOTE:<\/strong>/i, '').trim();
+          const parts = html.split(/<br\s*\/?>/i);
+          const titlePart = (parts[0] || '').replace(/<[^>]+>/g, '').trim();
+          const bodyPart = (parts.slice(1).join('\n') || '').replace(/<[^>]+>/g, '').trim();
+          if (titlePart) notes.push({ title: titlePart, body: bodyPart });
+        });
+
+        m.activities.push({
+          number,
+          title,
+          role,
+          tasks,
+          notes,
+          links: []
+        });
+      });
+    }
+    return m;
+  }
+
+  async function reRenderWorkflow() {
+    const wf = document.getElementById('workflowRender');
+    if (!wf || typeof currentBpmnXml === 'undefined' || !currentBpmnXml) return;
+    if (typeof BpmnJS === 'undefined') return;
+    try {
+      if (window.bpmnViewer) { try { window.bpmnViewer.destroy(); } catch(e) {} }
+      const newViewer = new BpmnJS({ container: wf });
+      window.bpmnViewer = newViewer;
+      await newViewer.importXML(currentBpmnXml);
+      try { newViewer.get('canvas').zoom('fit-viewport', 'auto'); } catch (e) {}
+      if (typeof applyBpmnTheme === 'function') applyBpmnTheme('nintex');
+      if (typeof injectBpmnAccessibility === 'function') injectBpmnAccessibility();
+    } catch (e) {
+      console.error('[save-edits] workflow re-render failed:', e);
+    }
+  }
+
+  // Did anything that appears in the visual workflow change? Only title,
+  // activity numbers, activity titles, and activity roles drive the diagram.
+  function workflowFieldsChanged(oldModel, newModel) {
+    if (!oldModel || !newModel) return true;
+    if ((oldModel.title || '') !== (newModel.title || '')) return true;
+    const oldActs = oldModel.activities || [];
+    const newActs = newModel.activities || [];
+    if (oldActs.length !== newActs.length) return true;
+    for (let i = 0; i < newActs.length; i++) {
+      const o = oldActs[i] || {};
+      const n = newActs[i];
+      if ((o.number || '') !== (n.number || '')) return true;
+      if ((o.title  || '') !== (n.title  || '')) return true;
+      if ((o.role   || '') !== (n.role   || '')) return true;
+    }
+    return false;
+  }
+
+  async function saveEditsAndRefresh() {
+    const newModel = extractModelFromDocPreview();
+    if (!newModel) {
+      if (typeof showToast === 'function') showToast('Nothing to save yet — analyse a draft first.', 'error');
+      return;
+    }
+    // Snapshot so we can detect whether workflow-relevant fields changed
+    const oldModelSnapshot = (typeof currentModel !== 'undefined' && currentModel)
+      ? JSON.parse(JSON.stringify(currentModel))
+      : null;
+    const workflowChanged = workflowFieldsChanged(oldModelSnapshot, newModel);
+
+    // Update globals
+    currentModel = newModel;
+    const _buildMermaid = window.buildMermaid || (typeof buildMermaid === 'function' ? buildMermaid : null);
+    const _buildBpmnXml = window.buildBpmnXml || (typeof buildBpmnXml === 'function' ? buildBpmnXml : null);
+    const _runRules    = window.runRulesEngine || (typeof runRulesEngine === 'function' ? runRulesEngine : null);
+    // Only regenerate diagram source if it actually changed — keeps zoom/pan
+    if (workflowChanged) {
+      if (_buildMermaid) currentMermaid = _buildMermaid(newModel);
+      if (_buildBpmnXml) currentBpmnXml = _buildBpmnXml(newModel);
+    }
+
+    console.log('[save-edits] extracted model:', {
+      title: newModel.title, owner: newModel.owner, expert: newModel.expert,
+      trigger: newModel.trigger, activities: newModel.activities.length
+    });
+    console.log('[save-edits] workflow fields changed?', workflowChanged);
+
+    // Re-run the rules engine + refresh the opportunities sidebar (every save)
+    let resolvedCount = 0;
+    if (_runRules) {
+      const oldCount = (currentIssues || []).filter(i => !i.informational).length;
+      currentIssues = _runRules(newModel);
+      console.log('[save-edits] new issues:', currentIssues.length, currentIssues.map(i => i.id));
+      if (typeof window.refreshIssuesSidebar === 'function') window.refreshIssuesSidebar();
+      const newCount = currentIssues.filter(i => !i.informational).length;
+      resolvedCount = Math.max(0, oldCount - newCount);
+      const oppsCount = document.getElementById('summaryChipOppsCount');
+      if (oppsCount) oppsCount.textContent = String(newCount);
+      const oppsChip = document.getElementById('summaryChipOpps');
+      if (oppsChip) oppsChip.style.display = (newCount > 0) ? '' : 'none';
+
+      // Update the Export button's error badge — soft-gate is driven by error count
+      const errorCount = currentIssues.filter(i => i.severity === 'error').length;
+      const errBadge = document.getElementById('actionExportErrorBadge');
+      if (errBadge) {
+        if (errorCount > 0) {
+          errBadge.textContent = '\u26A0 ' + errorCount + ' error' + (errorCount === 1 ? '' : 's');
+          errBadge.classList.remove('hidden');
+        } else {
+          errBadge.classList.add('hidden');
+        }
+      }
+      // Update the export-modal warning too if it's currently open / will open
+      const exportWarning = document.getElementById('exportWarning');
+      const exportWarningCount = document.getElementById('exportWarningCount');
+      if (exportWarning && exportWarningCount) {
+        exportWarningCount.textContent = String(errorCount);
+        exportWarning.classList.toggle('hidden', errorCount === 0);
+      }
+    } else {
+      console.warn('[save-edits] runRulesEngine not available; opportunities sidebar not refreshed');
+    }
+
+    // Re-render the workflow only when relevant fields changed
+    if (workflowChanged) {
+      await reRenderWorkflow();
+      const titleEl = document.getElementById('workflowTitle');
+      if (titleEl) titleEl.textContent = currentModel.title || '';
+    }
+
+    if (typeof showToast === 'function') {
+      let msg;
+      if (workflowChanged && resolvedCount > 0) {
+        msg = 'Workflow + opportunities updated. ' + resolvedCount + ' opportunit' + (resolvedCount === 1 ? 'y' : 'ies') + ' resolved.';
+      } else if (workflowChanged) {
+        msg = 'Workflow updated with your edits.';
+      } else if (resolvedCount > 0) {
+        msg = 'Opportunities updated. ' + resolvedCount + ' opportunit' + (resolvedCount === 1 ? 'y' : 'ies') + ' resolved.';
+      } else {
+        msg = 'Changes saved. Opportunities refreshed.';
+      }
+      showToast(msg, 'success', 4500);
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('saveEditsBtn');
+    if (btn) btn.addEventListener('click', saveEditsAndRefresh);
+  });
+
+  // Expose so other code paths can call it
+  window.saveEditsAndRefresh = saveEditsAndRefresh;
+})();
+</script>
+
+
+<script>
+// Top-of-doc 'Save changes' button — same behaviour as the bottom one
+(function wireTopSaveBtn() {
+  document.addEventListener('DOMContentLoaded', () => {
+    const top = document.getElementById('saveEditsTopBtn');
+    if (top) top.addEventListener('click', () => {
+      if (typeof window.saveEditsAndRefresh === 'function') {
+        window.saveEditsAndRefresh();
+      } else {
+        const bottom = document.getElementById('saveEditsBtn');
+        if (bottom) bottom.click(
