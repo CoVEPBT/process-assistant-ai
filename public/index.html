@@ -327,42 +327,6 @@
   .auto-fix-banner-dismiss:hover { background: #C8E6C9; }
   .auto-fix-banner.hidden { display: none; }
 
-  /* Copilot Studio embed stub */
-  .pat-side-action-experimental {
-    border-style: dashed !important;
-    color: #6B5117 !important;
-  }
-  .experimental-badge {
-    display: inline-block;
-    font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
-    background: #FFF8E6; color: #6B5117; border: 1px solid #F1D788;
-    padding: 1px 7px; border-radius: 4px; margin-left: 8px;
-    vertical-align: middle;
-  }
-  .copilot-studio-frame-wrap {
-    position: relative;
-    width: 100%; height: 60vh;
-    border: 1px solid var(--rmit-grey-mid); border-radius: 6px;
-    overflow: hidden; background: #FAFBFD;
-  }
-  .copilot-studio-placeholder {
-    position: absolute; inset: 0;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    padding: 32px; text-align: center; color: var(--rmit-text);
-    background: linear-gradient(135deg, #FFF8E6 0%, #FAFBFD 100%);
-    pointer-events: none;
-  }
-  .copilot-studio-placeholder p { margin: 0 0 8px; max-width: 480px; line-height: 1.5; }
-  .copilot-studio-placeholder code {
-    font-family: 'Courier New', monospace; background: #FFFFFF;
-    padding: 2px 6px; border-radius: 3px; border: 1px solid var(--rmit-grey-mid);
-    font-size: 12.5px;
-  }
-  /* Hide the placeholder when the iframe is actually configured (has a real URL) */
-  #copilotStudioFrame:not([src="PASTE_COPILOT_STUDIO_URL_HERE"]) + .copilot-studio-placeholder {
-    display: none;
-  }
-
   /* Auto-apply consent modal — checklist items */
   .consent-list {
     list-style: none; padding: 0; margin: 0 0 8px;
@@ -1007,6 +971,11 @@
   .pill.rmit { background: #E8F1FB; color: var(--severity-info); }
   .pill.nintex { background: #EDF7EE; color: var(--severity-pass); }
 
+  /* About modal — give the standards list a bit more breathing room */
+  .about-standards-list { margin: 14px 0 18px; padding-left: 22px; }
+  .about-standards-list li { margin-bottom: 14px; line-height: 1.55; }
+  .about-standards-list li:last-child { margin-bottom: 0; }
+
   details { margin: 8px 0; }
   details summary { cursor: pointer; font-weight: 500; padding: 6px 0; }
 
@@ -1517,6 +1486,14 @@
   .pat-side-header-chat {
     background: #FFF8F8;
     border-bottom-color: #FED7DA;
+  }
+  .pat-draft-panel.pat-draft-flash {
+    animation: patDraftFlash 1.6s ease-out;
+  }
+  @keyframes patDraftFlash {
+    0%   { box-shadow: 0 0 0 0 rgba(31, 111, 181, 0.55); border-color: var(--severity-info); }
+    50%  { box-shadow: 0 0 0 6px rgba(31, 111, 181, 0.18); border-color: var(--severity-info); }
+    100% { box-shadow: 0 0 0 0 rgba(31, 111, 181, 0); }
   }
   .pat-side-header-draft {
     background: #F5F9FF;
@@ -2129,95 +2106,7 @@
     color: #64748B; font-style: italic;
   }
 
-  /* Ask Copilot — iframe layout for tab + modal */
-  .copilot-tab-wrap, .copilot-modal-wrap {
-    border: 1px solid var(--rmit-grey-mid); border-radius: 6px;
-    overflow: hidden; background: #FAFBFD;
-  }
-  .copilot-tab-wrap { height: 70vh; min-height: 520px; }
-  .copilot-modal-wrap { height: 65vh; min-height: 480px; margin-top: 4px; }
-  .copilot-tab-wrap iframe, .copilot-modal-wrap iframe {
-    width: 100%; height: 100%; border: 0; display: block;
-  }
-  .copilot-empty {
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    height: 100%; padding: 32px; text-align: center; color: #475569;
-  }
-  .copilot-empty svg {
-    width: 56px; height: 56px; color: var(--rmit-red); margin-bottom: 14px; opacity: 0.85;
-  }
-  .copilot-empty h3 { margin: 0 0 8px; color: #0F172A; font-size: 18px; }
-  .copilot-empty p { margin: 0 0 6px; max-width: 480px; line-height: 1.5; }
-  .copilot-empty code {
-    font-family: 'Courier New', monospace; background: #FFFFFF;
-    padding: 2px 6px; border-radius: 3px; border: 1px solid var(--rmit-grey-mid);
-    font-size: 12.5px;
-  }
   .modal.modal-tall { max-width: 900px; }
-  /* Copilot launch CTA — opens M365 Copilot agent in a new tab (iframe blocked by Microsoft) */
-  .copilot-launch {
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    height: 100%; padding: 40px 32px; text-align: center; color: var(--rmit-text);
-    background: linear-gradient(135deg, #FFFFFF 0%, #F4F7FB 100%);
-  }
-  .copilot-launch .copilot-icon {
-    width: 64px; height: 64px; color: var(--rmit-red); margin-bottom: 16px;
-  }
-  .copilot-launch h3 {
-    margin: 0 0 8px; color: #0F172A; font-size: 22px; font-weight: 700;
-  }
-  .copilot-launch p {
-    margin: 0 0 8px; max-width: 560px; line-height: 1.55; color: #475569; font-size: 14.5px;
-  }
-  .copilot-launch p.copilot-tip {
-    background: #FFF8E1; border: 1px solid #F1D788; border-radius: 6px;
-    padding: 10px 14px; margin: 14px 0 4px; max-width: 520px; color: #6B5117; font-size: 13.5px;
-  }
-  .copilot-launch .copilot-actions {
-    display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 18px;
-  }
-
-  .copilot-launch .copilot-instructions {
-    background: #FFF8E1; border: 1px solid #F1D788; border-radius: 6px;
-    padding: 12px 16px; margin: 14px 0 4px; max-width: 540px;
-    color: #6B5117; text-align: left; font-size: 13.5px; line-height: 1.55;
-  }
-  .copilot-launch .copilot-instructions strong { color: #6B5117; }
-  .copilot-launch .copilot-instructions ol {
-    margin: 8px 0 0; padding-left: 22px;
-  }
-  .copilot-launch .copilot-instructions ol li {
-    margin-bottom: 4px;
-  }
-  .copilot-launch .copilot-instructions em { font-style: italic; color: #4B3705; }
-
-  .copilot-launch .copilot-launch-btn {
-    background: var(--rmit-red); color: #FFFFFF; border: none;
-    padding: 12px 22px; border-radius: 6px; font-size: 15px; font-weight: 600;
-    cursor: pointer; display: inline-flex; align-items: center; gap: 8px; min-height: 44px;
-    text-decoration: none; transition: all 0.15s ease;
-  }
-  .copilot-launch .copilot-launch-btn:hover {
-    background: #B01A26; transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(230,30,42,0.25);
-  }
-  .copilot-launch .copilot-launch-btn:focus-visible {
-    outline: 2px solid var(--rmit-red); outline-offset: 3px;
-  }
-  .copilot-launch .copilot-copy-btn {
-    background: #FFFFFF; color: var(--rmit-text);
-    border: 1px solid var(--rmit-grey-mid);
-    padding: 12px 18px; border-radius: 6px; font-size: 14px; font-weight: 500;
-    cursor: pointer; min-height: 44px; transition: all 0.15s ease;
-  }
-  .copilot-launch .copilot-copy-btn:hover {
-    background: var(--rmit-grey); border-color: #94A3B8;
-  }
-  .copilot-launch .copilot-copy-btn:disabled {
-    opacity: 0.55; cursor: not-allowed;
-  }
-
-
 
   /* ============================================================
      RESULTS — summary line + 3 action cards + secondary links
@@ -2537,10 +2426,6 @@
         <span class="burger-label">Menu</span>
       </button>
       <div class="help-menu burger-menu" id="burgerMenu" role="menu" aria-hidden="true">
-        <button type="button" class="burger-item" id="askCopilotBtn" role="menuitem">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-          Ask AI
-        </button>
         <button type="button" class="burger-item" id="helpBtn" role="menuitem">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
           About this tool
@@ -2795,51 +2680,17 @@ NOTE: What if access is delayed? Escalate to the IT lead and update the new star
 </div>
 
 
-<!-- AI chat modal (inline, calls /api/chat on the local server) -->
-<div class="modal-backdrop" id="copilotModal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="copilotModalTitle">
-  <div class="modal modal-wide modal-tall">
-    <button class="modal-close" id="copilotModalClose" type="button" aria-label="Close">&times;</button>
-    <h2 id="copilotModalTitle">AI Process Coach</h2>
-    <p style="font-size:14px;color:#475569;margin:0 0 12px;">Powered by OpenAI gpt-4o-mini, running through your local server. Your draft and flagged issues are sent as context with each message.</p>
-    <div id="aiChatPanel" class="ai-chat-panel">
-      <div id="aiChatMessages" class="ai-chat-messages">
-        <div class="ai-message ai-message-assistant ai-message-welcome">
-          <p>Hi! I'm your process writing assistant. What would you like to work on today?</p>
-          <ol class="ai-welcome-list">
-            <li>Create a new process map from scratch</li>
-            <li>Convert an existing document into a process map</li>
-            <li>Review and improve an existing process map</li>
-          </ol>
-          <p>Just pick a number below &mdash; or describe what you're after and I'll figure it out.</p>
-          <div class="ai-quick-prompts ai-quick-prompts-paths">
-            <button type="button" class="ai-quick" data-prompt="I need to create a new process map from scratch.">1. New process map</button>
-            <button type="button" class="ai-quick" data-prompt="I have a procedure document I want to convert.">2. Convert a document</button>
-            <button type="button" class="ai-quick" data-prompt="Can you review my existing process map?">3. Review existing map</button>
-          </div>
-        </div>
-      </div>
-      <form id="aiChatForm" class="ai-chat-form">
-        <textarea id="aiChatInput" placeholder="Ask the AI for help, paste a snippet, or pick a prompt above..." rows="2"></textarea>
-        <button type="submit" class="btn btn-primary" id="aiChatSendBtn">Send</button>
-      </form>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" id="copilotModalCloseFooter" type="button">Close</button>
-    </div>
-  </div>
-</div>
 <!-- About modal (P2 #9) -->
 <div class="modal-backdrop" id="aboutModal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="aboutModalTitle">
   <div class="modal">
     <button class="modal-close" id="aboutModalClose" type="button" aria-label="Close">&times;</button>
     <h2 id="aboutModalTitle">About this tool</h2>
-    <p>This tool reviews your process documentation against three published standards used at RMIT:</p>
-    <ul>
-      <li><strong>CoVE Process Writing Golden Rules</strong> <span class="pill cove">CoVE</span> &mdash; the College of Vocational Education's 11 rules for clear, consistent process maps.</li>
-      <li><strong>RMIT Tips for Process Editors &amp; Champions</strong> <span class="pill rmit">RMIT</span> &mdash; including activity title length, owner/expert separation, audience terminology and verb usage.</li>
-      <li><strong>Nintex Process Writing Techniques</strong> <span class="pill nintex">Nintex</span> &mdash; the eight Nintex techniques covering 80/20 normal vs exception, sub-process triggers, decisions vs notes, and verb-first naming.</li>
+    <p>This tool reviews your process documentation against three published standards used at RMIT and CoVE:</p>
+    <ul class="about-standards-list">
+      <li><strong style="color: var(--rmit-red);">CoVE Process Writing Golden Rules</strong> &mdash; the College of Vocational Education's 11 rules for clear, consistent process maps.</li>
+      <li><strong style="color: var(--severity-info);">RMIT Tips for Process Editors &amp; Champions</strong> &mdash; including activity title length, owner/expert separation, audience terminology and verb usage.</li>
+      <li><strong style="color: var(--severity-pass);">Nintex Process Writing Techniques</strong> &mdash; the eight Nintex techniques covering 80/20 normal vs exception, sub-process triggers, decisions vs notes, and verb-first naming.</li>
     </ul>
-    <p>The review runs entirely in your browser using rule-based logic &mdash; no data leaves your device.</p>
     <div class="modal-footer">
       <button class="btn btn-primary" id="aboutModalCloseFooter" type="button">Close</button>
     </div>
@@ -2879,17 +2730,13 @@ NOTE: What if access is delayed? Escalate to the IT lead and update the new star
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             <span>Browse FAQs</span>
           </button>
-          <button type="button" class="pat-side-action pat-side-action-experimental" id="copilotStudioBtn" aria-label="Open the Copilot Studio agent (experimental)" title="Experimental — Copilot Studio agent embed">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 10v6M4.22 4.22l4.24 4.24m7.08 7.08l4.24 4.24M1 12h6m10 0h6M4.22 19.78l4.24-4.24m7.08-7.08l4.24-4.24"/></svg>
-            <span>Copilot agent</span>
-          </button>
         </header>
         <div id="inlineChatMessages" class="ai-chat-messages inline-chat-messages">
           <div class="ai-message ai-message-assistant ai-message-welcome">
             <p>Pick a prompt below, or tell me what you're working on.</p>
             <p class="ai-disclaimer">A heads-up: I can make mistakes and I don't know how your process actually runs day-to-day. Always review what I suggest before using it.</p>
             <div class="ai-quick-prompts ai-quick-prompts-paths">
-              <button type="button" class="ai-quick" data-prompt="Can you review my process?">Review my process</button>
+              <button type="button" class="ai-quick" data-action="goto-draft">Review my process</button>
               <button type="button" class="ai-quick" data-prompt="I need to create a new process map from scratch. Walk me through what to capture first.">Help me plan a new process</button>
               <button type="button" class="ai-quick" data-prompt="How do I know whether my content should be a process or a user guide / knowledge article? Help me decide which one fits.">Process or user guide?</button>
               <button type="button" class="ai-quick" data-prompt="I have a process and need help breaking it into 3-7 high-level activities. Ask me what the process is, then suggest activities.">Suggest activities</button>
@@ -3029,7 +2876,7 @@ NOTE: What if access is delayed? Escalate to the IT lead and update the new star
       <span id="helpersLabel" class="helpers-label">Need a starter?</span>
       <button type="button" class="helper-link" id="trySampleLink">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-        Try the sample
+        Try example
       </button>
       <span class="helpers-dot">&middot;</span>
       <button type="button" class="helper-link" id="downloadTemplateLink">
@@ -3058,32 +2905,6 @@ NOTE: What if access is delayed? Escalate to the IT lead and update the new star
     <div class="auto-fix-note hidden" id="combinedFixBanner" role="status" aria-live="polite">
       <svg class="auto-fix-note-tick" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="#FFFFFF"/><path d="M5 8.5l2 2 4-5"/></svg>
       <span class="auto-fix-note-text" id="combinedFixBannerText"></span>
-    </div>
-
-    <!-- Copilot Studio agent embed — paste the iframe src URL into the placeholder below -->
-    <div class="modal-backdrop" id="copilotStudioModal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="copilotStudioTitle">
-      <div class="modal modal-wide modal-tall">
-        <button class="modal-close" id="copilotStudioClose" type="button" aria-label="Close">&times;</button>
-        <h2 id="copilotStudioTitle">Copilot Studio agent <span class="experimental-badge">Experimental</span></h2>
-        <p style="font-size:13px;color:#475569;margin:0 0 12px;">Testing an embedded Copilot Studio agent alongside the local AI. If it doesn't load, the iframe URL probably needs the Custom Website channel published or the X-Frame-Options unblocked.</p>
-        <div class="copilot-studio-frame-wrap">
-          <!-- =============== PASTE COPILOT STUDIO EMBED URL BELOW =============== -->
-          <iframe id="copilotStudioFrame"
-                  src="PASTE_COPILOT_STUDIO_URL_HERE"
-                  title="Copilot Studio agent"
-                  style="width: 100%; height: 100%; border: 0;"
-                  allow="microphone"></iframe>
-          <!-- =============== END PASTE AREA =============== -->
-          <div class="copilot-studio-placeholder" id="copilotStudioPlaceholder">
-            <p><strong>No URL configured yet.</strong></p>
-            <p>Paste your Copilot Studio Custom Website embed URL into the iframe's <code>src</code> attribute in <code>public/index.html</code>, then refresh.</p>
-            <p style="font-size:12px;color:#64748B;">Search the file for <code>PASTE_COPILOT_STUDIO_URL_HERE</code>.</p>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-primary" id="copilotStudioCloseFooter" type="button">Close</button>
-        </div>
-      </div>
     </div>
 
     <!-- Auto-apply acknowledgement modal — shown before the AI rewrite starts -->
@@ -3501,14 +3322,6 @@ const REQUIRED_TITLE_PREFIXES = ['CoVE - '];
 /* ============================================================
    STATE
    ============================================================ */
-// ============================================================
-// COPILOT STUDIO AGENT — set this to your published agent's iframe URL.
-// Get it from Copilot Studio > Channels > Custom Website > copy iframe src.
-// Leave as empty string until the agent is published; the tab and modal
-// will show a friendly setup-instructions panel until then.
-// ============================================================
-const COPILOT_AGENT_URL = 'https://m365.cloud.microsoft/chat/?titleId=T_174fb8d2-f02b-95ed-0b22-f1354ae96de1&source=embedded-builder';
-
 // Sample CoVE process used by 'Try the sample' on the home page and by the
 // guided tour. Module-level constant so any handler can reference it.
 const SAMPLE_PROCESS = [
@@ -6945,11 +6758,6 @@ const TOUR_STEPS = [
     target: '.doc-sidebar'
   },
   {
-    title: 'Need help? Ask Copilot',
-    body: 'For conversational help \u2014 paste a draft, ask about a rule, get suggestions \u2014 use the <strong>Ask Copilot</strong> button. It opens a Microsoft 365 Copilot agent in a new tab.',
-    target: '.sidebar-cta'
-  },
-  {
     title: 'Export your output',
     body: 'When you\'re happy, click <strong>Export</strong> to download as Word, PDF, or Nintex import format.',
     target: '#exportMenuBtn'
@@ -7171,10 +6979,6 @@ const trySampleLink = document.getElementById('trySampleLink');
 if (trySampleLink) trySampleLink.addEventListener('click', (e) => {
   e.preventDefault();
   loadSampleIntoPaste();
-  // First-time visitors get the tour automatically; returning users skip it.
-  let tourSeen = false;
-  try { tourSeen = !!localStorage.getItem('cove-tour-completed'); } catch (err) {}
-  if (!tourSeen) startTour();
 });
 
 // 'Build with a form' card in the orientation section — same toggle as before
@@ -7487,112 +7291,6 @@ if (restoreBtn) {
 })();
 
 
-// Ask Copilot — render a launch-CTA panel that opens the M365 Copilot agent in
-// a new tab. M365 Copilot pages can't be iframed (Microsoft blocks them via
-// X-Frame-Options), so we use the launch pattern instead.
-(function wireCopilot() {
-  const tabWrap = document.getElementById('copilotTabWrap');
-  const modalWrap = document.getElementById('copilotModalWrap');
-  const modal = document.getElementById('copilotModal');
-  const askBtn = document.getElementById('askCopilotBtn');
-  const closeBtn = document.getElementById('copilotModalClose');
-  const closeFooter = document.getElementById('copilotModalCloseFooter');
-
-  function emptyState() {
-    return '<div class="copilot-empty">' +
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' +
-      '<h3>Copilot agent not configured yet</h3>' +
-      '<p>Paste the published agent URL into the <code>COPILOT_AGENT_URL</code> constant in this file.</p>' +
-      '</div>';
-  }
-
-  function launchPanel(url) {
-    const safeUrl = String(url).replace(/"/g, '&quot;');
-    return '<div class="copilot-launch">' +
-      '<svg class="copilot-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M9 9h6M9 13h4"/></svg>' +
-      '<h3>Open the CoVE Process Coach</h3>' +
-      '<p>A specialist Microsoft 365 Copilot agent trained on RMIT process writing standards. Ask questions about the standards, paste a draft for review, or get help refining an activity.</p>' +
-      (currentModel ? '<p class="copilot-tip"><strong>Tip:</strong> click <em>Copy generated document</em> first, then paste it into the agent so it has your content as context.</p>' : '<p class="copilot-tip"><strong>Tip:</strong> Analyse a draft first, then come back here so you can copy the generated document before opening the agent.</p>') +
-      '<div class="copilot-actions">' +
-        '<button class="copilot-copy-btn" type="button" data-copilot-copy ' + (currentModel ? '' : 'disabled') + '>' +
-          'Copy generated document' +
-        '</button>' +
-        '<a class="copilot-launch-btn" href="' + safeUrl + '" target="_blank" rel="noopener" data-copilot-launch>' +
-          'Open in Microsoft 365 Copilot' +
-          '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>' +
-        '</a>' +
-      '</div>' +
-    '</div>';
-  }
-
-  function fill(wrap) {
-    if (!wrap) return;
-    wrap.innerHTML = (COPILOT_AGENT_URL && COPILOT_AGENT_URL.trim().length > 0)
-      ? launchPanel(COPILOT_AGENT_URL.trim())
-      : emptyState();
-  }
-
-  // Wire the Copy button (delegated since we may re-render)
-  function wireCopyButtons(scope) {
-    if (!scope) return;
-    scope.querySelectorAll('[data-copilot-copy]').forEach(btn => {
-      if (btn.dataset.wired) return;
-      btn.dataset.wired = '1';
-      btn.addEventListener('click', async () => {
-        const docEl = document.getElementById('docPreview');
-        if (!docEl) {
-          if (typeof showToast === 'function') showToast('Run Analyse first.', 'error');
-          return;
-        }
-        // Plain-text version of the editable doc, for friendly pasting into chat
-        const text = docEl.innerText || docEl.textContent || '';
-        try {
-          await navigator.clipboard.writeText(text);
-          if (typeof showToast === 'function') showToast('Generated document copied to clipboard. Paste it into the agent for context.', 'success', 5000);
-        } catch (err) {
-          if (typeof showToast === 'function') showToast('Could not copy automatically. Select the text in the document and copy manually (Ctrl+C).', 'error');
-        }
-      });
-    });
-  }
-
-  fill(tabWrap);
-  wireCopyButtons(tabWrap);
-
-  // Modal: lazy-fill on first open so we re-evaluate currentModel each time
-  function openModal() {
-    if (!modal) return;
-    fill(modalWrap);
-    wireCopyButtons(modalWrap);
-    modal.setAttribute('aria-hidden', 'false');
-  }
-  function closeModal() {
-    if (modal) modal.setAttribute('aria-hidden', 'true');
-  }
-  if (askBtn) askBtn.addEventListener('click', openModal);
-  if (closeBtn) closeBtn.addEventListener('click', closeModal);
-  if (closeFooter) closeFooter.addEventListener('click', closeModal);
-  if (modal) modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && modal && modal.getAttribute('aria-hidden') === 'false') closeModal();
-  });
-
-  // Re-render the tab panel after analysis runs (so the Copy button enables)
-  // Hook into the existing renderResults via a MutationObserver on docPreview's parent.
-  const docHost = document.getElementById('resultsCard');
-  if (docHost) {
-    const observer = new MutationObserver(() => {
-      if (currentModel && tabWrap) {
-        fill(tabWrap);
-        wireCopyButtons(tabWrap);
-      }
-    });
-    observer.observe(docHost, { attributes: true, attributeFilter: ['class'] });
-  }
-})();
-
-
-
 // ============================================================
 // SIMPLIFIED RESULTS — wire 3-action cards + issues modal + export modal (soft gate)
 // ============================================================
@@ -7703,21 +7401,6 @@ if (restoreBtn) {
 // SIMPLIFIED RESULTS UI — wire sidebar buttons, modals, export menu
 // ============================================================
 (function wireSimplifiedResultsUI() {
-  // Sidebar Ask Copilot button — opens the existing Copilot modal (the same one
-  // that the burger-menu "Ask Copilot" item opens).
-  const sidebarAsk = document.getElementById('sidebarAskCopilotBtn');
-  const copilotModal = document.getElementById('copilotModal');
-  if (sidebarAsk && copilotModal) {
-    sidebarAsk.addEventListener('click', () => {
-      // Re-fill the modal so the iframe/launch panel reflects the latest currentModel
-      const modalWrap = document.getElementById('copilotModalWrap');
-      if (modalWrap && typeof launchPanelForCopilot === 'function') {
-        modalWrap.innerHTML = launchPanelForCopilot();
-      }
-      copilotModal.setAttribute('aria-hidden', 'false');
-    });
-  }
-
   // Output tabs — Generated document / Visual workflow. Lives next to the sidebar
   // so flags stay visible regardless of which view is active.
   const outputTabDoc = document.getElementById('outputTabDoc');
@@ -7816,30 +7499,6 @@ if (restoreBtn) {
   }
 })();
 
-// Helper: build the Copilot launch panel HTML on demand. Used by both the
-// sidebar CTA and the burger menu item so they show identical content.
-function launchPanelForCopilot() {
-  // AI version — modal already contains the chat panel; no launch CTA to inject.
-  return '';
-}
-
-
-
-// Home-page "Ask Copilot first" link — opens the same Copilot modal so users
-// can ask for help before they have a draft to analyse.
-(function wireHomeCopilot() {
-  const homeAsk = document.getElementById('homeAskCopilotBtn');
-  const copilotModal = document.getElementById('copilotModal');
-  if (!homeAsk || !copilotModal) return;
-  homeAsk.addEventListener('click', () => {
-    const modalWrap = document.getElementById('copilotModalWrap');
-    if (modalWrap && typeof launchPanelForCopilot === 'function') {
-      modalWrap.innerHTML = launchPanelForCopilot();
-    }
-    copilotModal.setAttribute('aria-hidden', 'false');
-  });
-})();
-
 // Iframe auto-resize: post our content height to the parent (e.g. SharePoint)
 // so it can size the iframe to fit. Pairs with a tiny listener on the host page.
 (function setupAutoResize() {
@@ -7881,14 +7540,13 @@ function launchPanelForCopilot() {
 
 
 // ============================================================
-// AI CHAT — overrides Copilot modal with /api/chat backend
+// AI CHAT — inline chat panel against /api/chat backend
 // ============================================================
 const AI_BACKEND_URL = '/api/chat';
 
-// AI chat panel — replaces the Copilot launch panel with inline chat against /api/chat
-// Factory — wires up a chat surface (modal OR inline). Each surface keeps its
-// own conversation history. The optional modalCfg connects open/close behaviour
-// to a modal wrapper; pass null for an inline surface.
+// Factory — wires up an inline chat surface. Each surface keeps its own
+// conversation history. (Modal support was removed when the burger-menu
+// "Ask AI" entry was retired in favour of the home-page inline chat.)
 function createChatSurface(cfg) {
   const messagesEl = document.getElementById(cfg.messagesId);
   const formEl     = document.getElementById(cfg.formId);
@@ -8087,41 +7745,38 @@ function createChatSurface(cfg) {
   if (messagesEl) {
     messagesEl.addEventListener('click', (e) => {
       const q = e.target.closest('.ai-quick');
-      if (q && q.dataset.prompt) {
+      if (!q) return;
+      // Special action chips that don't send a prompt to the AI — they redirect
+      // the user somewhere on the page instead.
+      if (q.dataset.action === 'goto-draft') {
+        // Inline message confirming what's about to happen
+        appendMessage('assistant',
+          "To review your draft, please share it in the **Give me your draft** panel — " +
+          "paste it in, or drop a file in the upload area. Then click **Analyse content** and I'll take it from there."
+        );
+        // Scroll the draft panel into view and flash a subtle highlight
+        const draftPanel = document.querySelector('.pat-draft-panel');
+        if (draftPanel) {
+          draftPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          draftPanel.classList.add('pat-draft-flash');
+          setTimeout(() => draftPanel.classList.remove('pat-draft-flash'), 1800);
+          // Focus the paste area if it's currently visible (helps keyboard users)
+          const pasteArea = document.getElementById('pasteArea');
+          if (pasteArea && pasteArea.offsetParent !== null) {
+            setTimeout(() => pasteArea.focus({ preventScroll: true }), 450);
+          }
+        }
+        return;
+      }
+      if (q.dataset.prompt) {
         sendMessage(q.dataset.prompt);
       }
     });
   }
 
-  // Modal open/close — only wired if cfg.modal is supplied
-  const modal = cfg.modal ? document.getElementById(cfg.modal) : null;
-  if (modal) {
-    const openTrigger = cfg.openTrigger ? document.getElementById(cfg.openTrigger) : null;
-    const closeBtn = cfg.closeBtn ? document.getElementById(cfg.closeBtn) : null;
-    const closeFoot = cfg.closeFoot ? document.getElementById(cfg.closeFoot) : null;
-    const openModal = () => { modal.setAttribute('aria-hidden', 'false'); setTimeout(() => inputEl.focus(), 60); };
-    const closeModal = () => modal.setAttribute('aria-hidden', 'true');
-    if (openTrigger) openTrigger.addEventListener('click', openModal);
-    if (closeBtn) closeBtn.addEventListener('click', closeModal);
-    if (closeFoot) closeFoot.addEventListener('click', closeModal);
-    modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
-    document.addEventListener('keydown', e => {
-      if (e.key === 'Escape' && modal.getAttribute('aria-hidden') === 'false') closeModal();
-    });
-  }
 }
 
-// Wire both surfaces — modal (for the burger menu Ask AI) and inline (home page split).
-createChatSurface({
-  messagesId: 'aiChatMessages',
-  formId:     'aiChatForm',
-  inputId:    'aiChatInput',
-  sendBtnId:  'aiChatSendBtn',
-  modal:      'copilotModal',
-  openTrigger:'askCopilotBtn',
-  closeBtn:   'copilotModalClose',
-  closeFoot:  'copilotModalCloseFooter',
-});
+// Inline chat surface on the home page (modal version removed — chat is now home-only).
 createChatSurface({
   messagesId: 'inlineChatMessages',
   formId:     'inlineChatForm',
@@ -8130,7 +7785,6 @@ createChatSurface({
 });
 
 // Auto-prime IIFE removed — Auto-apply is now inline (see startAutoApply).
-// Users can still open the chat modal manually via the burger menu / Ask AI.
 
 </script>
 
