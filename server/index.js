@@ -493,9 +493,4 @@ app.get('/api/health', (req, res) => {
 
 await loadKnowledge();
 
-app.listen(PORT, () => {
-  console.log(`[process-assistant-ai] running on http://localhost:${PORT}`);
-  console.log(`[process-assistant-ai] model: ${MODEL}`);
-  console.log(`[process-assistant-ai] key configured: ${!!openai}`);
-  console.log(`[process-assistant-ai] knowledge corpus: ${KNOWLEDGE_CORPUS.length} chars`);
-});
+app.
