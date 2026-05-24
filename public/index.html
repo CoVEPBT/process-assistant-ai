@@ -996,6 +996,40 @@
     font-size: 12px; color: #666; font-style: italic;
     margin: -4px 0 12px; padding-left: 0;
   }
+  /* "Role:" label rendered as a CSS pseudo-element. Pseudo-elements aren't part
+     of the DOM text, so they can't be selected, deleted, or accidentally edited
+     when the user types in the role field. The actual role value is the only
+     thing the user can change. */
+  .doc-preview .activity .role::before {
+    content: "Role: ";
+    font-weight: 700;
+    color: #475569;
+    font-style: normal;
+    margin-right: 2px;
+    user-select: none;
+  }
+  /* Empty-role placeholder - clearly "fill me in" so users can see where to add
+     the accountable role. The whole line gets a dashed amber border and the
+     placeholder text is bold red so it stands out against the doc preview. */
+  .doc-preview .activity .role.role-empty {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #FFF8E1;
+    border: 1px dashed #C77700;
+    border-radius: 4px;
+    padding: 4px 10px;
+    color: #5A4500; font-style: normal; font-weight: 600;
+    margin: -2px 0 12px;
+  }
+  .doc-preview .activity .role.role-empty .role-placeholder {
+    color: var(--rmit-red); font-weight: 700;
+  }
+  /* When the user focuses the line to start typing, soften the placeholder
+     styling so it doesn't fight with what they're typing. */
+  .doc-preview .activity .role.role-empty:focus-within {
+    background: #FFFFFF;
+    border-color: var(--rmit-red);
+    border-style: solid;
+  }
   .doc-preview .task { display: block; padding: 6px 0 6px 32px; text-indent: -18px; margin: 2px 0; line-height: 1.45; }
   .doc-preview .task strong { color: var(--rmit-red); margin-right: 6px; }
   .doc-preview ul, .doc-preview ol { display: block; margin: 8px 0 8px 28px; padding: 0; }
@@ -6014,7 +6048,7 @@ function runRulesEngine(model) {
       push({ id:`act-norole-${idx}`, source:'CoVE', severity:'warning',
         message:`Activity ${a.number} has no responsible role.`,
         location: loc,
-        suggestion:'Assign a single accountable role. Others may support, but only one role is responsible.' });
+        suggestion:'Click the highlighted "[Click to add accountable role]" line under the activity title to type the role in. One accountable role per activity - others may support.' });
     } else {
       // The export pattern often shows multiple comma-separated roles for activities done jointly.
       // Flag two or more as info - sometimes intentional, but worth a check.
@@ -7174,7 +7208,15 @@ function renderDocPreview(m) {
   html += `<h2 id="doc-procedure">Procedure</h2>`;
   m.activities.forEach(a => {
     html += '<div class="activity" id="doc-activity-' + escapeHtml(a.number).replace('.', '-') + '"><div><span class="num">' + escapeHtml(a.number) + '</span> <strong>' + escapeHtml(a.title) + '</strong></div>';
-    if (a.role) html += `<div class="role">Role: ${escapeHtml(a.role)}</div>`;
+    // Always render the role line, even when empty - this is the primary place
+    // the user adds an accountable role. A missing role gets an obvious "fill me
+    // in" placeholder. The "Role:" prefix is rendered via CSS ::before so users
+    // can't accidentally delete it - only the role value itself is editable.
+    if (a.role) {
+      html += `<div class="role">${escapeHtml(a.role)}</div>`;
+    } else {
+      html += `<div class="role role-empty" data-empty="1"><span class="role-placeholder">[Click to add accountable role]</span></div>`;
+    }
     const actId = escapeHtml(a.number).replace('.', '-');
     a.tasks.forEach(t => {
       const taskId = 'doc-task-' + actId + '-' + escapeHtml(t.letter);
@@ -7322,7 +7364,7 @@ function renderDiffPreview(newModel, oldModel) {
       // Added activity - wrap whole block in green
       html += '<div class="activity diff-activity-added" id="doc-activity-' + escapeHtml(newA.number).replace('.', '-') + '">';
       html += '<div><span class="num">' + escapeHtml(newA.number) + '</span> <strong>' + escapeHtml(newA.title) + '</strong> <span class="diff-tag diff-tag-added">added</span></div>';
-      if (newA.role) html += '<div class="role">Role: ' + escapeHtml(newA.role) + '</div>';
+      if (newA.role) html += '<div class="role">' + escapeHtml(newA.role) + '</div>';
       (newA.tasks || []).forEach(t => {
         html += '<div class="task"><strong>' + escapeHtml(t.letter) + '.</strong> ' + escapeAndBoldLinks(t.text) + '</div>';
       });
@@ -7337,7 +7379,7 @@ function renderDiffPreview(newModel, oldModel) {
       // Removed activity - wrap whole block in red strikethrough
       html += '<div class="activity diff-activity-removed">';
       html += '<div><span class="num">' + escapeHtml(oldA.number) + '</span> <strong><del class="diff-del">' + escapeHtml(oldA.title) + '</del></strong> <span class="diff-tag diff-tag-removed">removed</span></div>';
-      if (oldA.role) html += '<div class="role"><del class="diff-del">Role: ' + escapeHtml(oldA.role) + '</del></div>';
+      if (oldA.role) html += '<div class="role"><del class="diff-del">' + escapeHtml(oldA.role) + '</del></div>';
       (oldA.tasks || []).forEach(t => {
         html += '<div class="task"><strong>' + escapeHtml(t.letter) + '.</strong> <del class="diff-del">' + escapeAndBoldLinks(t.text) + '</del></div>';
       });
@@ -7350,7 +7392,7 @@ function renderDiffPreview(newModel, oldModel) {
     html += '<div class="activity" id="doc-activity-' + actId + '">';
     html += '<div><span class="num">' + escapeHtml(newA.number) + '</span> <strong>' + diffOrPlain(oldA.title, newA.title) + '</strong></div>';
     if (newA.role || oldA.role) {
-      html += '<div class="role">Role: ' + diffOrPlain(oldA.role || '', newA.role || '') + '</div>';
+      html += '<div class="role">' + diffOrPlain(oldA.role || '', newA.role || '') + '</div>';
     }
     const newTasks = newA.tasks || [];
     const oldTasks = oldA.tasks || [];
@@ -8116,7 +8158,10 @@ function buildNintexImport(m) {
   const stripLabel = (s) => (s || '').replace(/^\s*(?:PROCESS|ACTIVITY|TASK|Role)\s*:\s*/i, '').trim();
   const cleanRole = (role) => {
     const r = stripLabel(role).replace(/[\[\]]/g, '').trim();
-    return r || 'Staff Role';
+    // Missing role -> emit a visible TBD marker the user will spot in the .txt
+    // rather than silently substituting a fake "Staff Role". They can swap it
+    // for the real role name in Nintex or in the exported file.
+    return r || 'TBD - add role';
   };
   const cleanLine = (s) => stripLabel(s).replace(/\s+/g, ' ').trim();
   const stripLeadingLetter = (s) => cleanLine(s).replace(/^[a-zA-Z]\.\s*/, '').replace(/^[a-zA-Z]\s+/, '');
@@ -10170,7 +10215,12 @@ createChatSurface({
           title = fullText;
         }
         const roleEl = actEl.querySelector('.role');
-        const role = roleEl ? stripLabel(extractText(roleEl), 'Role') : '';
+        let role = roleEl ? stripLabel(extractText(roleEl), 'Role') : '';
+        // Ignore the "Click to add accountable role" placeholder - treat as empty
+        // so we don't accidentally export the placeholder text as the role.
+        if (/^\[?\s*click to add accountable role\s*\]?$/i.test(role.trim())) {
+          role = '';
+        }
 
         const tasks = [];
         actEl.querySelectorAll('.task').forEach(taskEl => {
