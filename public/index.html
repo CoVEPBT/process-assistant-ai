@@ -9701,3 +9701,663 @@ createChatSurface({
       }
       // Re-capture the clean updated HTML now that renderResults has run
       updatedSnapshot.docHtml = (document.getElementById('docPreview') || {}).innerHTML || '';
+
+      // Open the flag sidebar so users can see what still needs their input
+      if (Array.isArray(currentIssues) && currentIssues.length > 0
+          && typeof window.openFlagsSidebar === 'function') {
+        window.openFlagsSidebar();
+      }
+    } catch (err) {
+      console.error('[auto-apply] failed:', err);
+      if (typeof showToast === 'function') {
+        // Surface a longer error toast that includes a snippet so the user can
+        // tell us what went wrong if they want.
+        const msg = (err.message || String(err)).slice(0, 320);
+        showToast('Auto-apply failed: ' + msg + ' - Try the manual review, or paste this error to the team.', 'error', 12000);
+      }
+      // Re-show the cards so the user can retry or choose the manual path
+      if (cards) cards.classList.remove('hidden');
+    } finally {
+      if (loading) loading.classList.add('hidden');
+    }
+  }
+
+  function setActiveToggle(which) {
+    // Home v3 (Move 3): the three-button segmented control was replaced with a
+    // single "Compare with original" switch. We keep this function for back-compat
+    // with anywhere else that might call it - it now just syncs the checkbox state.
+    const cb = document.getElementById('compareToggle');
+    if (!cb) return;
+    cb.checked = (which === 'changes');
+  }
+
+  async function applySnapshot(snap) {
+    if (!snap || !snap.model) return;
+    currentModel = JSON.parse(JSON.stringify(snap.model));
+    currentIssues = snap.issues.slice();
+    currentRecommendation = snap.recommendation;
+    currentMermaid = snap.mermaid;
+    currentBpmnXml = snap.bpmnXml;
+    await renderResults();
+    const dp = document.getElementById('docPreview');
+    if (dp && snap.docHtml) dp.innerHTML = snap.docHtml;
+    // Keep the banner + cards-hidden state intact across the toggle
+    const detail = document.getElementById('postAnalyseDetail');
+    if (detail) detail.hidden = false;
+    const cards = document.getElementById('resultsActionCards');
+    if (cards) cards.classList.add('hidden');
+    const updatedBanner = document.getElementById('updatedBanner');
+    if (updatedBanner) updatedBanner.classList.remove('hidden');
+  }
+
+  // Wire the single "Compare with original" switch (home v3 - Move 3).
+  // OFF (default): show the clean updated document.
+  // ON: show the inline diff (strikethroughs + highlights).
+  // The "Original-only" view was removed - the diff is the useful comparison.
+  document.addEventListener('DOMContentLoaded', () => {
+    const cb = document.getElementById('compareToggle');
+    if (!cb) return;
+    cb.addEventListener('change', () => {
+      if (!updatedSnapshot) { cb.checked = false; return; }
+      const dp = document.getElementById('docPreview');
+      if (!dp) return;
+      if (cb.checked) {
+        // Compare ON - show inline diff if we have one, otherwise revert + toast
+        if (!updatedSnapshot.diffHtml) {
+          cb.checked = false;
+          if (typeof showToast === 'function') {
+            showToast('No change-tracking available for this update.', 'info', 4500);
+          }
+          return;
+        }
+        viewMode = 'changes';
+        dp.innerHTML = updatedSnapshot.diffHtml;
+      } else {
+        // Compare OFF - show the clean updated doc
+        viewMode = 'updated';
+        if (updatedSnapshot.docHtml) dp.innerHTML = updatedSnapshot.docHtml;
+      }
+    });
+  });
+
+  // Expose for the card click handler
+  window.startAutoApply = startAutoApply;
+})();
+</script>
+
+
+<script>
+// PAT home - both panels visible at once now; no two-path chooser to wire.
+</script>
+
+
+<script>
+// FAQ overlay - show curated questions, click to send into the inline chat
+(function wireFaqOverlay() {
+  document.addEventListener('DOMContentLoaded', () => {
+    const openBtn = document.getElementById('browseFaqsBtn');
+    const closeBtn = document.getElementById('faqOverlayCloseBtn');
+    const overlay = document.getElementById('faqOverlay');
+    const messagesEl = document.getElementById('inlineChatMessages');
+    if (!openBtn || !overlay) return;
+
+    const open = () => { overlay.hidden = false; };
+    const close = () => { overlay.hidden = true; };
+
+    openBtn.addEventListener('click', open);
+    if (closeBtn) closeBtn.addEventListener('click', close);
+
+    // Esc closes the overlay
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && !overlay.hidden) close();
+    });
+
+    // Click any FAQ item -> send into chat (uses the existing quick-prompt
+    // delegated handler on inlineChatMessages by injecting a synthetic chip).
+    overlay.addEventListener('click', e => {
+      const item = e.target.closest('.faq-item');
+      if (!item || !item.dataset.prompt) return;
+      const prompt = item.dataset.prompt;
+      close();
+      // Trigger the same click path the welcome chips use
+      const fakeChip = document.createElement('button');
+      fakeChip.className = 'ai-quick';
+      fakeChip.dataset.prompt = prompt;
+      fakeChip.style.display = 'none';
+      if (messagesEl) {
+        messagesEl.appendChild(fakeChip);
+        fakeChip.click();
+        // Clean up the synthetic chip after a tick
+        setTimeout(() => fakeChip.remove(), 50);
+      }
+    });
+  });
+})();
+</script>
+
+
+<script>
+// Auto-fix 'what changed?' modal - opens when the user clicks the inline button
+(function wireAutofixModal() {
+  document.addEventListener('DOMContentLoaded', () => {
+    const modal = document.getElementById('autofixModal');
+    const closeBtn = document.getElementById('autofixModalClose');
+    const closeFoot = document.getElementById('autofixModalCloseFooter');
+    if (!modal) return;
+    const open = () => modal.setAttribute('aria-hidden', 'false');
+    const close = () => modal.setAttribute('aria-hidden', 'true');
+    // Delegated click - the trigger button is created dynamically by renderResults
+    document.addEventListener('click', e => {
+      if (e.target && e.target.id === 'autofixModalOpen') open();
+    });
+    if (closeBtn) closeBtn.addEventListener('click', close);
+    if (closeFoot) closeFoot.addEventListener('click', close);
+    modal.addEventListener('click', e => { if (e.target === modal) close(); });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && modal.getAttribute('aria-hidden') === 'false') close();
+    });
+  });
+})();
+</script>
+
+
+<script>
+// Auto-apply acknowledgement modal - must tick both boxes before the AI runs
+(function wireAutoApplyConsent() {
+  document.addEventListener('DOMContentLoaded', () => {
+    const modal = document.getElementById('autoApplyConsentModal');
+    if (!modal) return;
+    const closeBtn = document.getElementById('autoApplyConsentClose');
+    const cancelBtn = document.getElementById('autoApplyConsentCancel');
+    const proceedBtn = document.getElementById('autoApplyConsentProceed');
+    const cb1 = document.getElementById('consentSensitive');
+
+    function close() { modal.setAttribute('aria-hidden', 'true'); }
+    function refreshProceed() {
+      if (proceedBtn) proceedBtn.disabled = !(cb1 && cb1.checked);
+    }
+    if (cb1) cb1.addEventListener('change', refreshProceed);
+    if (closeBtn) closeBtn.addEventListener('click', close);
+    if (cancelBtn) cancelBtn.addEventListener('click', close);
+    if (proceedBtn) proceedBtn.addEventListener('click', () => {
+      close();
+      if (typeof window.startAutoApply === 'function') {
+        // Tiny delay so the modal animates out cleanly before the loading state appears
+        setTimeout(() => window.startAutoApply(), 80);
+      }
+    });
+    modal.addEventListener('click', e => { if (e.target === modal) close(); });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && modal.getAttribute('aria-hidden') === 'false') close();
+    });
+  });
+})();
+</script>
+
+
+<script>
+// Inline flags view - sidebar is the only mode in home v3 (Move 3).
+// The Sidebar/Inline toggle was removed; we force mode='sidebar' regardless of any
+// previously saved preference, and skip the inline rendering path entirely.
+(function wireInlineFlagsView() {
+  const KEY = 'pat-flags-view-mode'; // localStorage key (kept for back-compat)
+  let mode = 'sidebar';
+  // Clear any previously saved 'inline' mode so it doesn't reappear after upgrade
+  try { localStorage.removeItem(KEY); } catch (e) {}
+
+  function getIssues() {
+    return (typeof currentIssues !== 'undefined' && Array.isArray(currentIssues)) ? currentIssues : [];
+  }
+
+  function severityClass(sev) { return 'severity-' + (sev || 'info'); }
+  function severityChar(sev) {
+    if (sev === 'error') return '!';
+    if (sev === 'warning') return '\u25B2';   // ▲
+    return 'i';
+  }
+
+  function clearInlineFlags() {
+    document.querySelectorAll('.inline-flag-marker, .inline-flag-callout').forEach(n => n.remove());
+    const banner = document.getElementById('inlineProcessFlags');
+    if (banner) banner.remove();
+  }
+
+  function applyInlineFlags() {
+    clearInlineFlags();
+    const docPreview = document.getElementById('docPreview');
+    if (!docPreview) return;
+    const issues = getIssues();
+    if (issues.length === 0) return;
+
+    // Process-wide flags get a banner above the procedure section
+    const procEl = document.getElementById('doc-procedure');
+    const processWide = [];
+
+    issues.forEach((issue, idx) => {
+      issue._idx = idx;
+      const resolver = window.resolveJumpTarget;
+      const targetId = (typeof resolver === 'function')
+        ? resolver(issue.location || '', issue.message || '', issue.id || '')
+        : null;
+      if (!targetId) {
+        processWide.push(issue);
+        return;
+      }
+      const target = document.getElementById(targetId);
+      if (!target) {
+        processWide.push(issue);
+        return;
+      }
+      // Inject a marker into the target element
+      const marker = document.createElement('span');
+      marker.className = 'inline-flag-marker ' + severityClass(issue.severity);
+      marker.setAttribute('role', 'button');
+      marker.setAttribute('tabindex', '0');
+      marker.setAttribute('aria-label', issue.severity + ': ' + issue.message);
+      marker.title = issue.message;
+      marker.textContent = severityChar(issue.severity);
+      marker.dataset.issueIdx = String(idx);
+      target.appendChild(marker);
+
+      const expand = () => {
+        // Toggle: if a callout already exists for this issue, remove it
+        const existing = document.querySelector('.inline-flag-callout[data-issue-idx="' + idx + '"]');
+        if (existing) { existing.remove(); return; }
+        const callout = document.createElement('div');
+        callout.className = 'inline-flag-callout ' + severityClass(issue.severity);
+        callout.dataset.issueIdx = String(idx);
+        const sevWord = issue.severity === 'error' ? 'Error'
+                        : issue.severity === 'warning' ? 'Warning'
+                        : 'Suggestion';
+        callout.innerHTML =
+          '<span class="ifc-badge">' + sevWord + '</span>' +
+          '<div class="ifc-body"><strong>' + issue.message + '</strong>' +
+          (issue.suggestion ? '<em>' + issue.suggestion + '</em>' : '') + '</div>' +
+          '<button class="ifc-dismiss" type="button" aria-label="Close">&times;</button>';
+        callout.querySelector('.ifc-dismiss').addEventListener('click', e => { e.stopPropagation(); callout.remove(); });
+        // Insert callout after the target's parent activity block, or after the target itself
+        target.insertAdjacentElement('afterend', callout);
+      };
+      marker.addEventListener('click', expand);
+      marker.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); expand(); }
+      });
+    });
+
+    // Render process-wide banner
+    if (processWide.length > 0 && procEl) {
+      const banner = document.createElement('div');
+      banner.id = 'inlineProcessFlags';
+      banner.className = 'inline-process-flags';
+      banner.innerHTML = '<strong>' + processWide.length + ' process-wide ' +
+        (processWide.length === 1 ? 'item' : 'items') + ':</strong><ul>' +
+        processWide.map(i => '<li>' + i.message + (i.suggestion ? ' - <em>' + i.suggestion + '</em>' : '') + '</li>').join('') +
+        '</ul>';
+      procEl.insertAdjacentElement('beforebegin', banner);
+    }
+  }
+
+  function setMode(next) {
+    mode = next;
+    try { localStorage.setItem(KEY, mode); } catch (e) {}
+    const sidebarBtn = document.getElementById('flagsViewSidebarBtn');
+    const inlineBtn  = document.getElementById('flagsViewInlineBtn');
+    const sidebar = document.getElementById('docSidebar');
+    if (sidebarBtn) { sidebarBtn.classList.toggle('is-active', mode === 'sidebar'); sidebarBtn.setAttribute('aria-selected', String(mode === 'sidebar')); }
+    if (inlineBtn)  { inlineBtn.classList.toggle('is-active', mode === 'inline');  inlineBtn.setAttribute('aria-selected', String(mode === 'inline')); }
+    if (sidebar) sidebar.classList.toggle('inline-mode', mode === 'inline');
+    if (mode === 'inline') applyInlineFlags();
+    else clearInlineFlags();
+  }
+
+  // Expose so re-renders can re-apply
+  window.refreshInlineFlags = function () { if (mode === 'inline') applyInlineFlags(); };
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const sidebarBtn = document.getElementById('flagsViewSidebarBtn');
+    const inlineBtn  = document.getElementById('flagsViewInlineBtn');
+    if (sidebarBtn) sidebarBtn.addEventListener('click', () => setMode('sidebar'));
+    if (inlineBtn)  inlineBtn.addEventListener('click',  () => setMode('inline'));
+    // Restore saved mode visually (rendering happens after analyse)
+    setMode(mode);
+  });
+})();
+</script>
+
+
+<script>
+// 'Switch path' button - brings the two action cards back so the user can pick again
+(function wirePathStatusSwitch() {
+  document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('pathStatusSwitch');
+    if (!btn) return;
+    btn.addEventListener('click', () => {
+      const cards = document.getElementById('resultsActionCards');
+      const ps = document.getElementById('pathStatus');
+      if (cards) cards.classList.remove('hidden');
+      if (ps) ps.classList.add('hidden');
+      // Scroll to the cards so the user sees them again
+      if (cards) cards.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  });
+})();
+</script>
+
+
+<script>
+// Discreet summary chips - show counts in the corner instead of inline banners
+(function wireSummaryChips() {
+  function showChips() {
+    const flagEl = document.getElementById('flagHeadline');
+    const autoFix = document.getElementById('combinedFixBanner');
+    const chipsWrap = document.getElementById('summaryChips');
+    const chipOpps = document.getElementById('summaryChipOpps');
+    const chipFixes = document.getElementById('summaryChipFixes');
+    const oppsCount = document.getElementById('summaryChipOppsCount');
+    const fixesCount = document.getElementById('summaryChipFixesCount');
+
+    // Read counts from existing data
+    const issues = (typeof currentIssues !== 'undefined' ? currentIssues : [])
+      .filter(i => !i.informational);
+    const totalOpps = issues.length;
+    const autoFixHidden = autoFix && autoFix.classList.contains('hidden');
+    const fixesText = (document.getElementById('combinedFixBannerText') || {}).innerText || '';
+    const fixesMatch = fixesText.match(/(\d+)/);
+    const fixesNum = fixesMatch ? parseInt(fixesMatch[1], 10) : 0;
+
+    // Populate chip counts
+    if (oppsCount) oppsCount.textContent = String(totalOpps);
+    if (fixesCount) fixesCount.textContent = String(fixesNum);
+
+    // Summary chips disabled per UX request - they looked floating and orphaned
+    // next to the doc. The opportunities count is already shown in the sidebar
+    // header (via the sidebar list itself), and the auto-fix list lives in the
+    // green note above the doc. We force-hide all chip UI so nothing renders.
+    if (chipOpps) chipOpps.style.display = 'none';
+    if (chipFixes) chipFixes.style.display = 'none';
+    if (chipsWrap) chipsWrap.classList.add('hidden');
+    // Leave the flag headline + auto-fix banner visible (we no longer swap them
+    // for the chip strip).
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    // Opps chip - scroll to the sidebar / inline flag area
+    const chipOpps = document.getElementById('summaryChipOpps');
+    if (chipOpps) chipOpps.addEventListener('click', () => {
+      const sidebar = document.getElementById('docSidebar');
+      if (sidebar && !sidebar.hidden) {
+        sidebar.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else if (typeof window.openFlagsSidebar === 'function') {
+        window.openFlagsSidebar();
+      }
+    });
+    // Fixes chip - open the 'what I changed' modal
+    const chipFixes = document.getElementById('summaryChipFixes');
+    if (chipFixes) chipFixes.addEventListener('click', () => {
+      const m = document.getElementById('autofixModal');
+      if (m) m.setAttribute('aria-hidden', 'false');
+    });
+  });
+
+  window.showSummaryChips = showChips;
+})();
+</script>
+
+
+<script>
+// Save edits - extract the edited model from the doc preview DOM and re-render
+// the workflow (BPMN + Mermaid) so it reflects the user's text changes.
+(function wireSaveEdits() {
+  function extractText(el) {
+    if (!el) return '';
+    return (el.innerText || el.textContent || '').replace(/\s+/g, ' ').trim();
+  }
+  function stripLabel(text, label) {
+    // "Owner: Sarah Chen" -> "Sarah Chen". Tolerates dash separators too.
+    const re = new RegExp('^\\s*' + label + '\\s*[:\\-\\u2013\-]\\s*', 'i');
+    return text.replace(re, '').trim();
+  }
+
+  function extractModelFromDocPreview() {
+    const dp = document.getElementById('docPreview');
+    if (!dp || typeof currentModel === 'undefined' || !currentModel) return null;
+    const m = JSON.parse(JSON.stringify(currentModel));
+
+    const titleEl = dp.querySelector('#doc-title');
+    if (titleEl) m.title = extractText(titleEl);
+
+    // Meta fields - strip the bold label prefix, treat '-' as empty
+    const metaFields = [
+      { id: 'doc-meta-owner', label: 'Owner', key: 'owner' },
+      { id: 'doc-meta-expert', label: 'Expert', key: 'expert' },
+      { id: 'doc-meta-trigger', label: 'Trigger', key: 'trigger' },
+      { id: 'doc-meta-inputs', label: 'Inputs', key: 'inputs' },
+      { id: 'doc-meta-outputs', label: 'Outputs', key: 'outputs' }
+    ];
+    metaFields.forEach(({ id, label, key }) => {
+      const el = dp.querySelector('#' + id);
+      if (!el) {
+        console.warn('[save-edits] missing element for', id, '- keeping previous value:', m[key]);
+        return;
+      }
+      let txt = stripLabel(extractText(el), label);
+      // Collapse internal whitespace + strip Unicode dashes used for placeholder
+      txt = txt.replace(/\s+/g, ' ').trim();
+      if (txt === '-' || txt === '-' || txt === '\u2013') txt = '';
+      m[key] = txt;
+    });
+
+    // Objective + Background - h2 followed by <p>
+    const obj = dp.querySelector('#doc-objective');
+    if (obj && obj.nextElementSibling) m.objective = extractText(obj.nextElementSibling);
+    const bg = dp.querySelector('#doc-background');
+    if (bg && bg.nextElementSibling) m.background = extractText(bg.nextElementSibling);
+
+    // Activities - rebuild from the DOM
+    const actEls = dp.querySelectorAll('.activity');
+    if (actEls.length > 0) {
+      m.activities = [];
+      actEls.forEach((actEl, idx) => {
+        const numEl = actEl.querySelector('.num');
+        const number = numEl ? extractText(numEl) : (idx + 1) + '.0';
+        // First .div containing the activity title - find the first <strong> that isn't the number
+        let title = '';
+        const firstDiv = actEl.querySelector(':scope > div');
+        if (firstDiv) {
+          // Strip the .num text from the start
+          let fullText = extractText(firstDiv);
+          if (numEl) fullText = fullText.replace(number, '').trim();
+          title = fullText;
+        }
+        const roleEl = actEl.querySelector('.role');
+        const role = roleEl ? stripLabel(extractText(roleEl), 'Role') : '';
+
+        const tasks = [];
+        actEl.querySelectorAll('.task').forEach(taskEl => {
+          const fullText = extractText(taskEl);
+          // Letter prefix like "a." or "a"
+          const match = fullText.match(/^([a-z])\.?\s+(.+)$/i);
+          if (match) {
+            tasks.push({ letter: match[1].toLowerCase(), text: match[2] });
+          } else if (fullText) {
+            const next = String.fromCharCode(97 + tasks.length);
+            tasks.push({ letter: next, text: fullText });
+          }
+        });
+
+        const notes = [];
+        actEl.querySelectorAll('.note').forEach(noteEl => {
+          // NOTE block has <strong>NOTE:</strong> question <br> body
+          const html = noteEl.innerHTML.replace(/<strong>NOTE:<\/strong>/i, '').trim();
+          const parts = html.split(/<br\s*\/?>/i);
+          const titlePart = (parts[0] || '').replace(/<[^>]+>/g, '').trim();
+          const bodyPart = (parts.slice(1).join('\n') || '').replace(/<[^>]+>/g, '').trim();
+          if (titlePart) notes.push({ title: titlePart, body: bodyPart });
+        });
+
+        m.activities.push({
+          number,
+          title,
+          role,
+          tasks,
+          notes,
+          links: []
+        });
+      });
+    }
+    return m;
+  }
+
+  async function reRenderWorkflow() {
+    const wf = document.getElementById('workflowRender');
+    if (!wf || typeof currentBpmnXml === 'undefined' || !currentBpmnXml) return;
+    if (typeof BpmnJS === 'undefined') return;
+    try {
+      if (window.bpmnViewer) { try { window.bpmnViewer.destroy(); } catch(e) {} }
+      const newViewer = new BpmnJS({ container: wf });
+      window.bpmnViewer = newViewer;
+      await newViewer.importXML(currentBpmnXml);
+      try { newViewer.get('canvas').zoom('fit-viewport', 'auto'); } catch (e) {}
+      if (typeof applyBpmnTheme === 'function') applyBpmnTheme('nintex');
+      if (typeof injectBpmnAccessibility === 'function') injectBpmnAccessibility();
+    } catch (e) {
+      console.error('[save-edits] workflow re-render failed:', e);
+    }
+  }
+
+  // Did anything that appears in the visual workflow change? Only title,
+  // activity numbers, activity titles, and activity roles drive the diagram.
+  function workflowFieldsChanged(oldModel, newModel) {
+    if (!oldModel || !newModel) return true;
+    if ((oldModel.title || '') !== (newModel.title || '')) return true;
+    const oldActs = oldModel.activities || [];
+    const newActs = newModel.activities || [];
+    if (oldActs.length !== newActs.length) return true;
+    for (let i = 0; i < newActs.length; i++) {
+      const o = oldActs[i] || {};
+      const n = newActs[i];
+      if ((o.number || '') !== (n.number || '')) return true;
+      if ((o.title  || '') !== (n.title  || '')) return true;
+      if ((o.role   || '') !== (n.role   || '')) return true;
+    }
+    return false;
+  }
+
+  async function saveEditsAndRefresh() {
+    const newModel = extractModelFromDocPreview();
+    if (!newModel) {
+      if (typeof showToast === 'function') showToast('Nothing to save yet - analyse a draft first.', 'error');
+      return;
+    }
+    // Snapshot so we can detect whether workflow-relevant fields changed
+    const oldModelSnapshot = (typeof currentModel !== 'undefined' && currentModel)
+      ? JSON.parse(JSON.stringify(currentModel))
+      : null;
+    const workflowChanged = workflowFieldsChanged(oldModelSnapshot, newModel);
+
+    // Update globals
+    currentModel = newModel;
+    const _buildMermaid = window.buildMermaid || (typeof buildMermaid === 'function' ? buildMermaid : null);
+    const _buildBpmnXml = window.buildBpmnXml || (typeof buildBpmnXml === 'function' ? buildBpmnXml : null);
+    const _runRules    = window.runRulesEngine || (typeof runRulesEngine === 'function' ? runRulesEngine : null);
+    // Only regenerate diagram source if it actually changed - keeps zoom/pan
+    if (workflowChanged) {
+      if (_buildMermaid) currentMermaid = _buildMermaid(newModel);
+      if (_buildBpmnXml) currentBpmnXml = _buildBpmnXml(newModel);
+    }
+
+    console.log('[save-edits] extracted model:', {
+      title: newModel.title, owner: newModel.owner, expert: newModel.expert,
+      trigger: newModel.trigger, activities: newModel.activities.length
+    });
+    console.log('[save-edits] workflow fields changed?', workflowChanged);
+
+    // Re-run the rules engine + refresh the opportunities sidebar (every save)
+    let resolvedCount = 0;
+    if (_runRules) {
+      const oldCount = (currentIssues || []).filter(i => !i.informational).length;
+      currentIssues = _runRules(newModel);
+      console.log('[save-edits] new issues:', currentIssues.length, currentIssues.map(i => i.id));
+      if (typeof window.refreshIssuesSidebar === 'function') window.refreshIssuesSidebar();
+      const newCount = currentIssues.filter(i => !i.informational).length;
+      resolvedCount = Math.max(0, oldCount - newCount);
+      const oppsCount = document.getElementById('summaryChipOppsCount');
+      if (oppsCount) oppsCount.textContent = String(newCount);
+      const oppsChip = document.getElementById('summaryChipOpps');
+      if (oppsChip) oppsChip.style.display = (newCount > 0) ? '' : 'none';
+
+      // Update the Export button's error badge - soft-gate is driven by error count
+      const errorCount = currentIssues.filter(i => i.severity === 'error').length;
+      const errBadge = document.getElementById('actionExportErrorBadge');
+      if (errBadge) {
+        if (errorCount > 0) {
+          errBadge.textContent = '\u26A0 ' + errorCount + ' error' + (errorCount === 1 ? '' : 's');
+          errBadge.classList.remove('hidden');
+        } else {
+          errBadge.classList.add('hidden');
+        }
+      }
+      // Update the export-modal warning too if it's currently open / will open
+      const exportWarning = document.getElementById('exportWarning');
+      const exportWarningCount = document.getElementById('exportWarningCount');
+      if (exportWarning && exportWarningCount) {
+        exportWarningCount.textContent = String(errorCount);
+        exportWarning.classList.toggle('hidden', errorCount === 0);
+      }
+    } else {
+      console.warn('[save-edits] runRulesEngine not available; opportunities sidebar not refreshed');
+    }
+
+    // Re-render the workflow only when relevant fields changed
+    if (workflowChanged) {
+      await reRenderWorkflow();
+      const titleEl = document.getElementById('workflowTitle');
+      if (titleEl) titleEl.textContent = currentModel.title || '';
+    }
+
+    if (typeof showToast === 'function') {
+      let msg;
+      if (workflowChanged && resolvedCount > 0) {
+        msg = 'Workflow + opportunities updated. ' + resolvedCount + ' opportunit' + (resolvedCount === 1 ? 'y' : 'ies') + ' resolved.';
+      } else if (workflowChanged) {
+        msg = 'Workflow updated with your edits.';
+      } else if (resolvedCount > 0) {
+        msg = 'Opportunities updated. ' + resolvedCount + ' opportunit' + (resolvedCount === 1 ? 'y' : 'ies') + ' resolved.';
+      } else {
+        msg = 'Changes saved. Opportunities refreshed.';
+      }
+      showToast(msg, 'success', 4500);
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('saveEditsBtn');
+    if (btn) btn.addEventListener('click', saveEditsAndRefresh);
+  });
+
+  // Expose so other code paths can call it
+  window.saveEditsAndRefresh = saveEditsAndRefresh;
+})();
+</script>
+
+
+<script>
+// Top-of-doc 'Save changes' button - same behaviour as the bottom one
+(function wireTopSaveBtn() {
+  document.addEventListener('DOMContentLoaded', () => {
+    const top = document.getElementById('saveEditsTopBtn');
+    if (top) top.addEventListener('click', () => {
+      if (typeof window.saveEditsAndRefresh === 'function') {
+        window.saveEditsAndRefresh();
+      } else {
+        const bottom = document.getElementById('saveEditsBtn');
+        if (bottom) bottom.click();
+      }
+    });
+  });
+})();
+</script>
+
+</body>
+</html>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       
