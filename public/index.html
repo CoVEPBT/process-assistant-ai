@@ -1485,6 +1485,31 @@
     color: #475569;
     line-height: 1.55;
   }
+  /* Discreet "Chat with PAT" prompt right below the hero subtitle - gives
+     scanning users a clear entry point to the chat without adding a heavy CTA. */
+  .home-headline-chat {
+    margin: 12px 0 0;
+    text-align: center;
+  }
+  .home-headline-chat-link {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: transparent; border: 1px solid #DDC8F2;
+    color: var(--rmit-red); padding: 8px 14px; border-radius: 999px;
+    font: inherit; font-size: 13.5px; font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .home-headline-chat-link:hover {
+    background: #FFF5F5; border-color: var(--rmit-red);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(230, 30, 42, 0.12);
+  }
+  .home-headline-chat-link:focus-visible {
+    outline: 2px solid var(--rmit-red); outline-offset: 2px;
+  }
+  .home-headline-chat-link svg {
+    width: 15px; height: 15px; color: #6C56C4;
+  }
 
   /* The draft area is the hero - centred, max width capped, generous padding */
   .home-draft-area {
@@ -1699,6 +1724,71 @@
     box-shadow: 0 0 0 5px rgba(230, 30, 42, 0.55);
   }
   .coach-bubble[aria-expanded="true"] { display: none; }
+  /* First-visit attention pulse - draws the eye without being noisy. */
+  .coach-bubble.coach-bubble-pulse {
+    animation: coachBubblePulse 1.6s ease-in-out 0s 3;
+  }
+  @keyframes coachBubblePulse {
+    0%, 100% { box-shadow: 0 8px 24px rgba(0, 52, 120, 0.25), 0 2px 6px rgba(0, 0, 0, 0.12); }
+    50%      { box-shadow: 0 8px 24px rgba(0, 52, 120, 0.25), 0 2px 6px rgba(0, 0, 0, 0.12),
+                           0 0 0 10px rgba(230, 30, 42, 0.25); }
+  }
+
+  /* First-visit speech tooltip beside the bubble. */
+  .coach-intro-tip {
+    position: fixed;
+    right: 24px; bottom: 86px;
+    z-index: 205;
+    width: 300px; max-width: calc(100vw - 48px);
+    background: #FFFFFF;
+    border: 1px solid #DDC8F2;
+    border-radius: 14px;
+    padding: 12px 32px 12px 14px;
+    box-shadow: 0 14px 36px rgba(15, 23, 42, 0.18), 0 3px 10px rgba(0, 0, 0, 0.06);
+    animation: coachIntroIn 0.28s ease-out;
+  }
+  .coach-intro-tip[hidden] { display: none; }
+  /* Speech-bubble tail pointing at the Ask PAT bubble below */
+  .coach-intro-tip::after {
+    content: '';
+    position: absolute;
+    right: 30px; bottom: -8px;
+    width: 14px; height: 14px;
+    background: #FFFFFF;
+    border-right: 1px solid #DDC8F2;
+    border-bottom: 1px solid #DDC8F2;
+    transform: rotate(45deg);
+  }
+  .coach-intro-tip-text {
+    margin: 0;
+    font-size: 13.5px; line-height: 1.5;
+    color: #0F172A;
+  }
+  .coach-intro-tip-wave {
+    display: inline-block; margin-right: 4px;
+  }
+  .coach-intro-tip-close {
+    position: absolute; top: 6px; right: 8px;
+    width: 22px; height: 22px;
+    background: transparent; border: 0;
+    color: #94A3B8; font-size: 18px; line-height: 1;
+    border-radius: 4px; cursor: pointer; padding: 0;
+  }
+  .coach-intro-tip-close:hover { color: var(--rmit-red); background: #FEE2E2; }
+  .coach-intro-tip-close:focus-visible {
+    outline: 2px solid var(--rmit-red); outline-offset: 2px;
+  }
+  .coach-intro-tip.is-fading {
+    opacity: 0; transform: translateY(6px);
+    transition: opacity 0.35s ease, transform 0.35s ease;
+  }
+  @keyframes coachIntroIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @media (max-width: 560px) {
+    .coach-intro-tip { right: 12px; bottom: 70px; }
+  }
   .coach-bubble-icon {
     display: inline-flex; align-items: center; justify-content: center;
     width: 22px; height: 22px;
@@ -2654,14 +2744,17 @@
     cursor: pointer; font-family: inherit;
   }
   .ai-quick:hover { background: #F1E5C8; }
-  /* Welcome message - compact: override pre-wrap from .ai-message so the HTML
-     whitespace doesn't render as extra blank lines, and tighten margins. */
+  /* Welcome message - plain text, no card. Just a greeting + quick prompts. */
   .ai-message-welcome {
-    background: #F4F8FE; border-color: #DCE7F5;
-    white-space: normal; padding: 12px 14px 10px;
-    line-height: 1.45;
+    background: transparent; border: 0;
+    white-space: normal; padding: 8px 2px 4px;
+    line-height: 1.5;
+    box-shadow: none;
   }
-  .ai-message-welcome p { margin: 0 0 6px; line-height: 1.45; }
+  .ai-message-welcome p {
+    margin: 0 0 10px; line-height: 1.5;
+    font-size: 14px; color: #1F2937;
+  }
   .ai-message-welcome p:last-of-type { margin: 8px 0 8px; font-size: 13px; color: #475569; }
   .ai-welcome-list { margin: 0 0 6px 0; padding: 0 0 0 20px; line-height: 1.4; }
   .ai-welcome-list li { margin: 1px 0; }
@@ -2678,14 +2771,16 @@
   .ai-form-footnote-warn {
     color: #B45309; font-weight: 700; font-style: normal;
   }
-  /* Path-matching chips read like numbered options */
-  .ai-quick-prompts-paths { gap: 8px; }
+  /* Suggested prompts - quiet, low-emphasis chips so they don't compete with
+     the chat itself. Border only, no heavy fill. */
+  .ai-quick-prompts-paths { gap: 6px; margin-top: 6px; }
   .ai-quick-prompts-paths .ai-quick {
-    background: #FFFFFF; border: 1px solid var(--rmit-grey-mid);
-    color: var(--rmit-text); font-weight: 600;
+    background: transparent; border: 1px solid #E2E8F0;
+    color: #475569; font-weight: 500; font-size: 12.5px;
+    padding: 5px 10px; border-radius: 14px;
   }
   .ai-quick-prompts-paths .ai-quick:hover {
-    background: #FFF5F5; border-color: var(--rmit-red); color: var(--rmit-red);
+    background: #F8FAFC; border-color: var(--rmit-red); color: var(--rmit-red);
   }
   .ai-chat-form {
     display: flex; gap: 8px; padding: 12px;
@@ -3374,8 +3469,15 @@ NOTE: What if access is delayed? Escalate to the IT lead and update the new star
   <!-- ==================== INPUT ==================== -->
   <section class="card" id="inputCard">
     <div class="home-headline">
-      <h2 class="home-headline-title">Process polishing, done for you</h2>
-      <p class="home-headline-sub">Provide your draft process - I'll review it against the CoVE and Nintex Process Writing standards, ready for you to publish.</p>
+      <h2 class="home-headline-title">Enhance your process documentation</h2>
+      <p class="home-headline-sub">Provide your draft process. I'll review it against RMIT and Nintex<br>standards and generate a polished version.</p>
+      <p class="home-headline-chat">
+        <button type="button" class="home-headline-chat-link" id="homeChatLink">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M9 9h6M9 13h4"/></svg>
+          Need help getting started? Chat with PAT
+          <span aria-hidden="true">&rarr;</span>
+        </button>
+      </p>
     </div>
 
     <div class="home-draft-area">
@@ -3723,6 +3825,16 @@ NOTE: What if access is delayed? Escalate to the IT lead and update the new star
      Floating "Ask PAT" coach. Bubble lives in the bottom-right;
      clicking it slides out the chat panel. Same IDs as the old
      inline chat so all existing JS keeps working unchanged. -->
+<!-- First-visit speech tooltip - appears beside the Ask PAT bubble once per
+     browser (gated by localStorage). Auto-fades after a few seconds, or dismisses
+     when the user clicks the bubble. -->
+<div id="coachIntroTip" class="coach-intro-tip" role="status" aria-live="polite" hidden>
+  <button type="button" class="coach-intro-tip-close" id="coachIntroTipClose" aria-label="Dismiss">&times;</button>
+  <p class="coach-intro-tip-text">
+    <span class="coach-intro-tip-wave" aria-hidden="true">&#128075;</span>
+    Hi, I'm PAT. Stuck on a process? Ask me anything - how to start writing your process, or how this tool works.
+  </p>
+</div>
 <button type="button" id="coachBubble" class="coach-bubble" aria-controls="coachDrawer" aria-expanded="false" aria-label="Open chat coach">
   <span class="coach-bubble-icon" aria-hidden="true">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -3755,7 +3867,7 @@ NOTE: What if access is delayed? Escalate to the IT lead and update the new star
 
   <div id="inlineChatMessages" class="ai-chat-messages inline-chat-messages">
     <div class="ai-message ai-message-assistant ai-message-welcome">
-      <p>Hi! I'm PAT. Ask me anything about writing a process, CoVE standards, or Nintex.</p>
+      <p>Hi, I'm PAT. What can I help you with?</p>
       <div class="ai-quick-prompts ai-quick-prompts-paths">
         <button type="button" class="ai-quick" data-prompt="I need to create a new process map from scratch. Walk me through what to capture first.">Help me write a process</button>
         <button type="button" class="ai-quick" data-prompt="What are the CoVE Golden Rules in plain language?">Explain CoVE Golden Rules</button>
@@ -7488,31 +7600,220 @@ function htmlToDocxParagraphs(rootEl, D) {
    ============================================================ */
 async function downloadAsPdf() {
   if (!currentModel) return;
-  const wrap = document.createElement('div');
-  wrap.style.padding = '24px';
-  wrap.style.fontFamily = 'Segoe UI, Arial, sans-serif';
-  wrap.style.color = '#1D1D1D';
-  // Use LIVE doc preview HTML (so user edits are included).
-  wrap.innerHTML = document.getElementById('docPreview').innerHTML;
-  // append the rendered SVG
-  const wf = document.getElementById('workflowRender').innerHTML;
-  if (wf) {
-    const wfWrap = document.createElement('div');
-    wfWrap.style.marginTop = '24px';
-    wfWrap.style.borderTop = '2px solid #003478';
-    wfWrap.style.paddingTop = '16px';
-    wfWrap.innerHTML = '<h2 style="color:#003478;font-family:Segoe UI,Arial,sans-serif;">Visual workflow</h2>' + wf;
-    wrap.appendChild(wfWrap);
+  // Use jsPDF directly so the PDF contains REAL text (selectable, searchable,
+  // crisp at any zoom, small file size) instead of a canvas screenshot.
+  // jsPDF is bundled inside html2pdf.bundle.min.js and exposed at window.jspdf.
+  const jsPDFCtor = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
+  if (!jsPDFCtor) {
+    if (typeof showToast === 'function') {
+      showToast('PDF library still loading. Please try again in a moment.', 'error');
+    }
+    return;
   }
-  const opt = {
-    margin: 12,
-    filename: ((currentModel.title || 'process').replace(/[^\w\-]+/g,'_')) + '.pdf',
-    image: { type: 'jpeg', quality: 0.95 },
-    html2canvas: { scale: 2 },
-    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-    pagebreak: { mode: ['avoid-all','css','legacy'] }
-  };
-  await html2pdf().set(opt).from(wrap).save();
+  const m = currentModel;
+  const doc = new jsPDFCtor({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+
+  // ---------- Layout constants ----------
+  const PAGE_W = 210;
+  const PAGE_H = 297;
+  const MARGIN_L = 18;
+  const MARGIN_R = 18;
+  const MARGIN_T = 18;
+  const MARGIN_B = 18;
+  const CONTENT_W = PAGE_W - MARGIN_L - MARGIN_R;
+  const NAVY = [0, 52, 120];
+  const RED  = [192, 34, 61];
+  const GREY = [71, 85, 105];
+  const BLACK = [29, 29, 29];
+  let y = MARGIN_T;
+
+  // ---------- Helpers ----------
+  function setText(opts) {
+    doc.setFont('helvetica', opts && opts.bold ? 'bold' : (opts && opts.italic ? 'italic' : 'normal'));
+    doc.setFontSize((opts && opts.size) || 11);
+    const c = (opts && opts.color) || BLACK;
+    doc.setTextColor(c[0], c[1], c[2]);
+  }
+  function ensureSpace(needed) {
+    if (y + needed > PAGE_H - MARGIN_B) {
+      doc.addPage();
+      y = MARGIN_T;
+    }
+  }
+  function addBlock(text, opts) {
+    if (!text) return;
+    const o = opts || {};
+    setText(o);
+    const indent = o.indent || 0;
+    const width = CONTENT_W - indent;
+    const lineHeight = (o.lineHeight || (o.size ? o.size * 0.42 : 4.6));
+    const lines = doc.splitTextToSize(String(text), width);
+    lines.forEach(line => {
+      ensureSpace(lineHeight);
+      doc.text(line, MARGIN_L + indent, y);
+      y += lineHeight;
+    });
+    if (o.after) y += o.after;
+  }
+  function addDivider(opts) {
+    const o = opts || {};
+    ensureSpace(3);
+    const c = o.color || NAVY;
+    doc.setDrawColor(c[0], c[1], c[2]);
+    doc.setLineWidth(o.weight || 0.5);
+    doc.line(MARGIN_L, y, MARGIN_L + CONTENT_W, y);
+    y += (o.after || 3);
+  }
+  // Task text + optional bold "[xx link here]" marker on its own indented line below
+  function addTaskRow(letter, text) {
+    const rawText = String(text || '');
+    const hasLink = /\[xx link here\]/.test(rawText);
+    const cleanText = hasLink ? rawText.replace(/\s*\[xx link here\]\s*/g, ' ').trim() : rawText;
+    // Letter prefix in navy, then the body in black
+    const letterPrefix = letter + '. ';
+    setText({ bold: true, color: NAVY, size: 11 });
+    const letterWidth = doc.getTextWidth(letterPrefix);
+    const indent = 8;
+    const bodyWidth = CONTENT_W - indent - letterWidth;
+    setText({ size: 11 });
+    const lines = doc.splitTextToSize(cleanText, bodyWidth);
+    // First line: letter prefix + first wrapped line
+    ensureSpace(5);
+    setText({ bold: true, color: NAVY, size: 11 });
+    doc.text(letterPrefix, MARGIN_L + indent, y);
+    setText({ size: 11 });
+    doc.text(lines[0] || '', MARGIN_L + indent + letterWidth, y);
+    y += 5;
+    // Remaining wrapped lines (if any) aligned with body text
+    for (let i = 1; i < lines.length; i++) {
+      ensureSpace(5);
+      doc.text(lines[i], MARGIN_L + indent + letterWidth, y);
+      y += 5;
+    }
+    // Link placeholder on its own indented row, bold red
+    if (hasLink) {
+      ensureSpace(5);
+      setText({ bold: true, color: RED, size: 10.5 });
+      doc.text('[xx link here]', MARGIN_L + indent + letterWidth, y);
+      y += 5;
+    }
+    y += 1; // tiny breathing room after each task
+  }
+  function addNote(title, body) {
+    // Soft note block - thin left border + indented text. Built with a coloured rect.
+    const startY = y;
+    const innerW = CONTENT_W - 4;
+    setText({ bold: true, size: 10.5, color: NAVY });
+    const titleLines = doc.splitTextToSize('NOTE: ' + (title || ''), innerW - 4);
+    const bodyText = String(body || '');
+    setText({ size: 10.5, color: BLACK });
+    const bodyLines = bodyText ? doc.splitTextToSize(bodyText, innerW - 4) : [];
+    const blockHeight = 3 + (titleLines.length * 4.4) + (bodyLines.length ? 1 + (bodyLines.length * 4.4) : 0) + 3;
+    ensureSpace(blockHeight + 2);
+    // Light fill background
+    doc.setFillColor(252, 248, 230);
+    doc.setDrawColor(229, 200, 90);
+    doc.setLineWidth(0.2);
+    doc.rect(MARGIN_L, y, CONTENT_W, blockHeight, 'FD');
+    y += 3;
+    setText({ bold: true, size: 10.5, color: NAVY });
+    titleLines.forEach(line => { doc.text(line, MARGIN_L + 3, y); y += 4.4; });
+    if (bodyLines.length) {
+      y += 1;
+      setText({ size: 10.5, color: BLACK });
+      bodyLines.forEach(line => { doc.text(line, MARGIN_L + 3, y); y += 4.4; });
+    }
+    y += 3 + 2;
+  }
+
+  // ---------- Title ----------
+  addBlock(m.title || 'Untitled process', { bold: true, size: 18, color: NAVY, after: 1 });
+  addDivider({ color: NAVY, weight: 0.6, after: 4 });
+
+  // ---------- Meta block ----------
+  const metaLines = [];
+  if (m.owner)   metaLines.push(['Owner', m.owner]);
+  if (m.expert)  metaLines.push(['Expert', m.expert]);
+  if (m.trigger) metaLines.push(['Trigger', m.trigger]);
+  if (m.inputs)  metaLines.push(['Inputs', m.inputs]);
+  if (m.outputs) metaLines.push(['Outputs', m.outputs]);
+  if (metaLines.length) {
+    metaLines.forEach(([label, value]) => {
+      setText({ bold: true, size: 10.5, color: GREY });
+      const labelText = label + ': ';
+      const labelW = doc.getTextWidth(labelText);
+      const lines = doc.splitTextToSize(String(value), CONTENT_W - labelW);
+      ensureSpace(4.6);
+      doc.text(labelText, MARGIN_L, y);
+      setText({ size: 10.5, color: BLACK });
+      doc.text(lines[0] || '', MARGIN_L + labelW, y);
+      y += 4.6;
+      for (let i = 1; i < lines.length; i++) {
+        ensureSpace(4.6);
+        doc.text(lines[i], MARGIN_L + labelW, y);
+        y += 4.6;
+      }
+    });
+    y += 3;
+  }
+
+  // ---------- Objective ----------
+  if (m.objective) {
+    addBlock('Objective', { bold: true, size: 13, color: NAVY, after: 2 });
+    addBlock(m.objective, { size: 11, after: 4 });
+  }
+  // ---------- Background ----------
+  if (m.background) {
+    addBlock('Background', { bold: true, size: 13, color: NAVY, after: 2 });
+    addBlock(m.background, { size: 11, after: 4 });
+  }
+
+  // ---------- Procedure ----------
+  addBlock('Procedure', { bold: true, size: 13, color: NAVY, after: 2 });
+  addDivider({ color: [200, 210, 220], weight: 0.3, after: 3 });
+  m.activities.forEach((a, idx) => {
+    ensureSpace(8);
+    // Activity number + title on one line, navy
+    setText({ bold: true, size: 12, color: NAVY });
+    const numText = a.number + '  ';
+    const numW = doc.getTextWidth(numText);
+    doc.text(numText, MARGIN_L, y);
+    setText({ bold: true, size: 12, color: BLACK });
+    const titleLines = doc.splitTextToSize(a.title || '', CONTENT_W - numW);
+    doc.text(titleLines[0] || '', MARGIN_L + numW, y);
+    y += 5.5;
+    for (let i = 1; i < titleLines.length; i++) {
+      ensureSpace(5.5);
+      doc.text(titleLines[i], MARGIN_L + numW, y);
+      y += 5.5;
+    }
+    if (a.role) {
+      setText({ italic: true, size: 10, color: GREY });
+      const rl = doc.splitTextToSize('Role: ' + a.role, CONTENT_W - 8);
+      rl.forEach(line => { ensureSpace(4.4); doc.text(line, MARGIN_L + 8, y); y += 4.4; });
+    }
+    y += 1;
+    // Tasks
+    (a.tasks || []).forEach(t => addTaskRow(t.letter, t.text));
+    // Notes
+    (a.notes || []).forEach(n => addNote(n.title, n.body));
+    // Linked processes
+    (a.links || []).forEach(l => {
+      setText({ italic: true, size: 10, color: GREY });
+      addBlock('> Linked process: ' + l.name, { italic: true, size: 10, color: GREY, indent: 8, after: 0 });
+    });
+    // Space between activities
+    if (idx < m.activities.length - 1) y += 5;
+  });
+
+  // ---------- Footer: generated date ----------
+  setText({ italic: true, size: 8.5, color: GREY });
+  const today = (typeof formatAusDate === 'function') ? formatAusDate(new Date()) : new Date().toLocaleDateString('en-AU');
+  doc.text('Generated by CoVE Process Assistant on ' + today, MARGIN_L, PAGE_H - 8);
+
+  // ---------- Save ----------
+  const filename = ((m.title || 'process').replace(/[^\w\-]+/g, '_')) + '.pdf';
+  doc.save(filename);
 }
 
 /* ============================================================
@@ -8921,6 +9222,43 @@ createChatSurface({
   // Expose openers globally for use elsewhere (e.g. quick-prompt redirects)
   window.openCoachDrawer = openDrawer;
   window.closeCoachDrawer = closeDrawer;
+
+  // Inline "Chat with PAT" prompt in the home hero - opens the same drawer.
+  const homeChatLink = document.getElementById('homeChatLink');
+  if (homeChatLink) homeChatLink.addEventListener('click', openDrawer);
+
+  // First-visit speech tooltip + bubble pulse.
+  // Gated by localStorage so it only shows once per browser. Dismisses on
+  // bubble click, close button, drawer open, or after ~9 seconds.
+  (function showFirstVisitTip() {
+    const KEY = 'pat-coach-intro-seen';
+    let seen = false;
+    try { seen = localStorage.getItem(KEY) === '1'; } catch (e) {}
+    if (seen) return;
+    const tip = document.getElementById('coachIntroTip');
+    const tipClose = document.getElementById('coachIntroTipClose');
+    if (!tip) return;
+    function markSeen() {
+      try { localStorage.setItem(KEY, '1'); } catch (e) {}
+    }
+    function hideTip() {
+      if (tip.hidden) return;
+      tip.classList.add('is-fading');
+      setTimeout(() => { tip.hidden = true; tip.classList.remove('is-fading'); }, 380);
+      markSeen();
+    }
+    // Show after a brief settle so the page paints first
+    setTimeout(() => {
+      tip.hidden = false;
+      bubble.classList.add('coach-bubble-pulse');
+      setTimeout(() => bubble.classList.remove('coach-bubble-pulse'), 5200);
+    }, 700);
+    // Auto-fade after ~9 seconds if user hasn't interacted
+    const autoFade = setTimeout(hideTip, 9000);
+    // Dismiss on any of: close button, bubble click, drawer open
+    if (tipClose) tipClose.addEventListener('click', () => { clearTimeout(autoFade); hideTip(); });
+    bubble.addEventListener('click', () => { clearTimeout(autoFade); hideTip(); }, { once: true });
+  })();
 
   // References row (now in the page footer) - clicking opens the matching modal.
   // The modal IDs (writingGuideModal / standardsModal / aboutModal) are already wired
