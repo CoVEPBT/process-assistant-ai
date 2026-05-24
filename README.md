@@ -2,7 +2,7 @@
 
 A version of the CoVE Process Writing Assistant with **inline AI** (OpenAI gpt-4o-mini) instead of the external Copilot agent. Lets users get conversational help and AI-driven enhancement without leaving the tool.
 
-This is a **separate version** from the SharePoint-deployed v2 (`workflow-generator/rmit-process-writing-assistant-v2.html`) — that one is unchanged and continues to use the M365 Copilot agent for staff use.
+This is a **separate version** from the SharePoint-deployed v2 (`workflow-generator/rmit-process-writing-assistant-v2.html`) - that one is unchanged and continues to use the M365 Copilot agent for staff use.
 
 ## Architecture
 
@@ -49,9 +49,9 @@ npm run dev
 ## Security
 
 - `.env` is gitignored and must never be committed
-- The API key only exists on the machine running the server — not in the browser, not in any deployed file
+- The API key only exists on the machine running the server - not in the browser, not in any deployed file
 - For testing on your own machine, run `npm run dev` and access http://localhost:3001
-- For wider rollout, the server needs to be hosted somewhere accessible to your users (similar hosting question as comms-engine + VAL — the same RMIT IT conversation applies)
+- For wider rollout, the server needs to be hosted somewhere accessible to your users (similar hosting question as comms-engine + VAL - the same RMIT IT conversation applies)
 
 
 ## Knowledge files
@@ -68,7 +68,7 @@ knowledge/
 
 After adding or changing files, restart the server (`Ctrl+C` then `npm run dev`). The startup log shows `[knowledge] loaded ...` for each file picked up. Visit `http://localhost:3001/api/health` to see the total character count of loaded knowledge.
 
-Knowledge files are gitignored — keep RMIT-internal content out of any public repo.
+Knowledge files are gitignored - keep RMIT-internal content out of any public repo.
 
 ## Comparison with v2 (Copilot version)
 
@@ -76,8 +76,8 @@ Knowledge files are gitignored — keep RMIT-internal content out of any public 
 | --------------------- | ------------------------------- | -------------------------------- |
 | AI provider           | M365 Copilot agent              | OpenAI gpt-4o-mini               |
 | Where AI runs         | Microsoft tenant boundary       | Your OpenAI account              |
-| Hosting requirement   | None — pure static HTML         | Node.js server (this repo)       |
-| API key handling      | None — uses your M365 sign-in   | Server-side .env                 |
+| Hosting requirement   | None - pure static HTML         | Node.js server (this repo)       |
+| API key handling      | None - uses your M365 sign-in   | Server-side .env                 |
 | Deployment            | GitHub Pages → SharePoint embed | Localhost or hosted Node server  |
 | User experience       | Opens agent in new tab          | Inline chat, no tab switch       |
 | Cost per use          | Bundled in M365 Copilot licence | Per-token OpenAI charges         |

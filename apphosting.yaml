@@ -13,7 +13,7 @@ runConfig:
   # Single instance is plenty for an internal tool; scale to 10 if it picks up.
   minInstances: 0
   maxInstances: 5
-  # Memory bump above the 256 MiB default — mammoth + bpmn imports add weight.
+  # Memory bump above the 256 MiB default - mammoth + bpmn imports add weight.
   memoryMiB: 512
   cpu: 1
   # Allow long-running OpenAI calls
@@ -21,7 +21,7 @@ runConfig:
   concurrency: 80
 
 env:
-  # OpenAI model — overridable via Secret Manager or here directly.
+  # OpenAI model - overridable via Secret Manager or here directly.
   - variable: OPENAI_MODEL
     value: gpt-4o-mini
     availability:
