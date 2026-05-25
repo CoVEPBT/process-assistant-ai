@@ -68,6 +68,25 @@ async function loadKnowledge() {
 
 const app = express();
 app.use(express.json({ limit: '2mb' }));
+
+// SharePoint embed support: allow RMIT SharePoint tenants to iframe the tool.
+// frame-ancestors overrides any X-Frame-Options the platform might inject.
+// To allow other hosts (e.g. a different tenant or a test environment), add
+// them to the directive below. Use 'self' to keep the tool loadable on its
+// own Firebase URL outside an iframe.
+const ALLOWED_FRAME_ANCESTORS = [
+  "'self'",
+  'https://rmit.sharepoint.com',
+  'https://rmit-my.sharepoint.com'
+];
+app.use((req, res, next) => {
+  res.setHeader(
+    'Content-Security-Policy',
+    'frame-ancestors ' + ALLOWED_FRAME_ANCESTORS.join(' ')
+  );
+  next();
+});
+
 app.use(express.static(PUBLIC_DIR));
 
 const PORT  = parseInt(process.env.PORT || '3001', 10);

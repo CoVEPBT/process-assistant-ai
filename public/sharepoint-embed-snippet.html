@@ -1,0 +1,90 @@
+<!--
+  SharePoint Embed snippet for the CoVE Process Writing Assistant (AI version).
+  Paste this into a SharePoint Embed web part (Site contents > Pages > [your page] > Edit > "+" > Embed).
+
+  What it does:
+    1. Hosts the tool inside a responsive iframe pointed at the Firebase App Hosting URL.
+    2. Auto-resizes the iframe height to the tool's actual content (no inner scroll bars).
+    3. Sends the user's visible viewport position back to the tool, so any modal
+       (About, Standards, Writing guide, Export, etc.) opens centred on the user's
+       screen instead of the iframe's geometric centre.
+
+  STEP 1 - Get your Firebase URL:
+    Firebase console > pick the process-writing-coach-fb38c project >
+    Build > App Hosting > click your backend.
+    Copy the URL shown near the top of the page. It looks like:
+      https://process-assistant-ai--process-writing-coach-fb38c.<region>.hosted.app
+
+  STEP 2 - Replace FIREBASE_URL below with that URL.
+
+  STEP 3 - Paste this whole file into the SharePoint Embed web part.
+-->
+
+<style>
+  .cove-tool-frame { width: 100%; border: 0; display: block; min-height: 800px; }
+</style>
+
+<iframe
+  id="coveToolFrame"
+  class="cove-tool-frame"
+  src="FIREBASE_URL_HERE"
+  title="CoVE Process Writing Assistant"
+  loading="lazy"
+  sandbox="allow-scripts allow-same-origin allow-downloads allow-popups allow-forms"
+></iframe>
+
+<script>
+(function () {
+  var iframe = document.getElementById('coveToolFrame');
+  if (!iframe) return;
+
+  // 1) Auto-resize: tool posts its content height; we apply it.
+  window.addEventListener('message', function (e) {
+    if (!e.data || typeof e.data !== 'object') return;
+    if (e.source !== iframe.contentWindow) return;
+
+    if (e.data.type === 'cove-tool-resize' && typeof e.data.height === 'number') {
+      iframe.style.height = e.data.height + 'px';
+    }
+    // If the tool boots and asks for viewport info, send it now.
+    if (e.data.type === 'cove-tool-request-viewport') {
+      sendViewport();
+    }
+  });
+
+  // 2) Viewport sync: send the visible portion of the iframe to the tool so
+  //    its modals can position themselves where the user is actually looking.
+  function sendViewport() {
+    if (!iframe.contentWindow) return;
+    var rect = iframe.getBoundingClientRect();
+    var visibleTop = Math.max(0, -rect.top);
+    var visibleBottom = Math.min(rect.height, window.innerHeight - rect.top);
+    var visibleHeight = Math.max(0, visibleBottom - visibleTop);
+    // Fallback: if the iframe isn't on screen at all, use the window viewport.
+    if (visibleHeight < 100) visibleHeight = Math.min(window.innerHeight, rect.height || window.innerHeight);
+    try {
+      iframe.contentWindow.postMessage({
+        type: 'cove-host-viewport',
+        visibleTop: visibleTop,
+        visibleHeight: visibleHeight
+      }, '*');
+    } catch (err) { /* ignore */ }
+  }
+
+  // Send viewport info on every relevant event (throttled to ~10fps).
+  var sendViewportThrottled = (function () {
+    var t = null;
+    return function () {
+      if (t) return;
+      t = setTimeout(function () { t = null; sendViewport(); }, 100);
+    };
+  })();
+
+  window.addEventListener('scroll', sendViewportThrottled, { passive: true });
+  window.addEventListener('resize', sendViewportThrottled);
+  // Initial send + short follow-ups in case the iframe loads after this script.
+  sendViewport();
+  setTimeout(sendViewport, 500);
+  setTimeout(sendViewport, 1500);
+})();
+</script>
