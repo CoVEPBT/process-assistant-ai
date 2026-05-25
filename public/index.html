@@ -21,8 +21,14 @@
 
 <style>
   :root {
+    /* Legacy "rmit-red" name kept for backwards compatibility - it actually
+       holds the navy brand colour (#003478) since the rebrand from red to navy.
+       --rmit-navy + --rmit-navy-dark are aliases for any newer code that uses
+       the semantically-correct name. Both pairs resolve to the same colours. */
     --rmit-red: #003478;
     --rmit-red-dark: #002455;
+    --rmit-navy: #003478;
+    --rmit-navy-dark: #002455;
     --rmit-black: #000000;
     --rmit-grey: #F4F4F4;
     --rmit-grey-mid: #D9D9D9;
@@ -602,9 +608,6 @@
   .issue.issue-active .severity {
     color: #1B5E20;
   }
-  .issue.issue-active .issue-jump-hint {
-    background: #2E7D32; color: #FFFFFF; border-color: #2E7D32;
-  }
   /* When ANY card is active, dim its siblings so the focused one stands out. */
   #issuesOut:has(.issue.issue-active) .issue:not(.issue-active) {
     opacity: 0.45;
@@ -615,7 +618,30 @@
     opacity: 0.85;
   }
 
-  /* Discreet "Save changes to refresh" hint at the top of the opportunities sidebar */
+  /* Sidebar auto-apply escape hatch - shown above the quality flags list so
+     users who chose "Review yourself" can still flip to AI auto-apply at any
+     point without restarting. Compact compared to the main choice card. */
+  .sidebar-autoapply-fallback {
+    margin: 8px 12px 10px;
+  }
+  .sidebar-autoapply-fallback-btn {
+    width: 100%;
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: 8px;
+    padding: 10px 14px;
+    font-size: 13.5px; font-weight: 600;
+    border-radius: 8px;
+    min-height: 40px;
+  }
+  .sidebar-autoapply-fallback-btn svg { width: 15px; height: 15px; flex-shrink: 0; }
+  .sidebar-autoapply-fallback-btn .ai-badge { margin-left: 2px; }
+  .sidebar-autoapply-fallback-hint {
+    margin: 6px 0 0;
+    font-size: 11.5px; color: #64748B; line-height: 1.4;
+    text-align: center;
+  }
+
+  /* Discreet "Save changes to refresh" hint at the top of the quality flags sidebar */
   .doc-sidebar-hint {
     display: flex; align-items: flex-start; gap: 8px;
     margin: 8px 12px 12px;
@@ -644,6 +670,47 @@
   .autofix-bar button { white-space: nowrap; }
   .autofix-bar.applied { background: #EDF7EE; border-color: #A8D5AC; }
 
+  /* Save-changes reminder under the doc preview - centred, low-emphasis */
+  /* Hidden by default - only shown when the quality flags sidebar is visible.
+     If the sidebar is hidden the user has nothing to "refresh", so this
+     reminder is just noise. The :has() selector below switches it on when
+     the .doc-sidebar inside .doc-with-sidebar is NOT [hidden]. */
+  .doc-save-reminder {
+    display: none;
+    align-items: center; justify-content: center;
+    gap: 6px;
+    margin: 10px 0 0; padding: 8px 12px;
+    background: #F8FAFC; border: 1px solid #EEF1F5; border-radius: 4px;
+    font-size: 12.5px; color: #64748B; line-height: 1.45;
+  }
+  .doc-with-sidebar:has(.doc-sidebar:not([hidden])) .doc-save-reminder {
+    display: flex;
+  }
+  .doc-save-reminder svg {
+    width: 13px; height: 13px; color: #94A3B8; flex-shrink: 0;
+  }
+  .doc-save-reminder strong { color: #0F172A; font-weight: 600; }
+
+  /* Persistent green highlight on the active doc section. Pairs with the green
+     active quality flag card so the visual link between sidebar + doc is clear. */
+  .doc-preview .activity.section-active,
+  .doc-preview .task.section-active,
+  .doc-preview .note.section-active,
+  .doc-preview .section-active {
+    background: #ECFDF5 !important;
+    box-shadow: inset 3px 0 0 #2E7D32;
+    border-radius: 4px;
+  }
+  /* Headings and meta lines look better with a left border line than a fill */
+  .doc-preview h1.section-active,
+  .doc-preview h2.section-active,
+  .doc-preview p.section-active,
+  .doc-preview div.meta.section-active {
+    background: #ECFDF5 !important;
+    border-left: 3px solid #2E7D32;
+    padding-left: 8px;
+  }
+
   /* Pulse highlight when an activity is jumped to from an issue card */
   .activity-highlight { animation: pulse-highlight 1.4s ease-in-out 3; }
   @keyframes pulse-highlight {
@@ -664,21 +731,24 @@
   /* Group severity + source on the left of row1; affordance pill sits on the right
      (the existing .issue .row1 rule below uses justify-content:space-between). */
   .issue .issue-meta { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .issue-jump-hint, .issue-static-hint {
-    display: inline-flex; align-items: center; gap: 4px;
-    font-size: 11.5px; font-weight: 500;
-    padding: 2px 8px; border-radius: 999px;
+  /* Small location pill on the right of each issue card. Shows which part of
+     the document the issue points to (e.g. "Activity 1.0"). Discreet by
+     default; brighter when the card is active. */
+  .issue-pill {
+    display: inline-flex; align-items: center; gap: 2px;
+    font-size: 11px; font-weight: 500;
+    padding: 2px 8px; border-radius: 10px;
     white-space: nowrap;
     align-self: center;
-  }
-  .issue-jump-hint {
-    color: var(--rmit-red); background: #FFF5F5;
-    border: 1px solid #FFD9D9;
-  }
-  .issue-jump-hint svg { width: 11px; height: 11px; }
-  .issue-static-hint {
-    color: #64748B; background: #F1F5F9;
     border: 1px solid #E2E8F0;
+    background: #FFFFFF;
+    color: #475569;
+  }
+  .issue-pill-static {
+    color: #64748B; background: #F1F5F9;
+  }
+  .issue.issue-active .issue-pill {
+    background: #2E7D32; color: #FFFFFF; border-color: #2E7D32;
   }
 
   /* Toast (inline validation replacement for alert()) */
@@ -922,19 +992,45 @@
   }
   .doc-section[hidden] { display: none; }
   .doc-section-header {
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 12px; flex-wrap: wrap; margin: 0 0 8px;
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 12px; flex-wrap: wrap; margin: 0 0 10px;
+  }
+  .doc-section-title-wrap {
+    display: flex; align-items: center; gap: 10px;
+    min-width: 0; flex: 1 1 auto;
   }
   .doc-section-title {
     margin: 0; padding: 0; border: 0;
     display: inline-flex; align-items: center; gap: 8px;
     font-size: 15px; font-weight: 700; color: var(--rmit-navy);
     text-transform: none; letter-spacing: 0;
+    flex-wrap: wrap;
   }
   .doc-section-title svg { width: 18px; height: 18px; color: var(--rmit-navy); }
-  .doc-section-tip {
-    margin: 0 0 10px;
-    font-size: 12.5px; color: #64748B;
+  /* Inline metadata caption next to the section title (e.g. "5 activities - 18 tasks").
+     Reads as a quiet caption, never competes with the heading. */
+  .doc-import-summary {
+    margin: 0; padding: 0;
+    font-size: 12px; color: #64748B; font-weight: 500;
+  }
+  .doc-import-summary:empty { display: none; }
+  /* Top-of-section action row: Save changes - Export - kebab menu (Reset) */
+  .doc-section-actions {
+    display: inline-flex; align-items: center; gap: 8px;
+    flex-shrink: 0;
+  }
+  .doc-pane-export-btn { position: relative; }
+  /* Small chevron at the end of the Export button to signal it opens a menu */
+  .doc-pane-export-btn .export-chevron {
+    width: 12px; height: 12px;
+    margin-left: 6px; margin-right: -2px;
+    vertical-align: -1px;
+  }
+  /* Footer action row under the doc preview - holds the secondary Export
+     button so users who've scrolled don't need to return to the top to export. */
+  .doc-section-footer-actions {
+    display: flex; justify-content: flex-end;
+    margin-top: 16px;
   }
   /* Workflow section appears below the doc when the Visual workflow top tab is clicked. */
   .workflow-section {
@@ -951,12 +1047,13 @@
   }
 
   /* Generated doc preview - also used for PDF export.
-     Taller min-height + larger max-height so users can scan most of the document
-     without the inner scrollbar kicking in until truly long processes. */
+     Single-page-scroll mode: no internal scrollbar. The doc grows to its
+     natural height and the page itself is the only scroll surface. The sidebar
+     beside it is position:sticky and follows along until the doc ends. */
   .doc-preview {
     background: #FFFFFF; padding: 32px; border: 1px solid var(--rmit-grey-mid);
     border-radius: 4px;
-    min-height: 900px; max-height: calc(100vh - 120px); overflow-y: auto;
+    min-height: 900px;
     font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.5; color: #1D1D1D;
   }
   .doc-preview h1 {
@@ -1358,10 +1455,18 @@
     display: flex; gap: 18px; align-items: flex-start;
   }
   .doc-with-sidebar .doc-main { flex: 1 1 auto; min-width: 0; }
+  /* Sidebar sticks just below the sticky header + results tabs so it stays in
+     view as the user scrolls the page. Sticky positioning naturally releases
+     the sidebar once the user scrolls past the bottom of .doc-with-sidebar -
+     i.e. past the doc's end - so the sidebar "disappears past its end" without
+     extra logic. The max-height bounds the sidebar so it never exceeds the
+     remaining viewport. Internal overflow-y stays as a safety net for the
+     rare case of a very long quality flags list. */
   .doc-with-sidebar .doc-sidebar {
     flex: 0 0 360px;
-    position: sticky; top: 12px;
-    max-height: calc(100vh - 100px);
+    position: sticky;
+    top: calc(var(--header-height, 76px) + var(--results-tabs-height, 64px) + 12px);
+    max-height: calc(100vh - var(--header-height, 76px) - var(--results-tabs-height, 64px) - 24px);
     overflow-y: auto;
     border: 1px solid #C7DBF2; border-radius: 8px;
     background: #F4F7FB;
@@ -1377,6 +1482,26 @@
   .doc-sidebar-header h4 {
     margin: 0; font-size: 14px; font-weight: 700;
     color: var(--rmit-red); text-transform: uppercase; letter-spacing: 0.6px;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  /* Discreet "N to review" pill next to the QUALITY FLAGS header - amber chip
+     that updates as quality flags are resolved (by AI auto-apply or by the
+     user editing and saving). Turns green when all quality flags are clear. */
+  .sidebar-opps-count {
+    display: none;
+    align-items: center; justify-content: center;
+    padding: 3px 12px;
+    background: #FEF3C7; color: #8A6D00;
+    border: 1px solid #F5E29A;
+    border-radius: 999px;
+    font-size: 12px; font-weight: 700; letter-spacing: 0;
+    text-transform: none;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+  .sidebar-opps-count.is-visible { display: inline-flex; }
+  .sidebar-opps-count.is-clear {
+    background: #E8F5E9; color: #1B5E20; border-color: #B7EBD0;
   }
   .doc-sidebar-close {
     background: #FFFFFF; border: 1px solid #C7DBF2; color: var(--rmit-text);
@@ -1578,6 +1703,124 @@
   }
   .home-headline-chat-link svg {
     width: 15px; height: 15px; color: #6C56C4;
+  }
+
+  /* Site-wide pilot / acceptable-use banner. Sits directly under the heading
+     bar so users see it on every screen. Neutral slate palette so it reads
+     as informational, not alarming. */
+  .pilot-banner {
+    background: #F8FAFC;
+    border-top: 3px solid #94A3B8;
+    border-bottom: 1px solid #E2E8F0;
+    padding: 11px 24px;
+    font-size: 13px;
+    color: #475569;
+    line-height: 1.5;
+  }
+  .pilot-banner-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .pilot-banner-icon {
+    flex: 0 0 auto;
+    width: 16px; height: 16px;
+    color: #64748B;
+    margin-top: 2px;
+  }
+  .pilot-banner-body {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .pilot-banner strong {
+    color: #334155;
+    font-weight: 600;
+  }
+  .pilot-banner em {
+    font-style: normal;
+    color: #334155;
+    font-weight: 500;
+  }
+  /* Inline mini AI pill embedded in the banner copy. Matches the existing
+     .ai-badge styling but slightly smaller to sit cleanly mid-sentence. */
+  .pilot-banner .ai-badge-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    margin: 0 1px;
+    padding: 1px 6px;
+    background: linear-gradient(135deg, #F4ECFF 0%, #FDE7F1 100%);
+    border: 1px solid #DDC8F2;
+    border-radius: 8px;
+    color: #6C56C4;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    line-height: 1.2;
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+  .pilot-banner .ai-badge-inline svg {
+    width: 9px; height: 9px; color: #6C56C4;
+  }
+  /* See examples expansion */
+  .pilot-banner-details {
+    margin-top: 6px;
+  }
+  .pilot-banner-details > summary {
+    cursor: pointer;
+    color: #475569;
+    font-size: 12.5px;
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    list-style: none;
+    display: inline-block;
+    padding: 2px 0;
+  }
+  .pilot-banner-details > summary::-webkit-details-marker { display: none; }
+  .pilot-banner-details > summary::before {
+    content: "+ ";
+    font-weight: 700;
+    color: #64748B;
+  }
+  .pilot-banner-details[open] > summary::before {
+    content: "\2212 ";
+  }
+  .pilot-banner-details > summary:hover { color: #334155; }
+  .pilot-banner-details > summary:focus-visible {
+    outline: 2px solid var(--rmit-red);
+    outline-offset: 2px;
+    border-radius: 3px;
+  }
+  .pilot-banner-examples {
+    margin-top: 8px;
+    padding: 10px 12px;
+    background: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-radius: 6px;
+    font-size: 12.5px;
+    color: #475569;
+    line-height: 1.55;
+    max-width: 820px;
+  }
+  .pilot-banner-examples p { margin: 0 0 6px; }
+  .pilot-banner-examples p:last-child { margin-bottom: 0; }
+  .pilot-banner-examples ul {
+    margin: 4px 0 6px;
+    padding-left: 18px;
+  }
+  .pilot-banner-examples li { margin-bottom: 2px; }
+  .pilot-banner-examples em { font-style: italic; color: #334155; font-weight: 500; }
+  .pilot-banner-test {
+    margin-top: 8px !important;
+    padding-top: 8px;
+    border-top: 1px dashed #E2E8F0;
+  }
+  @media (max-width: 640px) {
+    .pilot-banner { padding: 10px 14px; }
   }
 
   /* The draft area is the hero - centred, max width capped, generous padding */
@@ -2565,15 +2808,25 @@
   /* ============================================================
      RESULTS HEADER ROW + SIDEBAR sections + EXPORT MENU
      ============================================================ */
-  /* Top tab bar at the very top of the analysed view - prominent primary navigation */
+  /* Top tab bar at the very top of the analysed view - prominent primary navigation.
+     Sticky just below the site-wide sticky header so Home stays reachable when
+     the user scrolls down the analysed page. The top offset is driven by the
+     --header-height CSS variable, which is set in JS from the header's actual
+     rendered height (and updated on resize / orientation change) so this works
+     correctly on phones and tablets where the header may wrap to two lines.
+     z-index sits under the header's z-index:100 so the header always wins. */
   .results-top-tabs {
     display: flex; align-items: stretch; gap: 0;
     margin: -12px -12px 24px;
     padding: 0 12px;
     border-bottom: 2px solid var(--rmit-grey-mid);
-    background: linear-gradient(180deg, #F8FAFD 0%, #FFFFFF 100%);
+    background: #FFFFFF;
     overflow: visible;
     border-radius: 8px 8px 0 0;
+    position: sticky;
+    top: var(--header-height, 76px);
+    z-index: 90;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.04);
   }
   .results-top-tab {
     display: inline-flex; align-items: center; gap: 10px;
@@ -2610,6 +2863,37 @@
   .results-top-tab-home svg { color: var(--rmit-navy); }
   .results-top-tab-home:hover { color: var(--rmit-navy); background: rgba(27, 42, 78, 0.06); }
   .results-top-tab-home:hover svg { color: var(--rmit-navy); }
+  /* Auto apply tab - action-style (navy fill) so it reads as a primary CTA
+     rather than a passive nav tab. Pushed to the right edge of the tab row
+     via margin-left:auto so it sits opposite Home / Visual workflow. Hides
+     after a successful auto-apply via JS (and on the .hidden class).
+     Note: --rmit-red is actually navy (#003478) - the variable kept its name
+     when the brand colour was changed, so we use it here for "navy fill". */
+  .results-top-tab-autoapply {
+    margin-left: auto;
+    background: var(--rmit-red);
+    color: #FFFFFF;
+    border-radius: 6px;
+    padding: 12px 18px;
+    margin-top: 8px; margin-bottom: 8px; margin-right: 8px;
+    font-weight: 600;
+    border-bottom: 0;
+    box-shadow: 0 2px 6px rgba(0, 52, 120, 0.22);
+    transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+  }
+  .results-top-tab-autoapply svg { color: #FFFFFF; width: 18px; height: 18px; }
+  .results-top-tab-autoapply:hover {
+    background: var(--rmit-red-dark);
+    color: #FFFFFF;
+    box-shadow: 0 4px 12px rgba(0, 52, 120, 0.32);
+    transform: translateY(-1px);
+  }
+  .results-top-tab-autoapply:hover svg { color: #FFFFFF; }
+  .results-top-tab-autoapply:focus-visible {
+    outline: 2px solid #FFFFFF; outline-offset: -3px;
+    box-shadow: 0 0 0 3px var(--rmit-red);
+  }
+  .results-top-tab-autoapply.hidden { display: none; }
   /* AI badge sized for the bigger tab */
   .ai-badge-tab {
     padding: 2px 7px; font-size: 11px;
@@ -2920,21 +3204,47 @@
   }
 
   /* Banner that sits above the doc once auto-apply has completed.
-     Contains the result summary + a View updated / View original toggle. */
+     Two visual states:
+       - Default: full width, prominent for the first few seconds so the user
+         reads the AI's result summary.
+       - .is-collapsed: shrinks to a compact chip after ~6 seconds so it stops
+         dominating the post-AI view. Triggered by JS in startAutoApply.
+     Compare toggle sits inside the banner (not floating beside it) so the
+     whole thing reads as one unit, not two zones. */
   .updated-banner {
-    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
     background: #ECFDF5; border: 1px solid #B7EBD0; border-radius: 8px;
-    padding: 14px 18px; margin: 18px 0 0;
+    padding: 14px 18px; margin: 18px 0 28px;
+    transition: padding 0.3s ease, font-size 0.3s ease, gap 0.3s ease, margin 0.3s ease;
   }
   .updated-banner.hidden { display: none; }
+  .updated-banner.is-collapsed {
+    padding: 6px 12px;
+    gap: 8px;
+  }
   .updated-banner-icon {
     flex-shrink: 0; width: 30px; height: 30px;
     display: inline-flex; align-items: center; justify-content: center;
     background: #FFFFFF; color: #2E7D32; border: 1.5px solid #B7EBD0;
     border-radius: 50%; font-size: 16px; font-weight: 700;
+    transition: width 0.3s ease, height 0.3s ease, font-size 0.3s ease;
   }
-  .updated-banner-text { flex: 1; font-size: 14px; color: #1B5E20; line-height: 1.5; min-width: 240px; }
+  .updated-banner.is-collapsed .updated-banner-icon {
+    width: 20px; height: 20px; font-size: 12px;
+  }
+  /* In collapsed state, hide the verbose detail and show the short summary.
+     The short summary is populated by JS into a span.updated-banner-short. */
+  .updated-banner-text {
+    flex: 0 1 auto; font-size: 14px; color: #1B5E20; line-height: 1.45; min-width: 0;
+  }
   .updated-banner-text strong { color: #0E4F1A; }
+  .updated-banner.is-collapsed .updated-banner-text {
+    font-size: 13px;
+  }
+  .updated-banner-detail { display: inline; }
+  .updated-banner.is-collapsed .updated-banner-detail { display: none; }
+  .updated-banner-short { display: none; font-weight: 600; }
+  .updated-banner.is-collapsed .updated-banner-short { display: inline; }
   .updated-banner-toggle {
     display: inline-flex; background: #FFFFFF;
     border: 1px solid #B7EBD0; border-radius: 999px; padding: 3px;
@@ -2971,6 +3281,59 @@
   .flag-headline.flag-headline-clear { color: #2E7D32; }
   .flag-headline.flag-headline-clear strong { color: #1B5E20; }
   .flag-headline.flag-headline-clear .flag-headline-icon { color: #2E7D32; }
+
+  /* Choice fork (post-analyse): Auto-apply (primary navy gradient) vs Review yourself
+     (outlined). Sits immediately below the flag headline and above the generated doc. */
+  .choice-row {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+    max-width: 880px; margin: 0 auto 22px;
+    padding: 0 12px;
+  }
+  .choice-row.hidden { display: none; }
+  .choice-card {
+    text-align: left;
+    background: #FFF;
+    border: 1.5px solid #DCE7F5;
+    border-radius: 10px;
+    padding: 16px 18px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex; flex-direction: column; gap: 6px;
+    font: inherit;
+    color: var(--rmit-text);
+  }
+  .choice-card:hover {
+    border-color: var(--rmit-red);
+    box-shadow: 0 4px 14px rgba(0, 52, 120, 0.16);
+    transform: translateY(-2px);
+  }
+  .choice-card:focus-visible {
+    outline: 2px solid var(--rmit-red); outline-offset: 2px;
+  }
+  .choice-card .choice-title {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 15px; font-weight: 700; color: #0F172A;
+    line-height: 1.3;
+  }
+  .choice-card .choice-title svg { width: 18px; height: 18px; flex-shrink: 0; }
+  .choice-card .choice-sub {
+    font-size: 13px; color: #64748B; line-height: 1.5;
+  }
+  .choice-card.choice-primary {
+    background: linear-gradient(135deg, var(--rmit-red) 0%, var(--rmit-red-dark) 100%);
+    border-color: var(--rmit-red);
+    color: #FFFFFF;
+    box-shadow: 0 2px 8px rgba(0, 52, 120, 0.22);
+  }
+  .choice-card.choice-primary .choice-title,
+  .choice-card.choice-primary .choice-sub { color: #FFFFFF; }
+  .choice-card.choice-primary .choice-sub { opacity: 0.88; }
+  .choice-card.choice-primary:hover {
+    box-shadow: 0 6px 20px rgba(0, 52, 120, 0.32);
+  }
+  @media (max-width: 720px) {
+    .choice-row { grid-template-columns: 1fr; }
+  }
 
   /* Top-of-page auto-apply action - sits centred under the flag headline */
   .top-autoapply-row {
@@ -3177,18 +3540,21 @@
   .nintex-instructions-body ol li { margin-bottom: 4px; }
   .nintex-instructions-body strong { color: #0F172A; }
 
+  /* Compact two-column export grid. Buttons are deliberately small so the
+     modal feels like a quick file-format pick, not a major decision. */
   .export-format-grid {
-    display: flex; flex-direction: column; gap: 8px;
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;
   }
+  /* Wide variant - spans both columns. Used by Nintex import since it has the
+     more involved sub-line + the collapsible instructions below it. */
+  .export-format-btn-wide { grid-column: 1 / -1; }
   .export-format-btn {
-    display: grid;
-    grid-template-columns: 24px 1fr;
-    grid-template-rows: auto auto;
-    align-items: center; column-gap: 12px;
-    padding: 14px 16px;
-    background: #FFFFFF; border: 1.5px solid var(--rmit-grey-mid);
+    display: flex; align-items: center; gap: 8px;
+    padding: 9px 12px;
+    background: #FFFFFF; border: 1px solid var(--rmit-grey-mid);
     border-radius: 6px; cursor: pointer; text-align: left;
     font-family: inherit; transition: all 0.15s ease;
+    min-height: 38px;
   }
   .export-format-btn:hover {
     border-color: var(--rmit-red); background: #FFF5F5;
@@ -3197,14 +3563,29 @@
     outline: 2px solid var(--rmit-red); outline-offset: 2px;
   }
   .export-format-btn svg {
-    grid-row: 1 / 3; grid-column: 1; width: 20px; height: 20px; color: var(--rmit-red);
-    align-self: center;
+    width: 16px; height: 16px; color: var(--rmit-red); flex-shrink: 0;
   }
   .export-format-btn .format-label {
-    grid-row: 1; grid-column: 2; font-size: 14.5px; font-weight: 600; color: #0F172A;
+    font-size: 13.5px; font-weight: 600; color: #0F172A;
+    display: inline-flex; align-items: center; gap: 6px;
   }
+  /* The sub-line is only shown for formats that genuinely need explaining
+     (PNG image, Nintex import). Word + PDF buttons omit it and stay compact. */
   .export-format-btn .format-sub {
-    grid-row: 2; grid-column: 2; font-size: 12.5px; color: #64748B;
+    font-size: 11.5px; color: #64748B; line-height: 1.3;
+    margin-top: 2px;
+  }
+  /* When a sub-line is present, stack the label + sub vertically on the right
+     of the icon. The button is happy with either layout. */
+  .export-format-btn:has(.format-sub) {
+    align-items: flex-start;
+    padding: 10px 12px;
+  }
+  .export-format-btn:has(.format-sub) > svg {
+    margin-top: 1px;
+  }
+  .export-format-btn:has(.format-sub) > .label-stack {
+    display: flex; flex-direction: column; gap: 0;
   }
   /* Discreet "i" badge sitting next to the format label */
   .export-format-btn .format-info {
@@ -3279,6 +3660,38 @@
     <!-- Burger menu removed in home v3 (Move 4). All references live inside the coach drawer (bottom-right). -->
   </div>
 </header>
+
+<!-- Pilot / acceptable-use banner. Site-wide, sits directly under the header
+     so users see it on every screen. Discreet slate palette - informational,
+     not alarming. Remove or update once PAT migrates to RMIT-managed AI
+     (Copilot Studio / VAL). -->
+<div class="pilot-banner" role="note" aria-label="Pilot information">
+  <div class="pilot-banner-inner">
+    <svg class="pilot-banner-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+    <div class="pilot-banner-body">
+      <span>
+        <strong>Pilot release</strong> &mdash; Features marked with the
+        <span class="ai-badge-inline" aria-label="AI" title="Uses AI"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>AI</span>
+        pill send your content to an external AI service (currently <em>Chat with PAT</em> and <em>Auto apply changes</em>). When using AI features, use generic process content only &mdash; no real names, IDs, contact details, or confidential business information. Moving to RMIT-managed AI soon.
+      </span>
+      <details class="pilot-banner-details">
+        <summary>See examples</summary>
+        <div class="pilot-banner-examples">
+          <p><strong>Safe for AI features:</strong> generic role-based process drafts like <em>"the Student Recruitment Officer reviews the application within 5 business days"</em>, or workflow steps written in plain language without specific people, accounts or values.</p>
+          <p><strong>Not safe for AI features:</strong></p>
+          <ul>
+            <li>Real names paired with roles, IDs, emails, phone numbers or photos</li>
+            <li>Student or staff records, grades, performance notes, disciplinary actions</li>
+            <li>Specific contract terms, supplier names, pricing, tender details</li>
+            <li>Documents marked <em>Confidential</em>, <em>Commercial in confidence</em>, or <em>Internal use only</em></li>
+            <li>Financial figures, strategic plans, or partnership terms not yet public</li>
+          </ul>
+          <p class="pilot-banner-test"><strong>Quick test:</strong> if you'd hesitate to forward it outside your team, don't paste it into an AI feature during the pilot.</p>
+        </div>
+      </details>
+    </div>
+  </div>
+</div>
 
 <!-- Guided tour overlay -->
 <div id="tourOverlay" role="dialog" aria-modal="true" aria-labelledby="tourTitle">
@@ -3560,13 +3973,6 @@ NOTE: What if access is delayed? Escalate to the IT lead and update the new star
     <div class="home-headline">
       <h2 class="home-headline-title">Enhance your process documentation</h2>
       <p class="home-headline-sub">Provide your draft process. I'll review it against RMIT and Nintex<br>standards and generate a polished version.</p>
-      <p class="home-headline-chat">
-        <button type="button" class="home-headline-chat-link" id="homeChatLink">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M9 9h6M9 13h4"/></svg>
-          Need help getting started? Chat with PAT
-          <span aria-hidden="true">&rarr;</span>
-        </button>
-      </p>
     </div>
 
     <div class="home-draft-area">
@@ -3614,7 +4020,9 @@ NOTE: What if access is delayed? Escalate to the IT lead and update the new star
       </div>
     </div>
 
-    <!-- Discreet starter row - low-emphasis, doesn't compete with the dropzone -->
+    <!-- Discreet starter row - low-emphasis, doesn't compete with the dropzone.
+         Chat with PAT lives at the end of the row as a fourth starter option;
+         it used to have its own prominent slot under the headline. -->
     <div class="home-starters" aria-label="Starter options">
       <span class="home-starters-label">First time here?</span>
       <button type="button" class="home-starter-link" id="trySampleLink">Try a sample</button>
@@ -3622,14 +4030,19 @@ NOTE: What if access is delayed? Escalate to the IT lead and update the new star
       <button type="button" class="home-starter-link" id="downloadTemplateLink">Download a template</button>
       <span class="home-starters-dot">&middot;</span>
       <button type="button" class="home-starter-link" id="buildFormCardBtn"><span id="buildFormCardLabel">Build with a form</span></button>
+      <span class="home-starters-dot">&middot;</span>
+      <button type="button" class="home-starter-link" id="homeChatLink">Chat with PAT</button>
     </div>
 
   </section>
 
   <!-- ==================== RESULTS ==================== -->
   <section class="card hidden" id="resultsCard">
-    <!-- Top tab bar - simplified: Home + Visual workflow only. The auto-apply
-         action lives in the sidebar; reviewing opportunities is the default state. -->
+    <!-- Top tab bar - Home + Visual workflow + Auto apply all changes.
+         Auto-apply sits in the tab row as an action-tab (navy fill) so it
+         reads as the primary action without competing with the doc / sidebar
+         layout below. Hidden after auto-apply succeeds, re-shown on a fresh
+         analyse. -->
     <nav class="results-top-tabs" id="resultsTopTabs" role="tablist" aria-label="Analysed view options">
       <button type="button" class="results-top-tab results-top-tab-home" id="topTabHome" role="tab">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12l9-9 9 9"/><path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10"/></svg>
@@ -3639,26 +4052,41 @@ NOTE: What if access is delayed? Escalate to the IT lead and update the new star
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M10 6.5h4"/><path d="M6.5 10v4"/><path d="M14 17.5h-4"/></svg>
         <span>Visual workflow</span>
       </button>
-      <!-- Removed: topTabAutoApply, topTabReview - the auto-apply action moved to the sidebar,
-           and "Review opportunities" is now the default view (no longer a destination). -->
-    </nav>
-
-    <p class="flag-headline" id="flagHeadline"></p>
-
-    <!-- Primary action sits directly below the flag headline so users can
-         choose AI auto-apply without scanning the sidebar first. The button
-         keeps the autoApplyBtn ID so all existing consent + AI flow wiring
-         continues to work unchanged. -->
-    <div class="top-autoapply-row" id="topAutoApplyRow">
-      <button type="button" class="btn btn-primary top-autoapply-btn" id="autoApplyBtn">
+      <button type="button" class="results-top-tab results-top-tab-autoapply hidden" id="topTabAutoApply">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
-        <span>Auto apply changes</span>
+        <span>Auto apply all changes</span>
         <span class="ai-badge ai-badge-on-primary" aria-label="Uses AI" title="Uses AI">
           <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>
           AI
         </span>
       </button>
-      <p class="top-autoapply-hint">Or step through each opportunity on the right and edit the document directly.</p>
+    </nav>
+
+    <p class="flag-headline" id="flagHeadline"></p>
+
+    <!-- Choice fork: amber callout + two choice cards. The user picks Auto-apply
+         (AI runs in place) or Review yourself (sidebar opens). The autoApplyBtn
+         ID is kept on the primary card so the existing consent + AI flow works
+         unchanged. The reviewYourselfBtn opens the quality flags sidebar. -->
+    <div class="choice-row" id="choiceRow">
+      <button type="button" class="choice-card choice-primary" id="autoApplyBtn">
+        <span class="choice-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
+          Auto apply changes
+          <span class="ai-badge ai-badge-on-primary" aria-label="Uses AI" title="Uses AI">
+            <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>
+            AI
+          </span>
+        </span>
+        <span class="choice-sub">I'll rewrite your draft to address every quality flag. You stay here and review the result.</span>
+      </button>
+      <button type="button" class="choice-card choice-secondary" id="reviewYourselfBtn">
+        <span class="choice-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Review &amp; update yourself
+        </span>
+        <span class="choice-sub">Step through each quality flag and edit the document inline. The quality flags panel opens on the right.</span>
+      </button>
     </div>
 
     <div class="auto-fix-note hidden" id="combinedFixBanner" role="status" aria-live="polite">
@@ -3671,7 +4099,7 @@ NOTE: What if access is delayed? Escalate to the IT lead and update the new star
       <div class="modal">
         <button class="modal-close" id="autoApplyConsentClose" type="button" aria-label="Close">&times;</button>
         <h2 id="autoApplyConsentTitle">Before I make changes</h2>
-        <p class="consent-intro">I'm about to use AI to rewrite your draft against the quality opportunities I've identified. Before I do, please confirm the box below:</p>
+        <p class="consent-intro">I'm about to use AI to rewrite your draft against the quality flags I've identified. Before I do, please confirm the box below:</p>
         <ul class="consent-list">
           <li>
             <input type="checkbox" id="consentSensitive" />
@@ -3698,7 +4126,7 @@ NOTE: What if access is delayed? Escalate to the IT lead and update the new star
       <div class="modal">
         <button class="modal-close" id="autofixModalClose" type="button" aria-label="Close">&times;</button>
         <h2 id="autofixModalTitle">What I changed automatically</h2>
-        <p style="font-size:13.5px;color:#475569;margin:0 0 16px;">These are the small mechanical fixes I applied before flagging quality opportunities. Spelling corrections, banned-term removals, whitespace cleanup, NOTE punctuation and task re-lettering.</p>
+        <p style="font-size:13.5px;color:#475569;margin:0 0 16px;">These are the small mechanical fixes I applied before raising the quality flags. Spelling corrections, banned-term removals, whitespace cleanup, NOTE punctuation and task re-lettering.</p>
         <div class="autofix-modal-body" id="autofixModalBody"></div>
         <div class="modal-footer">
           <button class="btn btn-primary" id="autofixModalCloseFooter" type="button">Close</button>
@@ -3712,7 +4140,7 @@ NOTE: What if access is delayed? Escalate to the IT lead and update the new star
     </p>
 
     <!-- Action cards + path-status banner removed in home v3.
-         Reviewing opportunities is the default state (sidebar is always open).
+         Reviewing quality flags is the default state (sidebar is always open).
          The auto-apply action moved into the sidebar header as a single button. -->
 
 
@@ -3724,12 +4152,18 @@ NOTE: What if access is delayed? Escalate to the IT lead and update the new star
     </div>
 
     <!-- Banner shown above the doc once the AI has applied updates.
-         Single switch: Compare with original (off = clean updated view, on = diff view). -->
+         Auto-collapses after ~6s to a compact chip so it stops dominating the
+         post-AI view. The compare toggle is inside the banner so the whole
+         thing reads as one unit. Two content spans:
+           .updated-banner-detail  - the full text, shown in the default state
+           .updated-banner-short   - the compact summary, shown when collapsed -->
     <div class="updated-banner hidden" id="updatedBanner">
       <span class="updated-banner-icon" aria-hidden="true">&#10003;</span>
       <div class="updated-banner-text" id="updatedBannerText">
-        <strong>Quality enhancements applied.</strong> The AI updated your process based on the flagged items.
-        Make any further edits in the document, then click <strong>Save changes</strong> to refresh the opportunities list.
+        <span class="updated-banner-detail">
+          <strong>Quality enhancements applied.</strong> The AI updated your process based on the flagged items.
+        </span>
+        <span class="updated-banner-short"></span>
       </div>
       <label class="compare-toggle" for="compareToggle">
         <input type="checkbox" id="compareToggle" />
@@ -3743,7 +4177,7 @@ NOTE: What if access is delayed? Escalate to the IT lead and update the new star
 
     <!-- Discreet summary chips - visible once a path has been chosen -->
     <div class="summary-chips hidden" id="summaryChips" aria-label="Analysis summary">
-      <button type="button" class="summary-chip summary-chip-opps" id="summaryChipOpps" title="Opportunities identified">
+      <button type="button" class="summary-chip summary-chip-opps" id="summaryChipOpps" title="Quality flags identified">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         <span id="summaryChipOppsCount">0</span>
       </button>
@@ -3757,17 +4191,39 @@ NOTE: What if access is delayed? Escalate to the IT lead and update the new star
       <div class="doc-main">
         <section class="doc-section" id="outputPaneDoc" aria-label="Generated document">
           <header class="doc-section-header">
-            <h3 class="doc-section-title">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-              Generated document
-            </h3>
-            <button class="btn btn-secondary doc-pane-save-btn" id="saveEditsTopBtn" type="button" title="Save your edits - re-render the workflow + refresh opportunities">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:13px;height:13px;vertical-align:-2px;margin-right:4px;"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-              Save changes
-            </button>
+            <div class="doc-section-title-wrap">
+              <h3 class="doc-section-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                <span id="docSectionTitleText">Generated document</span>
+                <span class="doc-import-summary" id="docImportSummary"></span>
+              </h3>
+            </div>
+            <div class="doc-section-actions">
+              <button class="btn btn-secondary doc-pane-save-btn" id="saveEditsTopBtn" type="button" title="Save your edits - re-render the workflow + refresh quality flags">
+                Save changes
+              </button>
+              <button class="btn btn-primary doc-pane-export-btn" id="actionExportBtn" type="button">
+                Export
+                <svg class="export-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+                <span class="action-card-error-badge hidden" id="actionExportErrorBadge"></span>
+              </button>
+            </div>
           </header>
-          <p class="hint doc-section-tip"><strong>Tip:</strong> click anywhere in the document to edit. Edits flow into your downloads.</p>
-          <div class="doc-preview" id="docPreview" contenteditable="true" spellcheck="true" lang="en-AU" aria-label="Editable process document"></div>
+          <div class="doc-preview" id="docPreview" contenteditable="true" spellcheck="true" lang="en-AU" aria-label="Editable process document, click anywhere to edit"></div>
+          <p class="doc-save-reminder">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            Click <strong>Save changes</strong> above to refresh the quality flags list after editing.
+          </p>
+          <!-- Secondary Export button at the foot of the doc, so users who have
+               scrolled to the bottom don't need to scroll back up to find it.
+               Same styling and same modal as the top Export button - the click
+               handler in JS forwards to #actionExportBtn. -->
+          <div class="doc-section-footer-actions">
+            <button class="btn btn-primary doc-pane-export-btn" id="actionExportBtnBottom" type="button">
+              Export
+              <svg class="export-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+          </div>
           <div id="docLiveRegion" aria-live="polite" aria-atomic="true" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;"></div>
         </section>
 
@@ -3785,39 +4241,32 @@ NOTE: What if access is delayed? Escalate to the IT lead and update the new star
           </div>
         </section>
 
-        <div class="doc-next-step-row">
-          <div class="doc-next-step-secondary">
-            <button class="btn btn-secondary" id="resetEditsBtn" type="button">Reset edits</button>
-            <button class="btn btn-secondary" id="saveEditsBtn" type="button" title="Re-render the visual workflow with your latest edits">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:13px;height:13px;vertical-align:-2px;margin-right:4px;"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-              Save changes
-            </button>
-          </div>
-          <div class="doc-next-step-primary">
-            <button class="btn btn-secondary" id="analyseAnotherBtn" type="button">&uarr; Analyse another</button>
-            <button class="btn btn-primary" id="actionExportBtn" type="button">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              Export
-              <span class="action-card-error-badge hidden" id="actionExportErrorBadge"></span>
-            </button>
-          </div>
-        </div>
+        <!-- Bottom action row removed - all actions now live at the top of the
+             Generated document section header. The hidden saveEditsBtn is kept
+             so any code that programmatically clicks it (e.g. legacy paths)
+             still works without touching the visible UI. -->
+        <button id="saveEditsBtn" type="button" hidden aria-hidden="true">Save changes (hidden duplicate)</button>
       </div>
       <aside class="doc-sidebar" id="docSidebar" aria-labelledby="docSidebarHeading">
         <div class="doc-sidebar-header">
-          <h4 id="docSidebarHeading">Opportunities</h4>
+          <h4 id="docSidebarHeading">Quality flags <span class="sidebar-opps-count" id="sidebarOppsCount" aria-label="quality flags remaining"></span></h4>
           <!-- Sidebar / Inline toggle removed in home v3 (Move 3) - sidebar is now the only view. -->
         </div>
 
-        <!-- Reminder so users know how to refresh the list after editing the doc -->
+        <!-- Auto-apply moved to the top tab bar (next to Visual workflow)
+             so the sidebar can focus on the quality flags themselves. -->
+
+        <!-- Discreet tip line shown above the quality flags list. Sets
+             expectations for new users without competing visually with the
+             cards. -->
         <p class="doc-sidebar-hint">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v4"/><circle cx="12" cy="16" r="0.6" fill="currentColor"/></svg>
-          <span class="doc-sidebar-hint-text">Edited the document? Click <strong>Save changes</strong> to refresh this list.</span>
+          <span class="doc-sidebar-hint-text"><strong>Tip:</strong> click a card to jump to the relevant section in the document.</span>
         </p>
 
         <!-- Auto-apply primary action has moved to the top of the analysed page,
              directly under the flag headline. The sidebar is now just a scrollable
-             list of opportunities. -->
+             list of quality flags. -->
         <div id="issuesOut"></div>
       </aside>
     </div>
@@ -3850,34 +4299,17 @@ NOTE: What if access is delayed? Escalate to the IT lead and update the new star
         <button class="export-format-btn" type="button" id="downloadDocxBtn">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
           <span class="format-label">Word (.docx)</span>
-          <span class="format-sub">Editable in Microsoft Word</span>
         </button>
         <button class="export-format-btn" type="button" id="downloadPdfBtn">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
           <span class="format-label">PDF</span>
-          <span class="format-sub">For sharing or printing</span>
         </button>
-      </div>
-    </div>
-
-    <div class="export-group">
-      <h3 class="export-group-title">Visual workflow</h3>
-      <div class="export-format-grid">
-        <button class="export-format-btn" type="button" id="downloadPngBtn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-          <span class="format-label">PNG image</span>
-          <span class="format-sub">Standard image - slides, Teams, SharePoint</span>
-        </button>
-      </div>
-    </div>
-
-    <div class="export-group">
-      <h3 class="export-group-title">Nintex Process Manager</h3>
-      <div class="export-format-grid">
-        <button class="export-format-btn" type="button" id="downloadNintexBtn">
+        <button class="export-format-btn export-format-btn-wide" type="button" id="downloadNintexBtn">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-          <span class="format-label">Nintex import (.txt)</span>
-          <span class="format-sub">Paste straight into Process Manager</span>
+          <span class="label-stack">
+            <span class="format-label">Nintex import (.txt)</span>
+            <span class="format-sub">Paste straight into Process Manager</span>
+          </span>
         </button>
       </div>
       <details class="nintex-instructions">
@@ -4070,6 +4502,96 @@ NOTE: What if access is delayed? Escalate to the IT lead and update the new star
 </footer>
 
 <script>
+/* ============================================================
+   Initial scroll reset
+   Force the page to load at the very top so the pilot banner under the
+   header is always visible on first paint. Disables the browser's automatic
+   scroll restoration (which would otherwise restore the previous scroll
+   position on refresh) and explicitly scrolls to (0, 0) on load and after
+   DOMContentLoaded as a belt-and-braces measure.
+   ============================================================ */
+if ('scrollRestoration' in history) {
+  history.scrollRestoration = 'manual';
+}
+window.scrollTo(0, 0);
+document.addEventListener('DOMContentLoaded', () => { window.scrollTo(0, 0); });
+window.addEventListener('load', () => { window.scrollTo(0, 0); });
+
+/* ============================================================
+   Sticky layout height variables
+   Measures the actual rendered heights of the sticky header AND the results
+   top-tabs nav, and writes them to --header-height and --results-tabs-height
+   CSS variables. These drive:
+     - the sticky offset for .results-top-tabs (sits below the header)
+     - the sticky offset + max-height for .doc-sidebar (sits below header + tabs)
+   Measuring live (not hard-coding) means the layout adapts to phones / tablets
+   where the header may wrap to two lines, and to any future redesign.
+   Re-measures on:
+     - DOMContentLoaded   (initial paint)
+     - load               (fonts / images settled)
+     - resize             (window + orientation changes)
+     - ResizeObserver     (header content / tabs content changes)
+   ============================================================ */
+(function trackStickyHeights() {
+  function setVar(name, px) {
+    document.documentElement.style.setProperty(name, px + 'px');
+  }
+  function measure() {
+    const header = document.querySelector('header.app-header');
+    if (header) {
+      const h = Math.ceil(header.getBoundingClientRect().height);
+      if (h > 0) setVar('--header-height', h);
+    }
+    const tabs = document.querySelector('.results-top-tabs');
+    if (tabs && tabs.offsetParent !== null) {
+      const h = Math.ceil(tabs.getBoundingClientRect().height);
+      if (h > 0) setVar('--results-tabs-height', h);
+    }
+  }
+  // Run as early as possible, then re-run after fonts and resize.
+  measure();
+  document.addEventListener('DOMContentLoaded', measure);
+  window.addEventListener('load', measure);
+  window.addEventListener('resize', measure);
+  window.addEventListener('orientationchange', measure);
+  // Watch both elements for size changes (header wrapping, tabs content, etc.)
+  document.addEventListener('DOMContentLoaded', () => {
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(measure);
+    const header = document.querySelector('header.app-header');
+    if (header) ro.observe(header);
+    const tabs = document.querySelector('.results-top-tabs');
+    if (tabs) ro.observe(tabs);
+  });
+  // Expose so other code can request a re-measure (e.g. after showing the
+  // results card for the first time, which is when .results-top-tabs first
+  // becomes visible and gets a measurable height).
+  window.remeasureStickyHeights = measure;
+})();
+
+/* ============================================================
+   Sidebar quality flags count badge
+   Updates the discreet count pill next to the sidebar QUALITY FLAGS header.
+   Called from renderResults (initial analyse), startAutoApply (after AI runs),
+   and the save-edits handler (after the user edits and saves). Counts only
+   actionable issues - informational tips are excluded.
+   ============================================================ */
+window.updateSidebarOppsCount = function() {
+  const badge = document.getElementById('sidebarOppsCount');
+  if (!badge) return;
+  const list = (typeof currentIssues !== 'undefined' && Array.isArray(currentIssues)) ? currentIssues : [];
+  const actionable = list.filter(i => !i.informational);
+  const n = actionable.length;
+  if (n === 0) {
+    badge.textContent = 'All clear';
+    badge.classList.add('is-visible', 'is-clear');
+  } else {
+    badge.textContent = n + ' to review';
+    badge.classList.add('is-visible');
+    badge.classList.remove('is-clear');
+  }
+};
+
 /* ============================================================
    PDF.js worker config
    ============================================================ */
@@ -4481,7 +5003,9 @@ document.getElementById('headerResetBtn').addEventListener('click', () => {
   // Send the user back to the home view: hide the work area and the Reset button
   if (inputWorkArea) inputWorkArea.hidden = true;
   // Reset button stays visible at all times now
-  document.getElementById('inputCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  // Scroll the page to the top (not into the input card) so the sticky header
+  // and pilot banner remain visible after Reset.
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 });
 
 /* ============================================================
@@ -5924,6 +6448,19 @@ function runRulesEngine(model) {
         location: model.title,
         suggestion:'Begin the title (after any "CoVE - PBT - " style prefix) with a verb from the categorised verb list, e.g. Create, Update, Manage, Plan.' });
     }
+    // Process title length: 3-8 words after the prefix. Matches the spirit of
+    // the activity-title rule (2-7 words) - if the process title is doing too
+    // much, the process itself is probably doing too much.
+    const titleWords = titleAfterPrefix.split(/\s+/).filter(Boolean);
+    if (titleWords.length > 0 && (titleWords.length < 3 || titleWords.length > 8)) {
+      const isShort = titleWords.length < 3;
+      push({ id:'title-length', source:'RMIT', severity:'warning',
+        message:`Process title is ${titleWords.length} word${titleWords.length===1?'':'s'} (after the "CoVE - " prefix). Aim for 3-8 words.`,
+        location: model.title,
+        suggestion: isShort
+          ? 'Add a bit more context so a reader can tell what this process does (e.g. "Create new TeachVE Hub site page" rather than just "Create page").'
+          : 'Tighten the title to 3-8 words. If you can\'t, the process is probably doing two things - consider splitting it into two processes.' });
+    }
   }
 
   // ---------- TRIGGER / INPUTS / OUTPUTS (CoVE 1) ----------
@@ -6774,10 +7311,22 @@ function buildMermaid(model) {
 // Mark the active flag in the sidebar so users know which one they're on.
 function markActiveFlag(el) {
   document.querySelectorAll('.issue.issue-active').forEach(n => n.classList.remove('issue-active'));
-  if (el) el.classList.add('issue-active');
+  // Clear any previously-active doc section highlight so the green link stays
+  // tied to whichever quality flag is currently active.
+  document.querySelectorAll('.section-active').forEach(n => n.classList.remove('section-active'));
+  if (el) {
+    el.classList.add('issue-active');
+    // Mirror the green highlight onto the target section in the document
+    const targetId = el.dataset.targetId;
+    if (targetId) {
+      const targetEl = document.getElementById(targetId);
+      if (targetEl) targetEl.classList.add('section-active');
+    }
+  }
 }
 function clearActiveFlag() {
   document.querySelectorAll('.issue.issue-active').forEach(n => n.classList.remove('issue-active'));
+  document.querySelectorAll('.section-active').forEach(n => n.classList.remove('section-active'));
 }
 // Wire dismiss buttons for the remaining inline banners
 (function wireBannerButtons() {
@@ -6848,7 +7397,17 @@ async function renderResults() {
   // Hide the input card now that results are showing - keeps the screen focused
   // on the deliverable. Reset and 'Analyse another' bring it back.
   document.getElementById('inputCard').classList.add('hidden');
-  document.getElementById('resultsCard').scrollIntoView({ behavior: 'smooth' });
+  // The results-top-tabs nav was display:none until now. Re-measure so the
+  // --results-tabs-height CSS variable picks up its real rendered height -
+  // the sticky sidebar's top offset depends on it.
+  if (typeof window.remeasureStickyHeights === 'function') {
+    window.remeasureStickyHeights();
+    // Run once more on the next frame in case fonts shift the height
+    requestAnimationFrame(() => window.remeasureStickyHeights());
+  }
+  // Scroll to the very top of the page (not into the resultsCard) so the
+  // sticky header and the pilot banner stay visible on the analysed page.
+  window.scrollTo({ top: 0, behavior: 'smooth' });
   // Clear any previously-active flag from a prior run
   clearActiveFlag();
   // Reset to the document tab on each new analyse
@@ -6870,9 +7429,23 @@ async function renderResults() {
   if (compareCb) compareCb.checked = false;
   const detail = document.getElementById('postAnalyseDetail');
   if (detail) detail.hidden = false;
-  // Sidebar is the default state - always visible after analyse
+  // Sidebar starts HIDDEN - it only opens when the user picks "Review yourself".
+  // Auto-apply runs in place without the sidebar.
   const sidebar = document.getElementById('docSidebar');
-  if (sidebar) sidebar.hidden = false;
+  if (sidebar) sidebar.hidden = true;
+  // Reset the choice row to visible on each new analyse (so the user can pick
+  // their path again). Hidden by the auto-apply / review-yourself click handlers.
+  const choiceRow = document.getElementById('choiceRow');
+  if (choiceRow) choiceRow.classList.remove('hidden');
+  // The top-tab "Auto apply all changes" stays HIDDEN on a fresh analyse -
+  // it's only an escape hatch surfaced after the user picks "Review yourself".
+  // The two choice cards below cover the initial decision.
+  const topAutoApplyReset = document.getElementById('topTabAutoApply');
+  if (topAutoApplyReset) topAutoApplyReset.classList.add('hidden');
+  // Reset the doc section heading - auto-apply changes this to "Polished
+  // document" but a fresh analyse starts as "Generated document" again.
+  const titleTextReset = document.getElementById('docSectionTitleText');
+  if (titleTextReset) titleTextReset.textContent = 'Generated document';
   // Top tabs: only Home + Visual workflow exist now
   if (typeof window.resetResultsTopTabs === 'function') {
     window.resetResultsTopTabs();
@@ -6930,26 +7503,47 @@ async function renderResults() {
   }
 
   // Summary - single line + 3 action cards (no more process-shape / findings cards)
-  // Count only actionable flags toward the opportunities tally - exclude
+  // Count only actionable flags toward the quality flags tally - exclude
   // informational tips that don't require the user to do anything in this tool.
   const actionableIssues = currentIssues.filter(i => !i.informational);
+  // Sync the discreet count pill next to the sidebar QUALITY FLAGS header
+  if (typeof window.updateSidebarOppsCount === 'function') {
+    window.updateSidebarOppsCount();
+  }
   const counts = actionableIssues.reduce((acc, i) => { acc[i.severity] = (acc[i.severity]||0)+1; return acc; }, {});
   const taskTotal = currentModel.activities.reduce(function(s,a){return s+a.tasks.length;},0);
   const totalIssues = actionableIssues.length;
+  // Import summary - small inline caption next to the section title showing
+  // what was parsed (e.g. "- 5 activities - 18 tasks").
+  const importSummaryEl = document.getElementById('docImportSummary');
+  if (importSummaryEl) {
+    const actCount = currentModel.activities.length;
+    const actWord = actCount === 1 ? 'activity' : 'activities';
+    const taskWord = taskTotal === 1 ? 'task' : 'tasks';
+    const noteCount = currentModel.activities.reduce((s, a) => s + (a.notes ? a.notes.length : 0), 0);
+    let parts = [actCount + ' ' + actWord, taskTotal + ' ' + taskWord];
+    if (noteCount > 0) parts.push(noteCount + (noteCount === 1 ? ' note' : ' notes'));
+    // Leading bullet acts as a visual separator from the heading text
+    importSummaryEl.textContent = '· ' + parts.join(' · ');
+  }
   const errorCount = counts.error || 0;
   const warningCount = counts.warning || 0;
   const suggestionCount = counts.info || 0;
 
-  // Flag headline - one focused line so users know what they're looking at
+  // Flag headline - one focused line so users know what they're looking at.
+  // Choice cards only show when there ARE quality flags to act on.
   const flagEl = document.getElementById('flagHeadline');
+  const choiceRowEl = document.getElementById('choiceRow');
   if (flagEl) {
     if (totalIssues === 0) {
       flagEl.innerHTML = '<span class="flag-headline-icon" aria-hidden="true">&#10003;</span>' +
-        '<span class="flag-headline-text"><strong>No opportunities to flag.</strong> Your draft already meets the standards I check against.</span>';
+        '<span class="flag-headline-text"><strong>No quality flags raised.</strong> Your draft already meets the standards I check against.</span>';
       flagEl.classList.add('flag-headline-clear');
+      // No path-choice needed - hide the choice cards entirely
+      if (choiceRowEl) choiceRowEl.classList.add('hidden');
     } else {
-      const word = totalIssues === 1 ? 'opportunity' : 'opportunities';
-      // Lightbulb SVG - "ideas / opportunities" framing replaces the old warning triangle
+      const word = totalIssues === 1 ? 'quality flag' : 'quality flags';
+      // Lightbulb SVG - "ideas / quality flags" framing replaces the old warning triangle
       const lightbulbSvg = '<span class="flag-headline-icon" aria-hidden="true">' +
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
         '<path d="M9 18h6"/>' +
@@ -6957,8 +7551,8 @@ async function renderResults() {
         '<path d="M12 2a7 7 0 0 0-4 12.7c.7.7 1 1.7 1 2.7v.6h6v-.6c0-1 .3-2 1-2.7A7 7 0 0 0 12 2z"/>' +
         '</svg></span>';
       flagEl.innerHTML = lightbulbSvg +
-        '<span class="flag-headline-text"><strong>I\'ve identified ' + totalIssues + ' ' + word +
-        ' to enhance your process.</strong></span>';
+        '<span class="flag-headline-text"><strong>I\'ve raised ' + totalIssues + ' ' + word +
+        ' on your process.</strong> Choose how you want to handle them.</span>';
       flagEl.classList.remove('flag-headline-clear');
     }
   }
@@ -7023,12 +7617,31 @@ async function renderResults() {
     const tabAttr = isClickable
       ? ' role="button" tabindex="0" data-target-id="' + targetId + '" data-issue-idx="' + i._idx + '" aria-label="Jump to ' + (i.location || 'document') + '"'
       : '';
-    const affordance = isClickable
-      ? '<span class="issue-jump-hint" aria-hidden="true">' +
-          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7"/><polyline points="8 7 17 7 17 16"/></svg>' +
-          'Jump to section' +
-        '</span>'
-      : '<span class="issue-static-hint" aria-hidden="true">Process-wide</span>';
+    // Small location pill on each card (right-aligned). Shows where this issue
+    // points to in the document, e.g. "Activity 1.0", "Task 2.0a", "Process title".
+    // Replaces the longer "Jump to section" affordance for a cleaner card.
+    const pillLabel = (function() {
+      const loc = (i.location || '').trim();
+      if (!isClickable) return 'Process-wide';
+      // Try to shorten common locations to fit on one line
+      if (/^process\s+title/i.test(loc) || /^title/i.test(loc)) return 'Title';
+      if (/^owner/i.test(loc)) return 'Owner';
+      if (/^expert/i.test(loc)) return 'Expert';
+      if (/^trigger/i.test(loc)) return 'Trigger';
+      if (/^inputs?/i.test(loc)) return 'Inputs';
+      if (/^outputs?/i.test(loc)) return 'Outputs';
+      if (/^objective/i.test(loc)) return 'Objective';
+      if (/^background/i.test(loc)) return 'Background';
+      const taskMatch = loc.match(/(\d+)\.(\d+)\s*([a-z])/i);
+      if (taskMatch) return 'Task ' + taskMatch[1] + '.' + taskMatch[2] + taskMatch[3].toLowerCase();
+      const actMatch = loc.match(/(\d+)\.(\d+)/);
+      if (actMatch) return 'Activity ' + actMatch[1] + '.' + actMatch[2];
+      // Fallback: use the location as-is, capped to 26 chars
+      return loc.length > 26 ? loc.slice(0, 23) + '…' : (loc || 'Document');
+    })();
+    const affordance = '<span class="issue-pill ' + (isClickable ? 'issue-pill-jump' : 'issue-pill-static') + '" aria-hidden="true">' +
+      (isClickable ? '&rarr; ' : '') + pillLabel +
+      '</span>';
     return '<div class="' + cls + '"' + tabAttr + '>' +
       '<div class="row1">' +
         '<div class="issue-meta">' +
@@ -7105,30 +7718,28 @@ async function renderResults() {
   if (typeof recommendArtefactType === 'function') window.recommendArtefactType = recommendArtefactType;
 
   // Expose so saveEditsAndRefresh can rebuild the sidebar after re-running rules
+  // Flat list - severity is already shown on each card via the inline label,
+  // so we don't need separate "Warnings" / "Suggestions" subheadings. Order:
+  // errors first (most urgent), then warnings, then suggestions.
   window.refreshIssuesSidebar = function () {
     const out = document.getElementById('issuesOut');
     if (!out || typeof currentIssues === 'undefined') return;
     const g = { error: [], warning: [], info: [] };
     currentIssues.forEach((i, idx) => { i._idx = idx; (g[i.severity] || g.info).push(i); });
+    const ordered = [].concat(g.error, g.warning, g.info);
     out.innerHTML = currentIssues.length === 0
-      ? '<p>No opportunities - your draft already meets the standards.</p>'
-      : '<div class="issues-scroll">' +
-          (g.error.length   ? '<h3 data-severity="error">Errors</h3>'      + g.error.map(renderIssue).join('')   : '') +
-          (g.warning.length ? '<h3 data-severity="warning">Warnings</h3>'  + g.warning.map(renderIssue).join('') : '') +
-          (g.info.length    ? '<h3 data-severity="info">Suggestions</h3>'  + g.info.map(renderIssue).join('')    : '') +
-        '</div>';
+      ? '<p>No quality flags - your draft already meets the standards.</p>'
+      : '<div class="issues-scroll">' + ordered.map(renderIssue).join('') + '</div>';
     attachIssueNav();
     if (typeof window.refreshInlineFlags === 'function') window.refreshInlineFlags();
   };
 
-  // Issues panel - fixes are now applied silently, so no manual button at the top.
+  // Issues panel - flat list (no subheadings). Errors first, then warnings,
+  // then suggestions. Severity is shown on each card via the inline label.
+  const orderedIssues = [].concat(grouped.error, grouped.warning, grouped.info);
   document.getElementById('issuesOut').innerHTML = currentIssues.length === 0
     ? '<p>No quality flags - your draft meets the encoded standards.</p>'
-    : '<div class="issues-scroll">' + (
-        (grouped.error.length ? `<h3 data-severity="error">Errors</h3>${grouped.error.map(renderIssue).join('')}` : '') +
-        (grouped.warning.length ? `<h3 data-severity="warning">Warnings</h3>${grouped.warning.map(renderIssue).join('')}` : '') +
-        (grouped.info.length ? `<h3 data-severity="info">Suggestions</h3>${grouped.info.map(renderIssue).join('')}` : '')
-      ) + '</div>';
+    : '<div class="issues-scroll">' + orderedIssues.map(renderIssue).join('') + '</div>';
 
   // Workflow - render with bpmn-js (Mermaid kept as fallback)
   const wf = document.getElementById('workflowRender');
@@ -7465,6 +8076,9 @@ async function downloadAsDocx() {
   const userHasEdited = liveHtml && liveHtml !== originalDocHtml.trim();
   if (userHasEdited) {
     const children = htmlToDocxParagraphs(docPreviewEl, D);
+    // Append the visual workflow on its own page at the end of the doc
+    const workflowChildren = await buildWorkflowDocxChildren(D);
+    if (workflowChildren && workflowChildren.length) children.push(...workflowChildren);
     const doc = new Document({
     styles: { default: { document: { run: { font: 'Segoe UI', size: 22 } } } },
     sections: [{ properties: {}, children }]
@@ -7618,9 +8232,53 @@ async function downloadAsDocx() {
     }));
   });
 
+  // Append the visual workflow on its own page at the end of the doc
+  const workflowChildren = await buildWorkflowDocxChildren(D);
+  if (workflowChildren && workflowChildren.length) children.push(...workflowChildren);
+
   const doc = new Document({ sections: [{ properties: {}, children }] });
   const blob = await Packer.toBlob(doc);
   triggerDownload(blob, (m.title || 'process').replace(/[^\w\-]+/g,'_') + '.docx');
+}
+
+/**
+ * Build the docx Paragraph children that render the visual workflow on its own
+ * final page in the exported Word document: a page break, a heading, and the
+ * rasterised BPMN diagram. Returns [] if there's no diagram available.
+ */
+async function buildWorkflowDocxChildren(D) {
+  if (!D) return [];
+  const png = await getWorkflowPng();
+  if (!png || !png.dataUrl) return [];
+  const { Paragraph, TextRun, PageBreak, ImageRun, HeadingLevel, AlignmentType } = D;
+  // Convert the base64 PNG to a Uint8Array for ImageRun.data
+  let bytes;
+  try {
+    const b64 = png.dataUrl.replace(/^data:image\/png;base64,/, '');
+    bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+  } catch (e) {
+    console.warn('[docx-workflow] PNG decode failed:', e);
+    return [];
+  }
+  // Target on-page width: roughly the doc's content width on a portrait A4.
+  // 600px maps to about 6.25 inches at 96 DPI - leaves a comfortable margin.
+  const TARGET_W = 600;
+  const aspect = png.height / png.width;
+  const targetH = Math.round(TARGET_W * aspect);
+  return [
+    new Paragraph({ children: [new PageBreak()] }),
+    new Paragraph({
+      children: [new TextRun({ text: 'Visual workflow', bold: true, size: 32, color: '003478', font: 'Segoe UI' })],
+      spacing: { after: 200 }
+    }),
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      children: [new ImageRun({
+        data: bytes,
+        transformation: { width: TARGET_W, height: targetH }
+      })]
+    })
+  ];
 }
 
 function triggerDownload(blob, filename) {
@@ -7942,6 +8600,42 @@ async function downloadAsPdf() {
   const today = (typeof formatAusDate === 'function') ? formatAusDate(new Date()) : new Date().toLocaleDateString('en-AU');
   doc.text('Generated by CoVE Process Assistant on ' + today, MARGIN_L, PAGE_H - 8);
 
+  // ---------- Visual workflow on its own final page ----------
+  try {
+    const png = await getWorkflowPng();
+    if (png && png.dataUrl) {
+      doc.addPage();
+      // Heading at the top of the workflow page
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(16);
+      doc.setTextColor(NAVY[0], NAVY[1], NAVY[2]);
+      doc.text('Visual workflow', MARGIN_L, MARGIN_T + 4);
+      // Compute the image dimensions so the diagram fits within the page margins
+      // while preserving aspect ratio. We have CONTENT_W width available; cap
+      // the height to leave room for the heading.
+      const headingY = MARGIN_T + 4;
+      const imgTop   = headingY + 8;
+      const maxH     = PAGE_H - MARGIN_B - imgTop;
+      const aspect   = png.height / png.width;
+      let drawW = CONTENT_W;
+      let drawH = drawW * aspect;
+      if (drawH > maxH) {
+        drawH = maxH;
+        drawW = drawH / aspect;
+      }
+      // Centre horizontally
+      const drawX = MARGIN_L + (CONTENT_W - drawW) / 2;
+      doc.addImage(png.dataUrl, 'PNG', drawX, imgTop, drawW, drawH);
+      // Same footer treatment on the workflow page
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(8.5);
+      doc.setTextColor(GREY[0], GREY[1], GREY[2]);
+      doc.text('Generated by CoVE Process Assistant on ' + today, MARGIN_L, PAGE_H - 8);
+    }
+  } catch (e) {
+    console.warn('[pdf-workflow] workflow page skipped:', e);
+  }
+
   // ---------- Save ----------
   const filename = ((m.title || 'process').replace(/[^\w\-]+/g, '_')) + '.pdf';
   doc.save(filename);
@@ -7963,6 +8657,66 @@ async function downloadSvg() {
   const fname = ((currentModel && currentModel.title) || 'workflow').replace(/[^A-Za-z0-9_\-]+/g, '_');
   const blob = new Blob([svgString], { type: 'image/svg+xml' });
   triggerDownload(blob, fname + '.svg');
+}
+
+/**
+ * Rasterise the current BPMN diagram to a PNG and return both the data URL
+ * and the natural pixel dimensions. Used by:
+ *   - downloadPng (direct PNG export)
+ *   - downloadAsDocx (appends the workflow as a final page in the Word doc)
+ *   - downloadAsPdf (appends the workflow as a final page in the PDF)
+ * Returns { dataUrl, width, height } or null if no diagram is available.
+ */
+async function getWorkflowPng() {
+  let xml = '';
+  if (typeof bpmnViewer !== 'undefined' && bpmnViewer) {
+    try { xml = (await bpmnViewer.saveSVG()).svg; } catch (e) {}
+  }
+  if (!xml) {
+    const svg = document.querySelector('#workflowRender svg');
+    if (!svg) return null;
+    xml = new XMLSerializer().serializeToString(svg);
+  }
+  let pxW = 0, pxH = 0;
+  const vbMatch = xml.match(/viewBox="([^"]+)"/);
+  if (vbMatch) {
+    const parts = vbMatch[1].trim().split(/\s+/).map(Number);
+    if (parts.length === 4 && parts[2] > 0 && parts[3] > 0) {
+      pxW = parts[2]; pxH = parts[3];
+    }
+  }
+  if (!pxW || !pxH) {
+    const liveSvg = document.querySelector('#workflowRender svg');
+    if (liveSvg) {
+      try {
+        const bb = liveSvg.getBBox();
+        if (bb.width > 0 && bb.height > 0) { pxW = Math.ceil(bb.width); pxH = Math.ceil(bb.height); }
+      } catch (e) {}
+    }
+  }
+  if (!pxW || !pxH) { pxW = 1400; pxH = 900; }
+  const scale = Math.min(2, 4000 / Math.max(pxW, pxH));
+  const canvasW = Math.round(pxW * scale);
+  const canvasH = Math.round(pxH * scale);
+  if (!/<svg\b[^>]*\bwidth=/i.test(xml)) {
+    xml = xml.replace(/<svg\b/, '<svg width="' + pxW + '" height="' + pxH + '"');
+  }
+  const dataUrl = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(xml)));
+  return new Promise(resolve => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = canvasW; canvas.height = canvasH;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve({ dataUrl: canvas.toDataURL('image/png'), width: canvasW, height: canvasH });
+    };
+    img.onerror = () => resolve(null);
+    img.src = dataUrl;
+  });
 }
 
 async function downloadPng() {
@@ -8232,14 +8986,19 @@ function downloadNintexImport() {
   showToast('Nintex import file downloaded - three blocks ready to paste into Nintex.', 'success', 6000);
 }
 
-document.getElementById('downloadDocxBtn').addEventListener('click', downloadAsDocx);
-document.getElementById('downloadPdfBtn').addEventListener('click', downloadAsPdf);
-document.getElementById('downloadNintexBtn').addEventListener('click', downloadNintexImport);
-// SVG export removed from the export modal (PNG is the only image format now).
-// downloadSvg() function still exists in case we wire it back up later.
-const svgBtnEl = document.getElementById('downloadSvgBtn');
-if (svgBtnEl) svgBtnEl.addEventListener('click', downloadSvg);
-document.getElementById('downloadPngBtn').addEventListener('click', downloadPng);
+// Export-format buttons. Null-guarded because the export modal is rebuilt
+// from time to time and not every format is always present.
+function wireExportBtn(id, handler) {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('click', handler);
+}
+wireExportBtn('downloadDocxBtn', downloadAsDocx);
+wireExportBtn('downloadPdfBtn', downloadAsPdf);
+wireExportBtn('downloadNintexBtn', downloadNintexImport);
+// SVG and PNG image exports are not currently wired in the modal but the
+// functions still exist in case they're reinstated later.
+wireExportBtn('downloadSvgBtn', downloadSvg);
+wireExportBtn('downloadPngBtn', downloadPng);
 // downloadBpmn button removed (was too technical for users)
 
 // Guided tour ('I'm new here' walkthrough)
@@ -8579,13 +9338,18 @@ document.getElementById('zoomFitBtn').addEventListener('click', () => {
   try { bpmnViewer.get('canvas').zoom('fit-viewport', 'auto'); } catch (e) {}
 });
 // Palette toggle removed; Nintex theme is the only theme
+// Kebab overflow menu removed - Reset edits action retired. The hidden
+// #resetEditsBtn element no longer exists in the DOM; any code that listens
+// for it null-guards gracefully.
+
 // P3 #12: 'Analyse another process' CTA - scroll back to input
 const analyseAnotherBtn = document.getElementById('analyseAnotherBtn');
 if (analyseAnotherBtn) {
   analyseAnotherBtn.addEventListener('click', () => {
     document.getElementById('resultsCard').classList.add('hidden');
     document.getElementById('inputCard').classList.remove('hidden');
-    document.getElementById('inputCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Scroll to page top so the sticky header and pilot banner stay visible
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     showToast('Edit your input above, then click Analyse content.', 'info');
   });
 }
@@ -8871,7 +9635,7 @@ if (restoreBtn) {
     if (cards) cards.classList.add('hidden');
     const ps = document.getElementById('pathStatus');
     const pst = document.getElementById('pathStatusText');
-    if (pst) pst.innerHTML = '<strong>Reviewing opportunities</strong> yourself.';
+    if (pst) pst.innerHTML = '<strong>Reviewing quality flags</strong> yourself.';
     if (ps) ps.classList.remove('hidden');
     if (typeof window.showSummaryChips === 'function') window.showSummaryChips();
   });
@@ -8880,16 +9644,53 @@ if (restoreBtn) {
   if (docSidebarClose) docSidebarClose.addEventListener('click', closeFlagsSidebar);
 
   // Auto-apply quality enhancements - show consent modal first, then run.
+  // NOTE: the choice cards stay visible while the consent modal is open. They
+  // only hide once the user clicks Continue (handled in wireAutoApplyConsent
+  // below) so cancelling the consent doesn't trap them with nothing on screen.
+  function openAutoApplyConsent() {
+    const modal = document.getElementById('autoApplyConsentModal');
+    const cb1 = document.getElementById('consentSensitive');
+    const proceed = document.getElementById('autoApplyConsentProceed');
+    if (cb1) cb1.checked = false;
+    if (proceed) proceed.disabled = true;
+    if (modal) modal.setAttribute('aria-hidden', 'false');
+  }
   const autoApplyBtn = document.getElementById('autoApplyBtn');
-  if (autoApplyBtn) {
-    autoApplyBtn.addEventListener('click', () => {
-      const modal = document.getElementById('autoApplyConsentModal');
-      // Reset checkbox + disable Continue every time the modal opens
-      const cb1 = document.getElementById('consentSensitive');
-      const proceed = document.getElementById('autoApplyConsentProceed');
-      if (cb1) cb1.checked = false;
-      if (proceed) proceed.disabled = true;
-      if (modal) modal.setAttribute('aria-hidden', 'false');
+  if (autoApplyBtn) autoApplyBtn.addEventListener('click', openAutoApplyConsent);
+  // Escape-hatch button inside the quality flags sidebar - same flow, different trigger
+  // Auto-apply tab in the top tab bar (moved here from the sidebar fallback).
+  // Same consent + AI flow as the primary card on the analysed page.
+  const topTabAutoApply = document.getElementById('topTabAutoApply');
+  if (topTabAutoApply) topTabAutoApply.addEventListener('click', openAutoApplyConsent);
+
+  // Review yourself - hide choice cards, open the quality flags sidebar, scroll
+  // the user down so they can start working through the list.
+  const reviewYourselfBtn = document.getElementById('reviewYourselfBtn');
+  if (reviewYourselfBtn) {
+    reviewYourselfBtn.addEventListener('click', () => {
+      const choiceRow = document.getElementById('choiceRow');
+      if (choiceRow) choiceRow.classList.add('hidden');
+      // Hide the verbose "I've identified X quality flags..." headline - the
+      // user has picked their path. The discreet count in the sidebar header
+      // takes over from here.
+      const flagEl = document.getElementById('flagHeadline');
+      if (flagEl) flagEl.classList.add('hidden');
+      // Surface the top-tab Auto-apply escape hatch now that the user has
+      // committed to the manual review path. They might still change their
+      // mind partway through - this gives them an obvious way back.
+      const topAutoApplyShow = document.getElementById('topTabAutoApply');
+      if (topAutoApplyShow) topAutoApplyShow.classList.remove('hidden');
+      if (typeof window.openFlagsSidebar === 'function') {
+        window.openFlagsSidebar();
+      } else {
+        // Fallback: just reveal the sidebar element
+        const sidebar = document.getElementById('docSidebar');
+        if (sidebar) sidebar.hidden = false;
+      }
+      // Make sure the discreet count is up to date when the sidebar opens
+      if (typeof window.updateSidebarOppsCount === 'function') {
+        window.updateSidebarOppsCount();
+      }
     });
   }
 
@@ -8917,6 +9718,9 @@ if (restoreBtn) {
   }
   function closeExportModal() { if (exportModal) exportModal.setAttribute('aria-hidden', 'true'); }
   if (actionExport) actionExport.addEventListener('click', openExportModal);
+  // Secondary Export button at the foot of the doc - same modal, no duplication.
+  const actionExportBottom = document.getElementById('actionExportBtnBottom');
+  if (actionExportBottom) actionExportBottom.addEventListener('click', openExportModal);
   if (exportClose) exportClose.addEventListener('click', closeExportModal);
   if (exportCloseFooter) exportCloseFooter.addEventListener('click', closeExportModal);
   if (exportModal) exportModal.addEventListener('click', e => { if (e.target === exportModal) closeExportModal(); });
@@ -8976,7 +9780,7 @@ if (restoreBtn) {
 // ============================================================
 // TOP TABS - simplified: Home + Visual workflow only.
 // The auto-apply tab and Review tab were removed in home v3 (Move 2):
-// auto-apply lives in the sidebar; reviewing opportunities is the default view.
+// auto-apply lives in the sidebar; reviewing quality flags is the default view.
 // ============================================================
 (function wireResultsTopTabs() {
   const tabHome = document.getElementById('topTabHome');
@@ -8996,7 +9800,8 @@ if (restoreBtn) {
   tabHome.addEventListener('click', () => {
     document.getElementById('resultsCard').classList.add('hidden');
     document.getElementById('inputCard').classList.remove('hidden');
-    document.getElementById('inputCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Scroll to page top so the sticky header and pilot banner stay visible
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     setActive(null);
   });
 
@@ -9704,16 +10509,22 @@ createChatSurface({
       const remaining = remainingFlags.length;
       const original = originalFlags.length;
       const resolved = Math.max(0, original - remaining);
+      // Populate both the verbose detail (shown in the full banner state) and
+      // the compact short summary (shown after the banner auto-collapses).
       const bannerText = document.getElementById('updatedBannerText');
       if (bannerText) {
+        const detailEl = bannerText.querySelector('.updated-banner-detail');
+        const shortEl  = bannerText.querySelector('.updated-banner-short');
         if (remaining === 0) {
-          bannerText.innerHTML =
+          if (detailEl) detailEl.innerHTML =
             '<strong>All ' + original + ' flag' + (original===1?'':'s') + ' resolved.</strong> ' +
             'The AI applied every quality enhancement. Review the updated process below.';
+          if (shortEl)  shortEl.textContent = original + ' / ' + original + ' resolved';
         } else {
-          bannerText.innerHTML =
+          if (detailEl) detailEl.innerHTML =
             '<strong>Quality enhancements applied.</strong> The AI addressed ' + resolved +
             ' of ' + original + ' flags. ' + remaining + ' still need your input - see the sidebar.';
+          if (shortEl)  shortEl.textContent = resolved + ' / ' + original + ' fixed by AI · ' + remaining + ' remaining';
         }
       }
 
@@ -9725,7 +10536,19 @@ createChatSurface({
       const autoFix = document.getElementById('combinedFixBanner');
       if (autoFix) autoFix.classList.add('hidden');
       const updatedBanner = document.getElementById('updatedBanner');
-      if (updatedBanner) updatedBanner.classList.remove('hidden');
+      if (updatedBanner) {
+        // Reset to full state on every successful auto-apply (in case the user
+        // ran auto-apply, edited, and ran it again - we want the verbose
+        // result message visible again for ~6s).
+        updatedBanner.classList.remove('hidden', 'is-collapsed');
+        // Auto-collapse to the compact chip after a brief reading window.
+        if (window._updatedBannerCollapseTimer) {
+          clearTimeout(window._updatedBannerCollapseTimer);
+        }
+        window._updatedBannerCollapseTimer = setTimeout(() => {
+          updatedBanner.classList.add('is-collapsed');
+        }, 6000);
+      }
       if (detail) detail.hidden = false;
       setActiveToggle('updated');
       // Show the path-status strip - user chose Auto-apply
@@ -9734,6 +10557,21 @@ createChatSurface({
       if (pst) pst.innerHTML = '<strong>Auto-apply</strong> complete.';
       if (ps) ps.classList.remove('hidden');
       if (typeof window.showSummaryChips === 'function') window.showSummaryChips();
+
+      // Auto-apply has just run - hide the now-stale UI that lets users start
+      // auto-apply again: the two top choice cards (renderResults re-shows them
+      // by default) and the sidebar "Auto apply all changes" escape hatch.
+      const choiceRowPost = document.getElementById('choiceRow');
+      if (choiceRowPost) choiceRowPost.classList.add('hidden');
+      const topAutoApplyPost = document.getElementById('topTabAutoApply');
+      if (topAutoApplyPost) topAutoApplyPost.classList.add('hidden');
+
+      // Signal the user that this isn't just the analysed document anymore -
+      // the AI has rewritten it. Renamed to "Polished document" for clarity.
+      // renderResults resets this back to "Generated document" on each fresh
+      // analyse.
+      const titleTextEl = document.getElementById('docSectionTitleText');
+      if (titleTextEl) titleTextEl.textContent = 'Polished document';
 
       // Precompute the diff HTML so the 'Show changes' toggle is instant.
       // The default view is the clean updated doc - renderResults already wrote that
@@ -9926,6 +10764,10 @@ createChatSurface({
     if (cancelBtn) cancelBtn.addEventListener('click', close);
     if (proceedBtn) proceedBtn.addEventListener('click', () => {
       close();
+      // Only NOW hide the choice cards - the user has confirmed they want to
+      // auto-apply. Cancelling the consent earlier leaves the cards visible.
+      const choiceRow = document.getElementById('choiceRow');
+      if (choiceRow) choiceRow.classList.add('hidden');
       if (typeof window.startAutoApply === 'function') {
         // Tiny delay so the modal animates out cleanly before the loading state appears
         setTimeout(() => window.startAutoApply(), 80);
@@ -10115,7 +10957,7 @@ createChatSurface({
     if (fixesCount) fixesCount.textContent = String(fixesNum);
 
     // Summary chips disabled per UX request - they looked floating and orphaned
-    // next to the doc. The opportunities count is already shown in the sidebar
+    // next to the doc. The quality flags count is already shown in the sidebar
     // header (via the sidebar list itself), and the auto-fix list lives in the
     // green note above the doc. We force-hide all chip UI so nothing renders.
     if (chipOpps) chipOpps.style.display = 'none';
@@ -10322,13 +11164,17 @@ createChatSurface({
     });
     console.log('[save-edits] workflow fields changed?', workflowChanged);
 
-    // Re-run the rules engine + refresh the opportunities sidebar (every save)
+    // Re-run the rules engine + refresh the quality flags sidebar (every save)
     let resolvedCount = 0;
     if (_runRules) {
       const oldCount = (currentIssues || []).filter(i => !i.informational).length;
       currentIssues = _runRules(newModel);
       console.log('[save-edits] new issues:', currentIssues.length, currentIssues.map(i => i.id));
       if (typeof window.refreshIssuesSidebar === 'function') window.refreshIssuesSidebar();
+      // Update the discreet count pill next to the sidebar QUALITY FLAGS header
+      if (typeof window.updateSidebarOppsCount === 'function') {
+        window.updateSidebarOppsCount();
+      }
       const newCount = currentIssues.filter(i => !i.informational).length;
       resolvedCount = Math.max(0, oldCount - newCount);
       const oppsCount = document.getElementById('summaryChipOppsCount');
@@ -10355,7 +11201,7 @@ createChatSurface({
         exportWarning.classList.toggle('hidden', errorCount === 0);
       }
     } else {
-      console.warn('[save-edits] runRulesEngine not available; opportunities sidebar not refreshed');
+      console.warn('[save-edits] runRulesEngine not available; quality flags sidebar not refreshed');
     }
 
     // Re-render the workflow only when relevant fields changed
@@ -10368,13 +11214,13 @@ createChatSurface({
     if (typeof showToast === 'function') {
       let msg;
       if (workflowChanged && resolvedCount > 0) {
-        msg = 'Workflow + opportunities updated. ' + resolvedCount + ' opportunit' + (resolvedCount === 1 ? 'y' : 'ies') + ' resolved.';
+        msg = 'Workflow + quality flags updated. ' + resolvedCount + ' quality flag' + (resolvedCount === 1 ? '' : 's') + ' resolved.';
       } else if (workflowChanged) {
         msg = 'Workflow updated with your edits.';
       } else if (resolvedCount > 0) {
-        msg = 'Opportunities updated. ' + resolvedCount + ' opportunit' + (resolvedCount === 1 ? 'y' : 'ies') + ' resolved.';
+        msg = 'Quality flags updated. ' + resolvedCount + ' quality flag' + (resolvedCount === 1 ? '' : 's') + ' resolved.';
       } else {
-        msg = 'Changes saved. Opportunities refreshed.';
+        msg = 'Changes saved. Quality flags refreshed.';
       }
       showToast(msg, 'success', 4500);
     }
