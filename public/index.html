@@ -4142,11 +4142,6 @@ NOTE: What if access is delayed? Escalate to the IT lead and update the new star
       </button>
     </div>
 
-    <div class="auto-fix-note hidden" id="combinedFixBanner" role="status" aria-live="polite">
-      <svg class="auto-fix-note-tick" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="#FFFFFF"/><path d="M5 8.5l2 2 4-5"/></svg>
-      <span class="auto-fix-note-text" id="combinedFixBannerText"></span>
-    </div>
-
     <!-- Auto-apply acknowledgement modal - shown before the AI rewrite starts -->
     <div class="modal-backdrop" id="autoApplyConsentModal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="autoApplyConsentTitle">
       <div class="modal">
@@ -4267,6 +4262,24 @@ NOTE: What if access is delayed? Escalate to the IT lead and update the new star
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
             Click <strong>Save changes</strong> above to refresh the quality flags list after editing.
           </p>
+
+          <!-- Visual workflow lives inside the Generated document section so it
+               appears directly below the doc preview when the user clicks the
+               "Visual workflow" top tab. The bottom Export button sits below it
+               so a single Export action covers both the doc and the diagram. -->
+          <div class="workflow-section" id="outputPaneFlow" aria-label="Visual workflow" hidden>
+            <p class="hint" style="margin: 0 0 8px;"><strong>Drag</strong> to pan &middot; <strong>Ctrl + scroll</strong> or use the buttons to zoom.</p>
+            <h4 id="workflowTitle" style="margin:0 0 8px;color:var(--rmit-red);font-size:15px;font-weight:600;"></h4>
+            <div id="workflowRender" class="theme-nintex"></div>
+            <div class="workflow-toolbar">
+              <div class="workflow-zoom">
+                <button class="small-btn" id="zoomInBtn" title="Zoom in">+</button>
+                <button class="small-btn" id="zoomOutBtn" title="Zoom out">&minus;</button>
+                <button class="small-btn" id="zoomFitBtn" title="Fit to view">Fit</button>
+              </div>
+            </div>
+          </div>
+
           <!-- Secondary Export button at the foot of the doc, so users who have
                scrolled to the bottom don't need to scroll back up to find it.
                Same styling and same modal as the top Export button - the click
@@ -4278,20 +4291,6 @@ NOTE: What if access is delayed? Escalate to the IT lead and update the new star
             </button>
           </div>
           <div id="docLiveRegion" aria-live="polite" aria-atomic="true" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;"></div>
-        </section>
-
-        <section class="workflow-section" id="outputPaneFlow" aria-label="Visual workflow" hidden>
-          <p class="hint" style="margin: 0 0 8px;"><strong>Drag</strong> to pan &middot; <strong>Ctrl + scroll</strong> or use the buttons to zoom.</p>
-          <h4 id="workflowTitle" style="margin:0 0 8px;color:var(--rmit-red);font-size:15px;font-weight:600;"></h4>
-          <div id="workflowRender" class="theme-nintex"></div>
-          <div class="workflow-toolbar">
-            <div class="workflow-zoom">
-              <button class="small-btn" id="zoomInBtn" title="Zoom in">+</button>
-              <button class="small-btn" id="zoomOutBtn" title="Zoom out">&minus;</button>
-              <button class="small-btn" id="zoomFitBtn" title="Fit to view">Fit</button>
-            </div>
-            <p class="workflow-export-hint">Use the <strong>Export</strong> button below to download the workflow as an image.</p>
-          </div>
         </section>
 
         <!-- Bottom action row removed - all actions now live at the top of the
