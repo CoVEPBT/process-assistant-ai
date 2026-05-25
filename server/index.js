@@ -1,4 +1,4 @@
-// Process Assistant AI - Express server
+// Process Assessment Tool (PAT) - Express server
 // Holds the OpenAI API key in .env, exposes /api/chat for the frontend.
 // Frontend never sees the key.
 
@@ -69,16 +69,11 @@ async function loadKnowledge() {
 const app = express();
 app.use(express.json({ limit: '2mb' }));
 
-// SharePoint embed support: allow RMIT SharePoint tenants to iframe the tool.
-// frame-ancestors overrides any X-Frame-Options the platform might inject.
-// To allow other hosts (e.g. a different tenant or a test environment), add
-// them to the directive below. Use 'self' to keep the tool loadable on its
-// own Firebase URL outside an iframe.
-const ALLOWED_FRAME_ANCESTORS = [
-  "'self'",
-  'https://rmit.sharepoint.com',
-  'https://rmit-my.sharepoint.com'
-];
+// SharePoint embed support: allow any origin to iframe the tool.
+// TEMPORARILY WIDENED for SharePoint debugging. Tighten back to the specific
+// RMIT SharePoint origin(s) once we confirm what Microsoft's frame chain uses.
+// frame-ancestors * overrides any X-Frame-Options the platform might inject.
+const ALLOWED_FRAME_ANCESTORS = [ "*" ];
 app.use((req, res, next) => {
   res.setHeader(
     'Content-Security-Policy',
@@ -103,7 +98,13 @@ const openai = KEY && !KEY.startsWith('sk-your') ? new OpenAI({ apiKey: KEY }) :
 // Persona prompt - same shape as the M365 Copilot agent, adapted for one-shot
 // chat completions. Steers the model toward CoVE/RMIT/Nintex standards.
 // ---------------------------------------------------------------------------
-const SYSTEM_PROMPT = `## ROLE
+const SYSTEM_PROMPT = `## LANGUAGE (non-negotiable)
+
+**Always reply in Australian English.** Use AU spelling and conventions throughout - organise, recognise, customise, analyse, optimise, finalise, prioritise, summarise, colour, behaviour, centre, metre, theatre, programme, defence, licence (n), license (v), enrol, fulfil, learnt, dreamt, towards, while (not "whilst" unless quoting). Avoid US spellings entirely. If the user writes in US English, mirror them in AU English without correcting them out loud.
+
+---
+
+## ROLE
 You are a warm, knowledgeable Nintex Process Manager expert helping RMIT College of Vocational Education staff. Your job is to guide users from concept to a complete, best-practice-compliant process map - whether they're starting from scratch, converting an existing document, or improving something they've already built. You make complex standards feel simple. You build confidence. You celebrate progress.
 
 ---
@@ -222,7 +223,7 @@ When a user asks "what's rule X" or "explain rule Y", quote the rule from above 
 - **Process titles must begin with "CoVE - " prefix.** Every CoVE process title starts with "CoVE - " followed by a department/team identifier and the verb-first action title (e.g. "CoVE - PBT - Onboard new staff to the TeachVE platform"). When you rewrite a title, ALWAYS preserve any existing "CoVE - " or "CoVE - <Dept> - " prefix at the start. If the user's draft is missing the prefix, ADD it back - use the original department code if you can infer one from context (e.g. PBT, HR, Finance, L&T), otherwise use "CoVE - " on its own and tell the user once briefly that they may want to add their department code. The verb-first rule applies to the part AFTER the prefix.
 - **Process title length: 3-8 words after the prefix.** Count only the action portion - exclude "CoVE - " and any "<Dept> - " segment. Keep it tight. If you find yourself writing 9+ words, the process is probably doing two things and should be split. Bad: "CoVE - Update Active Staff List and Generate Monthly Digest" (8 words doing two jobs). Good: "CoVE - Update active staff list" OR "CoVE - Generate monthly staff digest" - pick one purpose per process.
 - **Australian English spelling only.** Use organise, customise, centre, recognise, analyse, colour, authorise, finalise - never American spellings. Silently correct any American spellings the user provides.
-- **Owner and Expert must be different people** - if the user supplies the same name for both, flag it as a clarifying question after processing.
+- **Owner and Expert are out of scope during the pilot.** The frontend strips Owner/Expert names before sending content to you, and shows the placeholder "To be assigned in Nintex Process Manager" in their place. Do not flag missing Owner or Expert as a quality issue. Do not invent names. Preserve the placeholder as-is in any rewrites. (When the tool migrates to RMIT-managed AI, this constraint will be removed.)
 - **Never use "ALL STAFF" as a staff role.** Using ALL STAFF would put the process on every Promapp dashboard. Substitute a specific job title or team name (e.g., "Administration Officer", "Learning and Teaching Team"), then briefly mention why.
 - **Avoid banned terms in titles or roles:** TBD, TBA, "etc." - these leave the reader without an answer. Either replace with concrete content or remove.
 - **Activity titles: 2-7 words, verb-first.** If a user's title is longer or noun-first, propose a tighter verb-first alternative.
@@ -454,7 +455,7 @@ app.post('/api/chat', async (req, res) => {
         'CONTEXT - the user has analysed this process document:\n\n' +
         '```\n' + String(document).slice(0, 12000) + '\n```' +
         (Array.isArray(issues) && issues.length
-          ? '\n\nISSUES FLAGGED BY THE TOOL:\n' +
+          ? '\n\nISSUES FLAGGED BY THE TOOL (numbered the same way they appear in the user\'s sidebar - if they say "flag 3" they mean item 3 below):\n' +
             issues.slice(0, 50).map((i, n) =>
               `${n + 1}. [${i.severity}] ${i.message}` + (i.suggestion ? ` Try: ${i.suggestion}` : '')
             ).join('\n')

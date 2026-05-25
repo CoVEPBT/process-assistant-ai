@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PAT - Process Assistant Tool</title>
+<title>PAT - Process Analysis Tool</title>
 
 <!-- External libraries (loaded from CDNs that SharePoint typically allows) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -734,6 +734,25 @@
   /* Small location pill on the right of each issue card. Shows which part of
      the document the issue points to (e.g. "Activity 1.0"). Discreet by
      default; brighter when the card is active. */
+  /* Visible flag number on each card. Users can reference it in chat
+     ("tell me about flag 3"). Matches the order shown on screen, which is
+     also the order the AI receives via getOrderedIssuesForAi(). */
+  .issue-number {
+    display: inline-flex;
+    align-items: center; justify-content: center;
+    min-width: 20px; height: 20px;
+    padding: 0 6px;
+    margin-right: 8px;
+    background: #1B2A4E; color: #FFFFFF;
+    border-radius: 999px;
+    font-size: 11px; font-weight: 700;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  .issue.error .issue-number   { background: #C73A2F; }
+  .issue.warning .issue-number { background: #8A6D00; }
+  .issue.info .issue-number    { background: #1F6FB5; }
+  .issue.issue-active .issue-number { box-shadow: 0 0 0 2px rgba(255,255,255,0.6); }
   .issue-pill {
     display: inline-flex; align-items: center; gap: 2px;
     font-size: 11px; font-weight: 500;
@@ -1153,6 +1172,21 @@
 
   .hint { font-size: 12px; color: #666; margin-top: 4px; }
   .hidden { display: none !important; }
+
+  /* Pilot mode: hide Owner / Expert form inputs and show a placeholder note.
+     The body.pilot-names-excluded class is set on script load. */
+  body.pilot-names-excluded .pilot-hidden-field { display: none !important; }
+  .pilot-form-note {
+    margin: 12px 0 0; padding: 8px 12px;
+    background: #FFF8E1; border-left: 3px solid #F4C842; border-radius: 4px;
+    font-size: 12.5px; color: #5F4A00; line-height: 1.5;
+    display: none;
+  }
+  body.pilot-names-excluded .pilot-form-note { display: block; }
+  /* Doc preview - styling for the Owner/Expert placeholder so it reads as an
+     instruction to the user, not as if it were a real assignee. */
+  .doc-meta-placeholder { color: #64748B; }
+  .doc-meta-placeholder strong { color: #334155; }
 
   footer {
     margin-top: 60px; padding: 18px 28px;
@@ -3455,6 +3489,17 @@
     padding: 2px 10px; font-size: 12px; font-weight: 600;
   }
   .action-card-error-badge.hidden { display: none; }
+  /* Override for the small Export button - the badge was originally sized for
+     the big "action card" layout. On the small header button (and the
+     secondary footer button), pin it to the top-right corner with a slight
+     overhang so it never overlaps the button label. */
+  .doc-pane-export-btn .action-card-error-badge {
+    top: -8px; right: -8px;
+    padding: 1px 7px; font-size: 11px;
+    line-height: 1.4;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    pointer-events: none;
+  }
   .action-card-issues .action-card-icon { background: #FFF8E6; color: #C77700; }
   .action-card-copilot .action-card-icon { background: #EFF6FF; color: #1F6FB5; }
   .action-card-export .action-card-icon { background: #ECFDF5; color: #2E7D32; }
@@ -3652,7 +3697,7 @@
     </div>
     <div class="header-text">
       <div class="brand">PAT</div>
-      <div class="sub">Process Assistant Tool</div>
+      <div class="sub">Process Analysis Tool</div>
     </div>
   </a>
   <div class="header-actions">
@@ -3672,7 +3717,7 @@
       <span>
         <strong>Pilot release</strong> &mdash; Features marked with the
         <span class="ai-badge-inline" aria-label="AI" title="Uses AI"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>AI</span>
-        pill send your content to an external AI service (currently <em>Chat with PAT</em> and <em>Auto apply changes</em>). When using AI features, use generic process content only &mdash; no real names, IDs, contact details, or confidential business information. Moving to RMIT-managed AI soon.
+        pill send your content to an external AI service (currently <em>Chat with PAT</em> and <em>Auto apply changes</em>). When using AI features, use generic process content only &mdash; no real names, IDs, contact details, or confidential business information. <strong>Process Owner and Expert are excluded automatically</strong> &mdash; you'll assign them in Nintex Process Manager before publishing. Moving to RMIT-managed AI soon.
       </span>
       <details class="pilot-banner-details">
         <summary>See examples</summary>
@@ -3715,7 +3760,7 @@
   <div class="modal modal-wide">
     <button class="modal-close" id="standardsModalClose" type="button" aria-label="Close">&times;</button>
     <h2 id="standardsModalTitle">Standards guide</h2>
-    <p style="font-size:14px;color:#475569;margin:0 0 16px;">The CoVE Process Writing Assistant reviews your process content against three published standards. Each is summarised below.</p>
+    <p style="font-size:14px;color:#475569;margin:0 0 16px;">The CoVE Process Analysis Tool reviews your process content against three published standards. Each is summarised below.</p>
     <div class="standards-tabs" role="tablist">
       <button class="standards-tab active" role="tab" data-stab="cove">CoVE Golden Rules</button>
       <button class="standards-tab" role="tab" data-stab="rmit">RMIT Tips</button>
@@ -4001,12 +4046,20 @@ NOTE: What if access is delayed? Escalate to the IT lead and update the new star
     <div class="input-form" id="inputForm" hidden>
       <div class="form-grid">
         <div><label>Process name</label><input type="text" id="formTitle" placeholder="Verb-first name, e.g. Create new TeachVE Hub Site Page"></div>
-        <div><label>Process owner</label><input type="text" id="formOwner" placeholder="Single name"></div>
-        <div><label>Process expert</label><input type="text" id="formExpert" placeholder="Single name (must differ from owner)"></div>
+        <!-- Pilot: Owner + Expert hidden so users can't enter staff names that
+             would otherwise go to the external AI. Inputs are kept in the DOM
+             (just hidden) so any code that reads them still works; their
+             values are forced to empty in readFormModel when PILOT_NAMES_EXCLUDED. -->
+        <div class="pilot-hidden-field"><label>Process owner</label><input type="text" id="formOwner" placeholder="Single name"></div>
+        <div class="pilot-hidden-field"><label>Process expert</label><input type="text" id="formExpert" placeholder="Single name (must differ from owner)"></div>
         <div><label>Trigger</label><input type="text" id="formTrigger" placeholder="What starts the process"></div>
         <div><label>Inputs</label><input type="text" id="formInputs" placeholder="Forms, data, materials needed"></div>
         <div><label>Outputs</label><input type="text" id="formOutputs" placeholder="What the process produces"></div>
       </div>
+      <p class="pilot-form-note">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:14px;height:14px;vertical-align:-2px;margin-right:6px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        <strong>Pilot:</strong> Process owner and expert will be assigned in Nintex Process Manager before publishing - they're excluded from the AI review.
+      </p>
       <h3>Activities</h3>
       <div id="activityList"></div>
       <div class="button-row">
@@ -4396,11 +4449,22 @@ NOTE: What if access is delayed? Escalate to the IT lead and update the new star
   </header>
 
   <div id="inlineChatMessages" class="ai-chat-messages inline-chat-messages">
-    <div class="ai-message ai-message-assistant ai-message-welcome">
+    <!-- Default welcome - shown before the user analyses anything. -->
+    <div class="ai-message ai-message-assistant ai-message-welcome" id="chatWelcomeDefault">
       <p>Hi, I'm PAT. What can I help you with?</p>
       <div class="ai-quick-prompts ai-quick-prompts-paths">
         <button type="button" class="ai-quick" data-prompt="I need to create a new process map from scratch. Walk me through what to capture first.">Help me write a process</button>
         <button type="button" class="ai-quick" data-prompt="What are the CoVE Golden Rules in plain language?">Explain CoVE Golden Rules</button>
+      </div>
+    </div>
+    <!-- Doc-aware welcome - swapped in after Analyse runs. Tells the user that
+         PAT can see their document + quality flags, and offers contextual chips. -->
+    <div class="ai-message ai-message-assistant ai-message-welcome hidden" id="chatWelcomeAnalysed">
+      <p>I can see your analysed document and the quality flags. Each flag has a number on its card &mdash; reference them by number in chat (e.g. <em>"tell me more about flag 3"</em>).</p>
+      <div class="ai-quick-prompts ai-quick-prompts-paths">
+        <button type="button" class="ai-quick" data-prompt="Tell me more about flag 1 and how I should fix it.">Tell me about flag 1</button>
+        <button type="button" class="ai-quick" data-prompt="Can you suggest a tighter title for my process?">Suggest a tighter title</button>
+        <button type="button" class="ai-quick" data-prompt="Can you help me tighten the Objective on my process? Keep each sentence under 18 words.">Tighten my Objective</button>
       </div>
     </div>
   </div>
@@ -4734,6 +4798,45 @@ function stripTitlePrefix(title) {
    To disable the check entirely, set to an empty array [].
    ============================================================ */
 const REQUIRED_TITLE_PREFIXES = ['CoVE - '];
+
+/* ============================================================
+   PILOT MODE - exclude Owner and Expert names
+   ------------------------------------------------------------
+   During the pilot the tool uses external AI (OpenAI). To honour the data
+   acknowledgement that says "no real names", we strip Process Owner and
+   Process Expert out of every flow:
+     - the Build-with-a-form fields are hidden
+     - the paste / Nintex / docx parsers don't capture them
+     - the documentText sent to the AI has any "Owner: X" / "Expert: Y"
+       lines scrubbed before transmission
+     - the rules engine skips the owner/expert checks
+     - the doc preview + exports show a placeholder telling the user to
+       assign these in Nintex Process Manager before publishing
+   FLIP TO FALSE when we move to VAL (RMIT-managed AI). Single switch
+   restores the original behaviour across the tool.
+   ============================================================ */
+const PILOT_NAMES_EXCLUDED = true;
+const OWNER_EXPERT_PLACEHOLDER = 'To be assigned in Nintex Process Manager';
+
+// Flag the body so pilot-specific CSS rules apply (hidden form fields, etc.)
+if (PILOT_NAMES_EXCLUDED && document.body) {
+  document.body.classList.add('pilot-names-excluded');
+} else if (PILOT_NAMES_EXCLUDED) {
+  document.addEventListener('DOMContentLoaded', () => {
+    document.body.classList.add('pilot-names-excluded');
+  });
+}
+
+// Strip "Owner: X" / "Expert: X" / "Process Owner: X" / "Process Expert: X"
+// lines from any text payload before it goes to the AI. Replaces the value
+// with the placeholder so the AI still understands the structure but never
+// sees the real name.
+function scrubOwnerExpertForAi(text) {
+  if (!PILOT_NAMES_EXCLUDED || !text) return text;
+  return text
+    .replace(/^(\s*)(Process\s+)?Owner\s*:\s*.*$/gmi,  '$1$2Owner: ' + OWNER_EXPERT_PLACEHOLDER)
+    .replace(/^(\s*)(Process\s+)?Expert\s*:\s*.*$/gmi, '$1$2Expert: ' + OWNER_EXPERT_PLACEHOLDER);
+}
 
 /* ============================================================
    STATE
@@ -5464,10 +5567,13 @@ function parseNintexPdf(lines) {
     if (ob) model.objective = ob[1].trim();
     const bg = s.match(/Background\s*([\s\S]*?)(?=Owner|Expert|$)/i);
     if (bg) model.background = bg[1].trim();
-    const ow = s.match(/Owner\s+([^\n]+)/i);
-    if (ow) model.owner = ow[1].trim();
-    const ex = s.match(/Expert\s+([^\n]+)/i);
-    if (ex) model.expert = ex[1].trim();
+    // Pilot: don't capture Owner/Expert names from pasted content
+    if (!PILOT_NAMES_EXCLUDED) {
+      const ow = s.match(/Owner\s+([^\n]+)/i);
+      if (ow) model.owner = ow[1].trim();
+      const ex = s.match(/Expert\s+([^\n]+)/i);
+      if (ex) model.expert = ex[1].trim();
+    }
   }
 
   // PROCEDURE - parse activities
@@ -5800,15 +5906,15 @@ function parseStructuredText(text) {
             || key === 'name' || key === 'process') {
           if (!model.title) model.title = val;
         }
-        // Owner
+        // Owner - pilot: don't capture names
         else if (key === 'owner' || key === 'process owner' || key === 'author'
                  || key === 'responsible') {
-          if (!model.owner) model.owner = val;
+          if (!model.owner && !PILOT_NAMES_EXCLUDED) model.owner = val;
         }
-        // Expert
+        // Expert - pilot: don't capture names
         else if (key === 'expert' || key === 'process expert' || key === 'sme'
                  || key === 'subject matter expert') {
-          if (!model.expert) model.expert = val;
+          if (!model.expert && !PILOT_NAMES_EXCLUDED) model.expert = val;
         }
         // Trigger
         else if (key === 'trigger' || key === 'process trigger'
@@ -6003,8 +6109,10 @@ function readFormModel() {
   const model = {
     title: document.getElementById('formTitle').value.trim(),
     version: '',
-    owner: document.getElementById('formOwner').value.trim(),
-    expert: document.getElementById('formExpert').value.trim(),
+    // Pilot: don't capture Owner/Expert names from the form. Force empty so
+    // the doc preview + exports render the "assign in Nintex" placeholder.
+    owner: PILOT_NAMES_EXCLUDED ? '' : document.getElementById('formOwner').value.trim(),
+    expert: PILOT_NAMES_EXCLUDED ? '' : document.getElementById('formExpert').value.trim(),
     objective: '', background: '',
     trigger: document.getElementById('formTrigger').value.trim(),
     inputs: document.getElementById('formInputs').value.trim(),
@@ -6481,17 +6589,20 @@ function runRulesEngine(model) {
   }
 
   // ---------- OWNER / EXPERT (RMIT) ----------
-  if (model.owner && model.expert && model.owner.toLowerCase() === model.expert.toLowerCase()) {
+  // Pilot: skip these checks entirely. Owner/Expert aren't captured during
+  // the pilot (data privacy - we're on external AI) and will be assigned in
+  // Nintex Process Manager before publishing.
+  if (!PILOT_NAMES_EXCLUDED && model.owner && model.expert && model.owner.toLowerCase() === model.expert.toLowerCase()) {
     push({ id:'owner-equals-expert', source:'RMIT', severity:'error',
       message:'Process Owner and Process Expert must be different people.',
       suggestion:'Assign a different person as Expert so the correct approval chain applies.' });
   }
-  if (!model.owner) {
+  if (!PILOT_NAMES_EXCLUDED && !model.owner) {
     push({ id:'no-owner', source:'RMIT', severity:'warning',
       message:'Process Owner is not specified.',
       suggestion:'Owner is accountable for the process being effective and improving.' });
   }
-  if (!model.expert) {
+  if (!PILOT_NAMES_EXCLUDED && !model.expert) {
     push({ id:'no-expert', source:'RMIT', severity:'warning',
       message:'Process Expert is not specified.',
       suggestion:'Expert is accountable alongside the Owner; they must be a different person.' });
@@ -7446,6 +7557,13 @@ async function renderResults() {
   // document" but a fresh analyse starts as "Generated document" again.
   const titleTextReset = document.getElementById('docSectionTitleText');
   if (titleTextReset) titleTextReset.textContent = 'Generated document';
+  // Swap the chat welcome to the doc-aware version - PAT can now see the
+  // analysed doc + flags, so the chips reflect that context. The default
+  // welcome stays in the DOM (hidden) so a future Reset can swap back.
+  const welcomeDefault = document.getElementById('chatWelcomeDefault');
+  const welcomeAnalysed = document.getElementById('chatWelcomeAnalysed');
+  if (welcomeDefault) welcomeDefault.classList.add('hidden');
+  if (welcomeAnalysed) welcomeAnalysed.classList.remove('hidden');
   // Top tabs: only Home + Visual workflow exist now
   if (typeof window.resetResultsTopTabs === 'function') {
     window.resetResultsTopTabs();
@@ -7607,7 +7725,7 @@ async function renderResults() {
   // Issues
   const grouped = { error: [], warning: [], info: [] };
   currentIssues.forEach((i, idx) => { i._idx = idx; grouped[i.severity]?.push(i); });
-  const renderIssue = (i) => {
+  const renderIssue = (i, displayNumber) => {
     // Figure out the best place in the document to jump to. We use both the
     // location string and the issue id, since most "field is missing" errors
     // don't carry a location.
@@ -7642,9 +7760,17 @@ async function renderResults() {
     const affordance = '<span class="issue-pill ' + (isClickable ? 'issue-pill-jump' : 'issue-pill-static') + '" aria-hidden="true">' +
       (isClickable ? '&rarr; ' : '') + pillLabel +
       '</span>';
-    return '<div class="' + cls + '"' + tabAttr + '>' +
+    // Visible flag number so users can reference flags in chat ("tell me
+     // about flag 3"). The number matches what gets sent to the AI in the
+     // ISSUES FLAGGED context block, because the AI receives the same ordered
+     // list (see getOrderedIssuesForAi below).
+    const numberBadge = (typeof displayNumber === 'number')
+      ? '<span class="issue-number" aria-label="Flag ' + displayNumber + '">' + displayNumber + '</span>'
+      : '';
+    return '<div class="' + cls + '"' + tabAttr + ' data-flag-number="' + (displayNumber || '') + '">' +
       '<div class="row1">' +
         '<div class="issue-meta">' +
+          numberBadge +
           '<span class="severity">' + (SEVERITY_ICONS[i.severity] || '') + ' ' + i.severity + '</span>' +
         '</div>' +
         affordance +
@@ -7653,6 +7779,16 @@ async function renderResults() {
       (i.suggestion ? '<div class="suggestion"><strong>Try:</strong> ' + i.suggestion + '</div>' : '') +
       '</div>';
   };
+  // Shared helper: produce the same ordered list of flags that the sidebar
+  // shows, so the AI's "Flag 3" matches the card the user is looking at.
+  // Errors first, then warnings, then info-level suggestions.
+  function getOrderedIssuesForAi() {
+    const src = (typeof currentIssues !== 'undefined' && Array.isArray(currentIssues)) ? currentIssues : [];
+    const g = { error: [], warning: [], info: [] };
+    src.forEach(i => (g[i.severity] || g.info).push(i));
+    return [].concat(g.error, g.warning, g.info);
+  }
+  window.getOrderedIssuesForAi = getOrderedIssuesForAi;
 
   // Map an issue to a DOM element ID inside the doc preview. Uses the issue's
   // location string first, then falls back to its id for issues whose location
@@ -7729,7 +7865,7 @@ async function renderResults() {
     const ordered = [].concat(g.error, g.warning, g.info);
     out.innerHTML = currentIssues.length === 0
       ? '<p>No quality flags - your draft already meets the standards.</p>'
-      : '<div class="issues-scroll">' + ordered.map(renderIssue).join('') + '</div>';
+      : '<div class="issues-scroll">' + ordered.map((i, idx) => renderIssue(i, idx + 1)).join('') + '</div>';
     attachIssueNav();
     if (typeof window.refreshInlineFlags === 'function') window.refreshInlineFlags();
   };
@@ -7739,7 +7875,7 @@ async function renderResults() {
   const orderedIssues = [].concat(grouped.error, grouped.warning, grouped.info);
   document.getElementById('issuesOut').innerHTML = currentIssues.length === 0
     ? '<p>No quality flags - your draft meets the encoded standards.</p>'
-    : '<div class="issues-scroll">' + orderedIssues.map(renderIssue).join('') + '</div>';
+    : '<div class="issues-scroll">' + orderedIssues.map((i, idx) => renderIssue(i, idx + 1)).join('') + '</div>';
 
   // Workflow - render with bpmn-js (Mermaid kept as fallback)
   const wf = document.getElementById('workflowRender');
@@ -7807,8 +7943,13 @@ function renderDocPreview(m) {
   let html = `<h1 id="doc-title">${escapeHtml(m.title || 'Untitled process')}${m.version ? ' <small>'+escapeHtml(m.version)+'</small>' : ''}</h1>`;
   html += `<p class="generated-line">Generated: ${formatAusDate(new Date())}</p>`;
   html += `<div class="meta" id="doc-meta">`;
-  html += `<p id="doc-meta-owner"><strong>Owner:</strong> ${escapeHtml(m.owner||'-')}</p>`;
-  html += `<p id="doc-meta-expert"><strong>Expert:</strong> ${escapeHtml(m.expert||'-')}</p>`;
+  // Pilot: show the "assign in Nintex" placeholder instead of '-' when empty.
+  const _ownerVal = (PILOT_NAMES_EXCLUDED && !m.owner) ? OWNER_EXPERT_PLACEHOLDER : (m.owner || '-');
+  const _expertVal = (PILOT_NAMES_EXCLUDED && !m.expert) ? OWNER_EXPERT_PLACEHOLDER : (m.expert || '-');
+  const _ownerCls = (PILOT_NAMES_EXCLUDED && !m.owner) ? ' class="doc-meta-placeholder"' : '';
+  const _expertCls = (PILOT_NAMES_EXCLUDED && !m.expert) ? ' class="doc-meta-placeholder"' : '';
+  html += `<p id="doc-meta-owner"${_ownerCls}><strong>Owner:</strong> ${escapeHtml(_ownerVal)}</p>`;
+  html += `<p id="doc-meta-expert"${_expertCls}><strong>Expert:</strong> ${escapeHtml(_expertVal)}</p>`;
   // Wrap each meta field with an ID so flags about trigger/inputs/outputs can jump here
   html += `<div id="doc-meta-trigger">${metaField('Trigger', m.trigger)}</div>`;
   html += `<div id="doc-meta-inputs">${metaField('Inputs', m.inputs)}</div>`;
@@ -8125,8 +8266,11 @@ async function downloadAsDocx() {
     }
   };
   children.push(para(`Generated: ${formatAusDate(new Date())}`, { italic: true }));
-  children.push(para(`Owner: ${m.owner || '-'}`));
-  children.push(para(`Expert: ${m.expert || '-'}`));
+  // Pilot: show "assign in Nintex" placeholder when names are excluded
+  const _wOwner  = (PILOT_NAMES_EXCLUDED && !m.owner)  ? OWNER_EXPERT_PLACEHOLDER : (m.owner  || '-');
+  const _wExpert = (PILOT_NAMES_EXCLUDED && !m.expert) ? OWNER_EXPERT_PLACEHOLDER : (m.expert || '-');
+  children.push(para(`Owner: ${_wOwner}`));
+  children.push(para(`Expert: ${_wExpert}`));
   labelledField('Trigger', m.trigger);
   labelledField('Inputs', m.inputs);
   labelledField('Outputs', m.outputs);
@@ -8521,8 +8665,12 @@ async function downloadAsPdf() {
 
   // ---------- Meta block ----------
   const metaLines = [];
+  // Pilot: always include Owner/Expert rows so the placeholder text appears
+  // in the PDF, even when no name was captured (names are excluded by design).
   if (m.owner)   metaLines.push(['Owner', m.owner]);
+  else if (PILOT_NAMES_EXCLUDED) metaLines.push(['Owner', OWNER_EXPERT_PLACEHOLDER]);
   if (m.expert)  metaLines.push(['Expert', m.expert]);
+  else if (PILOT_NAMES_EXCLUDED) metaLines.push(['Expert', OWNER_EXPERT_PLACEHOLDER]);
   if (m.trigger) metaLines.push(['Trigger', m.trigger]);
   if (m.inputs)  metaLines.push(['Inputs', m.inputs]);
   if (m.outputs) metaLines.push(['Outputs', m.outputs]);
@@ -8598,7 +8746,7 @@ async function downloadAsPdf() {
   // ---------- Footer: generated date ----------
   setText({ italic: true, size: 8.5, color: GREY });
   const today = (typeof formatAusDate === 'function') ? formatAusDate(new Date()) : new Date().toLocaleDateString('en-AU');
-  doc.text('Generated by CoVE Process Assistant on ' + today, MARGIN_L, PAGE_H - 8);
+  doc.text('Generated by CoVE Process Analysis Tool on' + today, MARGIN_L, PAGE_H - 8);
 
   // ---------- Visual workflow on its own final page ----------
   try {
@@ -8630,7 +8778,7 @@ async function downloadAsPdf() {
       doc.setFont('helvetica', 'italic');
       doc.setFontSize(8.5);
       doc.setTextColor(GREY[0], GREY[1], GREY[2]);
-      doc.text('Generated by CoVE Process Assistant on ' + today, MARGIN_L, PAGE_H - 8);
+      doc.text('Generated by CoVE Process Analysis Tool on' + today, MARGIN_L, PAGE_H - 8);
     }
   } catch (e) {
     console.warn('[pdf-workflow] workflow page skipped:', e);
@@ -8823,9 +8971,9 @@ async function generateBlankTemplate() {
   }));
   c.push(para('How to use this template', { heading: HeadingLevel.HEADING_2 }));
   c.push(para('1. Replace every bracketed placeholder [like this] with your own content.', { italic: true }));
-  c.push(para('2. Keep all the bold headings exactly as they appear - the Process Writing Assistant uses them to read your file.', { italic: true }));
+  c.push(para('2. Keep all the bold headings exactly as they appear - the Process Analysis Tool uses them to read your file.', { italic: true }));
   c.push(para('3. Add or remove activity blocks as needed (aim for 3 to 10 activities).', { italic: true }));
-  c.push(para('4. Save and upload this file back into the Process Writing Assistant.', { italic: true }));
+  c.push(para('4. Save and upload this file back into the Process Analysis Tool.', { italic: true }));
 
   c.push(para('Process metadata', { heading: HeadingLevel.HEADING_1 }));
   c.push(para('Process name: [CoVE - <Department> - Verb-first title]'));
@@ -9004,7 +9152,7 @@ wireExportBtn('downloadPngBtn', downloadPng);
 // Guided tour ('I'm new here' walkthrough)
 const TOUR_STEPS = [
   {
-    title: 'Welcome to the CoVE Process Writing Assistant',
+    title: 'Welcome to the CoVE Process Analysis Tool',
     body: 'A 60-second walkthrough. Use <strong>Next</strong> to advance, or <strong>Skip</strong> to jump straight in.',
     target: null
   },
@@ -9491,7 +9639,7 @@ if (restoreBtn) {
       children: [new TextRun({ text: 'How to write a process', bold: true, size: 36, color: NAVY, font: FONT })],
       spacing: { after: 200 }
     }));
-    c.push(para('A step-by-step guide aligned with CoVE Golden Rules, RMIT Tips and Nintex Techniques. Use it as a reference while you build your process in the CoVE Process Writing Assistant, in Word, or in Nintex Process Manager.', { italic: true, color: GREY }));
+    c.push(para('A step-by-step guide aligned with CoVE Golden Rules, RMIT Tips and Nintex Techniques. Use it as a reference while you build your process in the CoVE Process Analysis Tool, in Word, or in Nintex Process Manager.', { italic: true, color: GREY }));
     c.push(para('Generated ' + new Date().toLocaleDateString('en-AU', { year:'numeric', month:'long', day:'numeric' }), { italic: true, color: GREY, size: 18 }));
 
     c.push(sectionHeading('Step 1 - Define the basics'));
@@ -10083,8 +10231,15 @@ function createChatSurface(cfg) {
     try {
       const dp = document.getElementById('docPreview');
       documentText = dp ? (dp.innerText || dp.textContent || '') : '';
+      // Pilot: scrub any Owner: / Expert: lines before the text leaves us
+      documentText = scrubOwnerExpertForAi(documentText);
     } catch (e) {}
-    const issues = (typeof currentIssues !== 'undefined' ? currentIssues : []).map(i => ({
+    // Send issues in the SAME order the sidebar displays them (errors then
+     // warnings then info) so the AI's "flag 3" matches the user's card "3".
+    const issues = (typeof window.getOrderedIssuesForAi === 'function'
+      ? window.getOrderedIssuesForAi()
+      : (typeof currentIssues !== 'undefined' ? currentIssues : [])
+    ).map(i => ({
       severity: i.severity, message: i.message, suggestion: i.suggestion, location: i.location
     }));
 
@@ -10401,8 +10556,14 @@ createChatSurface({
     try {
       const dp = document.getElementById('docPreview');
       documentText = dp ? (dp.innerText || dp.textContent || '') : '';
+      // Pilot: scrub any Owner: / Expert: lines before the text leaves us
+      documentText = scrubOwnerExpertForAi(documentText);
     } catch (e) {}
-    const issues = (Array.isArray(currentIssues) ? currentIssues : []).map(i => ({
+    // Same ordering as the sidebar so the AI's "Flag N" matches the visible card.
+    const issues = (typeof window.getOrderedIssuesForAi === 'function'
+      ? window.getOrderedIssuesForAi()
+      : (Array.isArray(currentIssues) ? currentIssues : [])
+    ).map(i => ({
       severity: i.severity, message: i.message, suggestion: i.suggestion, location: i.location, id: i.id
     }));
 

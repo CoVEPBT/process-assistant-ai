@@ -4,6 +4,11 @@ node_modules/
 .DS_Store
 
 # Knowledge files (may contain sensitive RMIT content)
+# README + FAQ corpus + the published process-writing standards are allowed.
+# Anything else dropped into knowledge/ (e.g. internal-only drafts) stays out.
 knowledge/*
 !knowledge/README.txt
 !knowledge/process-faqs.md
+!knowledge/RMIT - Tips for process writing.docx
+!knowledge/Nintex Process writing techniques.docx
+!knowledge/VERB_LIST_CATEGORISED.docx
