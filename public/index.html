@@ -8295,8 +8295,8 @@ async function downloadAsDocx() {
 
   m.activities.forEach((a, ai) => {
     if (ai > 0) {
-      // Spacer paragraph between activities
-      children.push(new Paragraph({ children: [new TextRun({ text: '' })], spacing: { before: 240, after: 120 } }));
+      // Spacer paragraph between activities - generous gap so each activity reads as its own block
+      children.push(new Paragraph({ children: [new TextRun({ text: '' })], spacing: { before: 480, after: 240 } }));
     }
     const activityPara = [];
     // Activity title row: number badge + title
@@ -8818,19 +8818,59 @@ async function downloadSvg() {
 async function getWorkflowPng() {
   let xml = '';
   if (typeof bpmnViewer !== 'undefined' && bpmnViewer) {
-    try { xml = (await bpmnViewer.saveSVG()).svg; } catch (e) {}
+    try { xml = (await bpmnViewer.saveSVG()).svg; } catch (e) { console.warn('[workflow-png] saveSVG failed', e); }
   }
   if (!xml) {
     const svg = document.querySelector('#workflowRender svg');
-    if (!svg) return null;
+    if (!svg) { console.warn('[workflow-png] no live svg in #workflowRender'); return null; }
     xml = new XMLSerializer().serializeToString(svg);
   }
+
+  // Strip the bpmn.io "powered-by" watermark - the on-screen CSS rule only
+  // hides it in the live DOM; saveSVG() still emits it and it ends up dominating
+  // the rasterised image (showing up as a pixellated "bpmn.io" badge).
+  try {
+    const doc = new DOMParser().parseFromString(xml, 'image/svg+xml');
+    const svgEl = doc.documentElement;
+    if (svgEl && svgEl.tagName.toLowerCase() === 'svg') {
+      svgEl.querySelectorAll('.bjs-powered-by, [class*="powered-by"]').forEach(el => el.remove());
+      // Also strip any <a> / <text> with bpmn.io content as a defensive fallback
+      svgEl.querySelectorAll('a, text').forEach(el => {
+        if (/bpmn\.io/i.test(el.textContent || '')) el.remove();
+      });
+      xml = new XMLSerializer().serializeToString(svgEl);
+    }
+  } catch (e) { console.warn('[workflow-png] watermark strip failed', e); }
+
+  // Prefer the bpmn-js canvas's inner viewbox - that's the bounding box of just
+  // the diagram elements, not the surrounding chrome.
   let pxW = 0, pxH = 0;
-  const vbMatch = xml.match(/viewBox="([^"]+)"/);
-  if (vbMatch) {
-    const parts = vbMatch[1].trim().split(/\s+/).map(Number);
-    if (parts.length === 4 && parts[2] > 0 && parts[3] > 0) {
-      pxW = parts[2]; pxH = parts[3];
+  if (typeof bpmnViewer !== 'undefined' && bpmnViewer) {
+    try {
+      const inner = bpmnViewer.get('canvas').viewbox().inner;
+      if (inner && inner.width > 0 && inner.height > 0) {
+        const pad = 20;
+        pxW = Math.ceil(inner.width + pad * 2);
+        pxH = Math.ceil(inner.height + pad * 2);
+        // Rewrite the viewBox so the rasterised image frames only the diagram
+        const vbX = Math.floor(inner.x - pad);
+        const vbY = Math.floor(inner.y - pad);
+        const newVb = `${vbX} ${vbY} ${pxW} ${pxH}`;
+        if (/viewBox="/.test(xml)) {
+          xml = xml.replace(/viewBox="[^"]*"/, `viewBox="${newVb}"`);
+        } else {
+          xml = xml.replace(/<svg\b/, `<svg viewBox="${newVb}"`);
+        }
+      }
+    } catch (e) { console.warn('[workflow-png] canvas.viewbox().inner failed', e); }
+  }
+  if (!pxW || !pxH) {
+    const vbMatch = xml.match(/viewBox="([^"]+)"/);
+    if (vbMatch) {
+      const parts = vbMatch[1].trim().split(/\s+/).map(Number);
+      if (parts.length === 4 && parts[2] > 0 && parts[3] > 0) {
+        pxW = parts[2]; pxH = parts[3];
+      }
     }
   }
   if (!pxW || !pxH) {
@@ -8846,23 +8886,34 @@ async function getWorkflowPng() {
   const scale = Math.min(2, 4000 / Math.max(pxW, pxH));
   const canvasW = Math.round(pxW * scale);
   const canvasH = Math.round(pxH * scale);
-  if (!/<svg\b[^>]*\bwidth=/i.test(xml)) {
-    xml = xml.replace(/<svg\b/, '<svg width="' + pxW + '" height="' + pxH + '"');
-  }
+  // Force explicit width/height attributes to match the new viewBox so the
+  // <img> tag rasterises at the right dimensions.
+  xml = xml.replace(/\s(width|height)="[^"]*"/gi, '');
+  xml = xml.replace(/<svg\b/, `<svg width="${pxW}" height="${pxH}"`);
   const dataUrl = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(xml)));
   return new Promise(resolve => {
     const img = new Image();
-    img.crossOrigin = 'anonymous';
+    // Do NOT set crossOrigin on data: URLs - it can taint the canvas when the
+    // SVG references external resources (fonts, icons) and then toDataURL throws.
+    let settled = false;
+    const finish = (result) => { if (!settled) { settled = true; resolve(result); } };
     img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = canvasW; canvas.height = canvasH;
-      const ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#FFFFFF';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      resolve({ dataUrl: canvas.toDataURL('image/png'), width: canvasW, height: canvasH });
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = canvasW; canvas.height = canvasH;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        finish({ dataUrl: canvas.toDataURL('image/png'), width: canvasW, height: canvasH });
+      } catch (e) {
+        console.warn('[workflow-png] canvas.toDataURL failed (tainted canvas?)', e);
+        finish(null);
+      }
     };
-    img.onerror = () => resolve(null);
+    img.onerror = (e) => { console.warn('[workflow-png] img load failed', e); finish(null); };
+    // Hard timeout so a stuck image load never hangs the export
+    setTimeout(() => { if (!settled) { console.warn('[workflow-png] rasterise timed out'); finish(null); } }, 8000);
     img.src = dataUrl;
   });
 }
