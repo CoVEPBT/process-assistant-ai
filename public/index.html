@@ -8885,10 +8885,13 @@ async function getWorkflowPng() {
   const scale = Math.min(2, 4000 / Math.max(pxW, pxH));
   const canvasW = Math.round(pxW * scale);
   const canvasH = Math.round(pxH * scale);
-  // Force explicit width/height attributes to match the new viewBox so the
-  // <img> tag rasterises at the right dimensions.
-  xml = xml.replace(/\s(width|height)="[^"]*"/gi, '');
-  xml = xml.replace(/<svg\b/, `<svg width="${pxW}" height="${pxH}"`);
+  // Force explicit width/height attributes on the <svg> opening tag (and only
+  // the opening tag - stripping width/height from descendants would collapse
+  // task rects, image elements, etc. to zero size and break the export).
+  xml = xml.replace(/<svg\b([^>]*)>/i, (_, attrs) => {
+    const cleaned = attrs.replace(/\s(width|height)="[^"]*"/gi, '');
+    return `<svg${cleaned} width="${pxW}" height="${pxH}">`;
+  });
   const dataUrl = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(xml)));
   return new Promise(resolve => {
     const img = new Image();
