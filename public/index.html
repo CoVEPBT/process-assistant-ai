@@ -5518,24 +5518,43 @@ function parseNintexPdf(lines) {
     return true;
   });
 
-  // Find document title - handle multi-line titles. The version "vX.Y" appears on
-  // the last line of the title; preceding lines (up to 3) form the title.
+  // Find document title.
+  // First pass: look for the CoVE house naming convention "CoVE - XX(X) - <text>"
+  // and capture up to the "[" status marker or "vX.Y" version. Page 1 of a Nintex
+  // export jumbles the swimlane labels into the title line, so when this pattern
+  // exists we trust it absolutely - it's specific enough to skip the vX.Y look-back
+  // logic that would otherwise prepend stray swimlane fragments.
   let title = '';
   let version = '';
-  for (let i = 0; i < Math.min(filtered.length, 16); i++) {
-    const m = filtered[i].text.match(/^(.+?)\s+v(\d+\.\d+)$/);
-    if (m) {
-      version = 'v' + m[2];
-      const titleLines = [m[1].trim()];
-      // Look back up to 3 lines for the rest of the title (not section headings).
-      for (let j = i - 1; j >= 0 && j >= i - 3; j--) {
-        const prev = filtered[j].text;
-        if (/^(Summary|Procedure|Triggers|Outputs|RACI|Systems|OFI|Timeframes|Variance)/i.test(prev)) break;
-        if (/CRICOS|RMIT >|Uncontrolled|Page \d/.test(prev)) break;
-        titleLines.unshift(prev.trim());
-      }
-      title = titleLines.join(' ').replace(/\s+/g,' ').trim();
+  const COVE_TITLE_RE = /\b(CoVE\s*[-–—]\s*[A-Z]{2,3}\s*[-–—]\s*[^\[<>]+?)(?=\s+\[|\s+v\d+\.\d+|$)/i;
+  for (let i = 0; i < Math.min(filtered.length, 30); i++) {
+    const t = filtered[i].text;
+    const cm = t.match(COVE_TITLE_RE);
+    if (cm) {
+      title = cm[1].trim().replace(/\s+/g, ' ');
+      const vm = t.match(/v(\d+\.\d+)/);
+      if (vm) version = 'v' + vm[1];
       break;
+    }
+  }
+  // Fallback: handle multi-line titles. The version "vX.Y" appears on the last
+  // line of the title; preceding lines (up to 3) form the title.
+  if (!title) {
+    for (let i = 0; i < Math.min(filtered.length, 16); i++) {
+      const m = filtered[i].text.match(/^(.+?)\s+v(\d+\.\d+)$/);
+      if (m) {
+        version = 'v' + m[2];
+        const titleLines = [m[1].trim()];
+        // Look back up to 3 lines for the rest of the title (not section headings).
+        for (let j = i - 1; j >= 0 && j >= i - 3; j--) {
+          const prev = filtered[j].text;
+          if (/^(Summary|Procedure|Triggers|Outputs|RACI|Systems|OFI|Timeframes|Variance)/i.test(prev)) break;
+          if (/CRICOS|RMIT >|Uncontrolled|Page \d/.test(prev)) break;
+          titleLines.unshift(prev.trim());
+        }
+        title = titleLines.join(' ').replace(/\s+/g,' ').trim();
+        break;
+      }
     }
   }
   if (!title && filtered.length) title = filtered[0].text;
@@ -5752,6 +5771,21 @@ function parseProcedureBlock(block) {
   const taskRe     = /^([a-z])\s+(.+)$/;
   const noteRe     = /^NOTE\s+(.+)$/;
   const procRe     = /^PROCESS\s+(.+)$/;
+  // A line is a role line if it looks like the Nintex/CoVE role convention:
+  // "CoVE - X", "RMIT - X", or contains an en/em dash separating an org from
+  // a role name. This is how we distinguish role lines from title-wrap lines.
+  const roleLineRe = /^(?:CoVE|RMIT)\b|[–—]/;
+  const SECTION_HEADINGS_RE = /^(TRIGGERS|INPUTS|OUTPUTS|PERFORMANCE\s+TARGETS|RACI|RESPONSIBLE|ACCOUNTABLE|CONSULTED|INFORMED|SYSTEMS|OFI|TIMEFRAMES|STAKEHOLDERS|VARIANCE\s+SCENARIOS|PROCESS\s+LINKS)\b/i;
+
+  // Append continuation text, joining hyphenated word wraps. The PDF extractor
+  // often emits "Adminis-" and "tration" on consecutive lines; we want
+  // "Administration", not "Adminis- tration".
+  const appendContinuation = (prev, next) => {
+    if (/-$/.test(prev) && /^[a-z]/.test(next)) {
+      return prev.replace(/-$/, '') + next;
+    }
+    return prev ? (prev + ' ' + next) : next;
+  };
 
   for (const line of lines) {
     const am = line.match(activityRe);
@@ -5765,13 +5799,26 @@ function parseProcedureBlock(block) {
     if (!current) continue;
 
     if (expectingRole) {
-      // Role line(s) - keep collecting consecutive non-task/note/process lines as the role.
-      // The role often spans 2 lines, e.g. "CoVE - Subject Matter Expert (SME), CoVE - Teach VE / Site Member".
-      if (!taskRe.test(line) && !noteRe.test(line) && !procRe.test(line) && !activityRe.test(line)) {
-        current.role = current.role ? (current.role + ' ' + line) : line;
+      // Three cases while waiting for the role:
+      //  1. Line is a structural marker (task/note/process/activity) - exit role mode and fall through.
+      //  2. Line looks like a role - capture (or extend) the role.
+      //  3. Line doesn't look like a role AND we haven't captured one yet - it's a title continuation.
+      //  4. Line doesn't look like a role AND we already have one - it's an attachment / extra line; ignore.
+      if (taskRe.test(line) || noteRe.test(line) || procRe.test(line) || activityRe.test(line)) {
+        expectingRole = false;
+        // fall through to the structural handlers below
+      } else if (roleLineRe.test(line)) {
+        current.role = current.role ? appendContinuation(current.role, line) : line;
+        continue;
+      } else if (!current.role) {
+        current.title = appendContinuation(current.title, line);
+        continue;
+      } else {
+        // Role already captured; this is an attachment / link title / etc.
+        // Drop it and exit role mode so subsequent attachment URLs don't get bound to the role.
+        expectingRole = false;
         continue;
       }
-      expectingRole = false;
     }
 
     const nm = line.match(noteRe);
@@ -5797,16 +5844,19 @@ function parseProcedureBlock(block) {
       continue;
     }
 
-    // continuation line - append to current note or current task
+    // continuation line - append to current note or current task. Skip recognised
+    // section headings that may leak in from page-break artifacts in the PDF.
+    if (SECTION_HEADINGS_RE.test(line)) continue;
     if (inNote && currentNote) {
-      currentNote.body += (currentNote.body ? ' ' : '') + line;
+      currentNote.body = appendContinuation(currentNote.body, line);
     } else if (currentTask) {
-      // detect attachment lines like "TeachVE Hub - Site Pages" followed by a URL
       if (/^https?:\/\//i.test(line)) {
         currentTask.attachment = (currentTask.attachment || '') + ' ' + line;
-      } else if (line.length < 120 && !/^[A-Z]+\s*[A-Z]/.test(line)) {
-        // append to task text only if it looks like a wrap
-        currentTask.text += ' ' + line;
+      } else {
+        // Accept the continuation - the only filter is the SECTION_HEADINGS_RE
+        // check above. The old length<120 / all-caps heuristic was dropping
+        // short caps continuations like "SAMS." mid-sentence.
+        currentTask.text = appendContinuation(currentTask.text, line);
       }
     }
   }
@@ -6069,6 +6119,23 @@ function parseStructuredText(text) {
     }
   }
   if (current) model.activities.push(current);
+
+  // CoVE process-title pattern: "CoVE - XX(X) - <text>" near the top of the
+  // document is the team's house naming convention (e.g. "CoVE - SL - Pre-training
+  // review"). When we see it, use the whole line as the confirmed title - the
+  // pattern is specific enough that we don't flag it for confirmation.
+  if (!model.title) {
+    const COVE_TITLE_RE = /^CoVE\s*[-\u2013\u2014]\s*[A-Z]{2,3}\s*[-\u2013\u2014]\s*\S.*$/i;
+    const SCAN_LIMIT = Math.min(lines.length, 30);
+    for (let i = 0; i < SCAN_LIMIT; i++) {
+      const l = (lines[i] || '').trim().replace(/^#+\s*/, '');
+      if (!l) continue;
+      if (COVE_TITLE_RE.test(l)) {
+        model.title = l;
+        break;
+      }
+    }
+  }
 
   // Inference fallback: if the user pasted content without a "Process name:" prefix,
   // treat the first plausible line as the title and flag it for confirmation.
