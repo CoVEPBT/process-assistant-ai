@@ -1976,11 +1976,17 @@
     padding: 0 4px;
     border-radius: 3px;
   }
-  /* The placeholder sits on its own row beneath the task it belongs to. */
+  /* The placeholder / link sits on its own row beneath the task it belongs to. */
   .task-link-row {
     margin: 2px 0 6px 24px;
     font-size: 13px;
   }
+  .task-link-row a {
+    color: var(--rmit-red); text-decoration: underline;
+    word-break: break-all;  /* long Workday-style URLs wrap cleanly */
+  }
+  .task-link-row a:hover { text-decoration: none; }
+  .task-link-row strong { color: #475569; margin-right: 4px; }
 
   /* ============================================================
      COMPARE-WITH-ORIGINAL SWITCH (home v3 - Move 3)
@@ -4837,6 +4843,26 @@ const APPROVED_VERBS_FLAT = Object.values(APPROVED_VERBS).flat();
 const APPROVED_VERBS_SET = new Set(APPROVED_VERBS_FLAT);
 
 /**
+ * Detect an inline URL in a task / line and return the text with the URL
+ * stripped, plus the URL itself. Returns { text, url } - url is the empty
+ * string when no URL is found. Pilot testers reported pasted URLs were
+ * disappearing into task text rather than rendering as clickable links.
+ */
+function extractInlineUrl(input) {
+  const text = String(input || '');
+  // Match http(s) URLs - liberal, terminates at whitespace, closing bracket,
+  // or end of string. Trailing punctuation (",.;!?)") is trimmed off so we
+  // don't capture the full-stop at the end of a sentence as part of the URL.
+  const m = text.match(/(https?:\/\/[^\s\]\)\>]+)/i);
+  if (!m) return { text: text.trim(), url: '' };
+  let url = m[1];
+  // Trim common trailing punctuation that's almost certainly sentence stuff
+  url = url.replace(/[.,;:!?]+$/, '');
+  const stripped = text.replace(m[1], '').replace(/\s{2,}/g, ' ').trim();
+  return { text: stripped, url };
+}
+
+/**
  * Split a role string into individual roles using SAFE separators only.
  * Many RMIT job titles include commas (e.g. "Coordinator, Student Lifecycle",
  * "Officer, Recruitment"). A naive .split(',') treats those as two roles,
@@ -5605,44 +5631,120 @@ function parseNintexPdf(lines) {
   });
 
   // Find document title.
-  // First pass: look for the CoVE house naming convention "CoVE - XX(X) - <text>"
-  // and capture up to the "[" status marker or "vX.Y" version. Page 1 of a Nintex
-  // export jumbles the swimlane labels into the title line, so when this pattern
-  // exists we trust it absolutely - it's specific enough to skip the vX.Y look-back
-  // logic that would otherwise prepend stray swimlane fragments.
+  //
+  // Strategy: the most reliable signal a line is the title is the presence of
+  //   - a Nintex status marker like "[ Awaiting Publish ]" / "[ Approved ]", OR
+  //   - a version marker "vX.Y"
+  // Both only appear on the title line. We anchor on whichever appears first,
+  // then walk back up to 5 lines to reassemble the multi-line wrapped title
+  // (Page 1 of a Nintex export typically wraps the title across 2-3 lines and
+  // page-1 swimlane labels also start with "CoVE -", so a plain "starts with
+  // CoVE" heuristic picks up the wrong line).
+  //
+  // Stopping conditions for the look-back: section headings, page headers,
+  // and lines that look like role labels (org acronym + role keyword).
   let title = '';
   let version = '';
-  const COVE_TITLE_RE = /\b(CoVE\s*[-–—]\s*[A-Z]{2,3}\s*[-–—]\s*[^\[<>]+?)(?=\s+\[|\s+v\d+\.\d+|$)/i;
-  for (let i = 0; i < Math.min(filtered.length, 30); i++) {
+  const STATUS_RE = /\[\s*(?:Awaiting\s+Publish|Approved|Draft|Published|Under\s+Review|Review|Retired|Archived)\s*\]/i;
+  const VERSION_RE = /\bv(\d+\.\d+)\b/i;
+  const ROLE_KEYWORDS_RE = /\b(Manager|Officer|Coordinator|Analyst|Consultant|Director|Lead|Specialist|Administrator|Advisor|Assistant|Champion|Designer|Engineer|Architect|Operator|Reviewer|Head|Chief|Partner|Steward|Approver|Sponsor|Representative)\b/i;
+  // Role keyword + structural separator is the most reliable signal that a
+  // line is a role label rather than a title wrap. We deliberately do NOT
+  // treat "starts with CoVE -" as a role, because the title itself starts
+  // with "CoVE -" and that check would break the title look-back.
+  const looksLikeRoleLine = (line) => {
+    if (ROLE_KEYWORDS_RE.test(line) && /\s-\s|\s–\s|\s—\s/.test(line)) return true;
+    return false;
+  };
+  const dehyphenate = (s) =>
+    s.replace(/(\w)-\s+([a-z])/g, '$1$2')   // join "regis- tration" -> "registration"
+     .replace(/\s+/g, ' ')
+     .trim();
+
+  // Iterate ALL status/version anchors and pick the best candidate. The
+  // column-split PDF layout on page 1 of a Nintex export sometimes isolates
+  // the status badge in the right column without the title context, so the
+  // first anchor isn't always the right one. We prefer candidates whose
+  // assembled title starts with a known org prefix (CoVE -, RMIT -).
+  let fallbackTitle = '';
+  let fallbackVersion = '';
+  for (let i = 0; i < Math.min(filtered.length, 50); i++) {
     const t = filtered[i].text;
-    const cm = t.match(COVE_TITLE_RE);
-    if (cm) {
-      title = cm[1].trim().replace(/\s+/g, ' ');
-      const vm = t.match(/v(\d+\.\d+)/);
-      if (vm) version = 'v' + vm[1];
+    const sMatch = t.match(STATUS_RE);
+    const vMatch = t.match(VERSION_RE);
+    if (!sMatch && !vMatch) continue;
+
+    const candidateVersion = vMatch ? 'v' + vMatch[1] : '';
+
+    // The title content on this line ends BEFORE the status marker or version,
+    // whichever appears first.
+    let cutoff = t.length;
+    if (sMatch) cutoff = Math.min(cutoff, t.indexOf(sMatch[0]));
+    if (vMatch) {
+      const vIdx = t.indexOf('v' + vMatch[1]);
+      if (vIdx >= 0) cutoff = Math.min(cutoff, vIdx);
+    }
+    let titleEnd = t.slice(0, cutoff).trim();
+
+    // If the title-end starts with extra text before "CoVE -" (e.g. PDF
+    // extraction collapsed title + preceding garbage), strip up to the actual
+    // title start.
+    const titleStart = titleEnd.search(/\bCoVE\s*[-–—]/i);
+    if (titleStart > 0) titleEnd = titleEnd.slice(titleStart).trim();
+
+    // Walk back to gather wrapped title lines.
+    const parts = [];
+    for (let j = i - 1; j >= 0 && j >= i - 5; j--) {
+      const prev = filtered[j].text.trim();
+      if (!prev) continue;
+      if (/^(Summary|Procedure|Triggers|Outputs|RACI|Systems|OFI|Timeframes|Variance|Owner|Expert|Background|Objective|Detailed|Process\s+Dependencies)/i.test(prev)) break;
+      if (/CRICOS|RMIT >|Uncontrolled|^Page \d/.test(prev)) break;
+      if (looksLikeRoleLine(prev)) break;
+      parts.unshift(prev);
+    }
+    if (titleEnd) parts.push(titleEnd);
+
+    let candidate = dehyphenate(parts.join(' '));
+    // Defensive: if the candidate still doesn't lead with the convention,
+    // try slicing to the first "CoVE -" within it.
+    if (!/^CoVE\s*[-–—]/i.test(candidate)) {
+      const coveIdx = candidate.search(/\bCoVE\s*[-–—]/i);
+      if (coveIdx >= 0) candidate = candidate.slice(coveIdx).trim();
+    }
+
+    // Capture as fallback if we haven't seen anything else yet.
+    if (!fallbackTitle && candidate) {
+      fallbackTitle = candidate;
+      fallbackVersion = candidateVersion;
+    }
+    // Prefer candidates that start with a known org prefix - that's the
+    // signal we've found the actual title rather than swimlane junk.
+    if (/^(?:CoVE|RMIT)\s*[-–—]/i.test(candidate)) {
+      title = candidate;
+      version = candidateVersion;
       break;
     }
   }
-  // Fallback: handle multi-line titles. The version "vX.Y" appears on the last
-  // line of the title; preceding lines (up to 3) form the title.
+  if (!title && fallbackTitle) {
+    title = fallbackTitle;
+    version = fallbackVersion;
+  }
+
+  // Fallback A: original CoVE house-naming regex (acronym-style titles).
   if (!title) {
-    for (let i = 0; i < Math.min(filtered.length, 16); i++) {
-      const m = filtered[i].text.match(/^(.+?)\s+v(\d+\.\d+)$/);
-      if (m) {
-        version = 'v' + m[2];
-        const titleLines = [m[1].trim()];
-        // Look back up to 3 lines for the rest of the title (not section headings).
-        for (let j = i - 1; j >= 0 && j >= i - 3; j--) {
-          const prev = filtered[j].text;
-          if (/^(Summary|Procedure|Triggers|Outputs|RACI|Systems|OFI|Timeframes|Variance)/i.test(prev)) break;
-          if (/CRICOS|RMIT >|Uncontrolled|Page \d/.test(prev)) break;
-          titleLines.unshift(prev.trim());
-        }
-        title = titleLines.join(' ').replace(/\s+/g,' ').trim();
+    const COVE_TITLE_RE = /\b(CoVE\s*[-–—]\s*[A-Z]{2,3}\s*[-–—]\s*[^\[<>]+?)(?=\s+\[|\s+v\d+\.\d+|$)/i;
+    for (let i = 0; i < Math.min(filtered.length, 30); i++) {
+      const t = filtered[i].text;
+      const cm = t.match(COVE_TITLE_RE);
+      if (cm) {
+        title = cm[1].trim().replace(/\s+/g, ' ');
+        const vm = t.match(VERSION_RE);
+        if (vm && !version) version = 'v' + vm[1];
         break;
       }
     }
   }
+  // Fallback B: first line of the document.
   if (!title && filtered.length) title = filtered[0].text;
 
   // Concatenate all text for section parsing
@@ -5857,10 +5959,19 @@ function parseProcedureBlock(block) {
   const taskRe     = /^([a-z])\s+(.+)$/;
   const noteRe     = /^NOTE\s+(.+)$/;
   const procRe     = /^PROCESS\s+(.+)$/;
-  // A line is a role line if it looks like the Nintex/CoVE role convention:
-  // "CoVE - X", "RMIT - X", or contains an en/em dash separating an org from
-  // a role name. This is how we distinguish role lines from title-wrap lines.
-  const roleLineRe = /^(?:CoVE|RMIT)\b|[–—]/;
+  // Role line detection: recognise role labels so they don't bleed into the
+  // activity title. Nintex roles appear in several forms:
+  //   "CoVE - SL - Coordinator, Student Lifecycle"   (known org prefix)
+  //   "STEM - SHBS - Accreditation Manager"          (acronym + role keyword)
+  //   "USARG Government Reporting - Senior Analyst"  (all-caps + role keyword)
+  //   "Library Services – Information Officer"       (en/em dash)
+  const PROC_ROLE_KEYWORDS_RE = /\b(Manager|Officer|Coordinator|Analyst|Consultant|Director|Lead|Specialist|Administrator|Advisor|Assistant|Champion|Designer|Engineer|Architect|Operator|Reviewer|Head|Chief|Partner|Steward|Approver|Sponsor|Representative)\b/i;
+  const isRoleLine = (line) => {
+    if (/^(?:CoVE|RMIT)\b/i.test(line)) return true;
+    if (/[–—]/.test(line)) return true;
+    if (/^[A-Z]{2,}\b/.test(line) && /\s-\s/.test(line) && PROC_ROLE_KEYWORDS_RE.test(line)) return true;
+    return false;
+  };
   const SECTION_HEADINGS_RE = /^(TRIGGERS|INPUTS|OUTPUTS|PERFORMANCE\s+TARGETS|RACI|RESPONSIBLE|ACCOUNTABLE|CONSULTED|INFORMED|SYSTEMS|OFI|TIMEFRAMES|STAKEHOLDERS|VARIANCE\s+SCENARIOS|PROCESS\s+LINKS)\b/i;
 
   // Append continuation text, joining hyphenated word wraps. The PDF extractor
@@ -5935,7 +6046,7 @@ function parseProcedureBlock(block) {
       if (taskRe.test(line) || noteRe.test(line) || procRe.test(line) || activityRe.test(line)) {
         expectingRole = false;
         // fall through to the structural handlers below
-      } else if (roleLineRe.test(line)) {
+      } else if (isRoleLine(line)) {
         current.role = current.role ? appendContinuation(current.role, line) : line;
         continue;
       } else if (!current.role) {
@@ -6028,6 +6139,209 @@ function parseProcedureBlock(block) {
      2.0 Next activity
      ...
    ============================================================ */
+
+/* ============================================================
+   NINTEX "EXPORT PROCEDURE TEXT" PARSER
+   ------------------------------------------------------------
+   Nintex Process Manager has an "Export Procedure Text" button
+   that produces a structured plain-text dump of the procedure
+   only (no document metadata - no title, no version, no owner /
+   expert, no summary). The format is:
+
+     Activity title [Role A;Role B;Role C]
+           Task one text (6-space indent, no a/b/c letter)
+           Task two with a URL https://example.com
+     - Sub-bullet point of the preceding task (flush-left)
+     - Another sub-bullet
+           Task three text
+           [FORM] Form name           (inline form reference)
+           [PROCESS] Sub-process      (inline sub-process link)
+           NOTE: Question text?
+           Body of the note on the next indented line(s)
+     Next activity title [Role X]
+           ...
+
+   Key points for parsing:
+   - Activity heading: flush-left, ends with "[...]" containing
+     one or more roles separated by ";".
+   - Tasks: any line that starts with whitespace and isn't a
+     special marker (FORM / PROCESS / NOTE / sub-bullet).
+   - Sub-bullets: flush-left "- text" lines; they belong to the
+     PREVIOUS task as continuation content.
+   - The export has NO process title - we leave model.title empty
+     so the tool's existing "title missing" flag prompts the user
+     to add one. If the paste starts with a non-activity line and
+     it looks title-like (starts with "CoVE -" / "RMIT -"), we
+     accept it as the title.
+   ============================================================ */
+function looksLikeProcedureTextExport(text) {
+  const lines = String(text || '').split(/\r?\n/);
+  // We need at least 2 activity-heading-shaped lines for a confident match.
+  // Heading: starts with a non-whitespace char, contains "[...]" at end,
+  // bracket content has no nested brackets (so this never matches "[FORM] x"
+  // or "[PROCESS] x", which are task-level markers and always indented).
+  const headingRe = /^\S[^\[\n]*\[[^\[\]\n]+\]\s*$/;
+  let headings = 0;
+  for (const raw of lines) {
+    if (headingRe.test(raw)) headings++;
+    if (headings >= 2) return true;
+  }
+  return false;
+}
+
+function parseProcedureTextExport(text) {
+  const rawLines = String(text || '').split(/\r?\n/);
+
+  const model = {
+    title: '', version: '',
+    owner: '', expert: '',
+    objective: '', background: '',
+    trigger: '', inputs: '', outputs: '',
+    roles: [],
+    activities: [],
+    decisions: [],
+    systems: [],
+    raci: { responsible: [], accountable: [], consulted: [], informed: [] },
+    source: 'nintex-procedure-text'
+  };
+
+  // Patterns:
+  //   activityRe   - heading line (flush-left, ends with [roles;...]).
+  //                  Match the LAST [...] in the line so titles that happen
+  //                  to contain "[" earlier in them don't break it.
+  //   linkRe       - indented "[FORM] name" / "[PROCESS] name" task marker.
+  //   noteRe       - indented "NOTE: title text" or "NOTE title text".
+  //   subBulletRe  - flush-left "- text" continuation list for the prev task.
+  const activityRe   = /^(\S.*?)\s*\[([^\[\]\n]+)\]\s*$/;
+  const linkRe       = /^\s+\[(FORM|PROCESS|RACI|LINK)\]\s+(.+)$/i;
+  const noteRe       = /^\s+NOTE\s*[:\-]?\s+(.+)$/i;
+  const subBulletRe  = /^-\s+(.+)$/;
+
+  let current = null;
+  let currentTask = null;
+  let currentNote = null;
+  let activityNum = 1;
+  // Cumulative role list - we collect roles as we split each [bracket], rather
+  // than re-running splitRoles() on the joined string at the end. splitRoles
+  // splits on " & " which would shred names like "Programs & Delivery".
+  const allRoles = [];
+
+  // Optional title: if the first non-empty line is NOT an activity heading
+  // and looks like a CoVE/RMIT process title, capture it.
+  for (let i = 0; i < rawLines.length; i++) {
+    const t = rawLines[i].trim();
+    if (!t) continue;
+    if (activityRe.test(t)) break;            // first heading - stop scanning
+    if (/^(?:CoVE|RMIT)\s*[-–—]/i.test(t)) {
+      model.title = t;
+    }
+    break;                                     // only check the very first line
+  }
+
+  for (let i = 0; i < rawLines.length; i++) {
+    const raw = rawLines[i];
+    if (!raw || !raw.trim()) {
+      // Blank line ends any open note.
+      currentNote = null;
+      continue;
+    }
+
+    // Activity heading - must be flush left (no leading whitespace).
+    if (!/^\s/.test(raw)) {
+      const am = raw.match(activityRe);
+      if (am) {
+        if (current) model.activities.push(current);
+        const title = am[1].trim();
+        // Roles are semicolon-separated. Trim each and drop empties (the
+        // export sometimes inserts whitespace + trailing semicolons).
+        const roles = am[2]
+          .split(';')
+          .map(r => r.replace(/\s+/g, ' ').trim())
+          .filter(Boolean);
+        roles.forEach(r => { if (!allRoles.includes(r)) allRoles.push(r); });
+        current = {
+          number: activityNum + '.0',
+          title,
+          role: roles.join(', '),
+          tasks: [],
+          notes: [],
+          links: []
+        };
+        activityNum++;
+        currentTask = null;
+        currentNote = null;
+        continue;
+      }
+
+      // Flush-left "- text" -> sub-bullet continuation of the prev task.
+      const sb = raw.match(subBulletRe);
+      if (sb && current && currentTask) {
+        currentTask.text += '\n- ' + sb[1].trim();
+        continue;
+      }
+      // Otherwise it's content before the first activity - ignore.
+      continue;
+    }
+
+    // From here, the line is indented. We must have an active activity.
+    if (!current) continue;
+
+    // FORM / PROCESS / LINK marker -> attach as a link on the activity.
+    const lm = raw.match(linkRe);
+    if (lm) {
+      current.links.push({ type: lm[1].toLowerCase(), name: lm[2].trim() });
+      currentNote = null;
+      // Don't reset currentTask - a FORM marker often "belongs" to the task
+      // immediately above it (e.g. "Liaise with hiring manager / [FORM] RAF Form").
+      continue;
+    }
+
+    // NOTE: title text -> start a new note. Body accumulates from following
+    // indented continuation lines.
+    const nm = raw.match(noteRe);
+    if (nm) {
+      const noteText = nm[1].trim();
+      // If "title? body" on the same line, split on the first "?".
+      const qSplit = noteText.match(/^([^?]+?\?)\s+([\s\S]+)$/);
+      if (qSplit) {
+        currentNote = { title: qSplit[1].trim(), body: qSplit[2].trim() };
+      } else {
+        currentNote = { title: noteText, body: '' };
+      }
+      current.notes.push(currentNote);
+      currentTask = null;
+      continue;
+    }
+
+    // Indented continuation of a NOTE body.
+    if (currentNote) {
+      currentNote.body = currentNote.body
+        ? currentNote.body + ' ' + raw.trim()
+        : raw.trim();
+      continue;
+    }
+
+    // Regular task line - assign a letter and extract any inline URL.
+    const text = raw.trim();
+    if (!text) continue;
+    const n = current.tasks.length;
+    const letter = (n < 26) ? String.fromCharCode(97 + n) : 'z';
+    const extracted = extractInlineUrl(text);
+    const task = { letter, text: extracted.text };
+    if (extracted.url) task.attachment = extracted.url;
+    current.tasks.push(task);
+    currentTask = task;
+  }
+  if (current) model.activities.push(current);
+
+  // Roll up unique roles across all activities (already deduplicated as we
+  // collected them - no need to re-run splitRoles, which would shred names
+  // containing " & " like "Programs & Delivery").
+  model.roles = allRoles;
+
+  return model;
+}
+
 function parseStructuredText(text) {
   // Defensive: accept either a string, or an array of line objects/strings.
   if (Array.isArray(text)) {
@@ -6035,6 +6349,16 @@ function parseStructuredText(text) {
   } else if (typeof text !== 'string') {
     text = String(text || '');
   }
+
+  // Auto-detect the Nintex "Export Procedure Text" format and delegate.
+  // That export has no section headers / metadata, just activities of the form
+  //   "Activity title [Role A;Role B]"
+  // followed by 6-space-indented tasks. We detect it by counting how many
+  // non-empty top-level lines end with a "[...]" role bracket.
+  if (looksLikeProcedureTextExport(text)) {
+    return parseProcedureTextExport(text);
+  }
+
   const lines = text.split(/\r?\n/).map(l => l.trim());
   const model = {
     title: '', version: '',
@@ -6206,7 +6530,13 @@ function parseStructuredText(text) {
       // Auto-assign a letter - a, b, c… capped at 'z' for the rare edge case
       const n = current.tasks.length;
       const letter = (n < 26) ? String.fromCharCode(97 + n) : 'z';
-      current.tasks.push({ letter, text: bm2[1] });
+      // Extract any inline URL into a separate attachment field so it renders
+      // as a "Link:" row in the doc preview, rather than being swallowed into
+      // the task text.
+      const extracted = extractInlineUrl(bm2[1]);
+      const task = { letter, text: extracted.text };
+      if (extracted.url) task.attachment = extracted.url;
+      current.tasks.push(task);
       // Mark this activity as using bullet-style tasks so later "N. Title"
       // lines get treated as new activities, not continued numbered tasks.
       if (!current._taskStyle) current._taskStyle = 'bullet';
@@ -6221,7 +6551,11 @@ function parseStructuredText(text) {
       if (text) {
         const n = current.tasks.length;
         const letter = (n < 26) ? String.fromCharCode(97 + n) : 'z';
-        current.tasks.push({ letter, text });
+        const extracted = extractInlineUrl(text);
+        const task = { letter, text: extracted.text };
+        if (extracted.url) task.attachment = extracted.url;
+        current.tasks.push(task);
+        if (!current._taskStyle) current._taskStyle = 'numeric';
         inNote = false;
         continue;
       }
@@ -8225,6 +8559,15 @@ function renderDocPreview(m) {
       html += `<div class="task" id="${taskId}"><strong>${escapeHtml(t.letter)}.</strong> ${escapeHtml(cleanText)}</div>`;
       if (hasLink) {
         html += `<div class="task-link-row"><strong class="link-placeholder">[xx link here]</strong></div>`;
+      }
+      // Inline-extracted URL gets its own clickable "Link:" row under the task.
+      // task.attachment is set by extractInlineUrl() at parse time when a URL
+      // was embedded in the pasted task text.
+      if (t.attachment) {
+        const url = String(t.attachment).trim();
+        if (/^https?:\/\//i.test(url)) {
+          html += `<div class="task-link-row"><strong>Link:</strong> <a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(url)}</a></div>`;
+        }
       }
     });
     a.notes.forEach((n, ni) => {
@@ -10841,6 +11184,12 @@ createChatSurface({
       '* MANDATORY SELF-CHECK before emitting blocks: read each sentence in your draft Objective, ' +
       'Background, and every task. Count words. Any sentence over 18 words MUST be split. Any ' +
       'multi-clause task MUST be reduced to one imperative clause. Re-do this pass twice if needed.\n\n' +
+      'PRESERVE URLS: If a task in the source contains a URL (https://...), keep it in the same task ' +
+      'in your output. Do not drop or rewrite URLs. URLs are typically training-module or system links ' +
+      'the process owner has provided - removing them breaks the documented process.\n' +
+      'KEEP TASK ORDER STABLE: do not reorder tasks within an activity unless one is a genuine duplicate. ' +
+      'The tool matches URL attachments back to tasks by their position (a, b, c, ...) so reordering ' +
+      'will misalign the link rendering.\n\n' +
       'No preamble. No commentary. No "Here are the blocks" sentence. No closing question. ' +
       'No <<nintex-ready>> marker. The very first character of your reply must be the opening ``` of the first block.';
 
@@ -10892,6 +11241,29 @@ createChatSurface({
       const newModel = parseStructuredText(rebuiltInput);
       if (!newModel || !newModel.activities || newModel.activities.length === 0) {
         throw new Error('Could not parse the AI rewrite into a valid process model.');
+      }
+
+      // Restore task attachments (URLs / links) from the original model. The
+      // AI's three-block output format doesn't include URLs, so the rewrite
+      // drops them. We match new tasks back to original tasks by activity
+      // index + task letter and copy the attachment over.
+      try {
+        const origActs = (originalSnapshot.model && originalSnapshot.model.activities) || [];
+        newModel.activities.forEach((newAct, ai) => {
+          const origAct = origActs[ai];
+          if (!origAct || !origAct.tasks) return;
+          // Build a lookup by letter for the original tasks
+          const origByLetter = {};
+          origAct.tasks.forEach(t => { if (t.letter) origByLetter[t.letter] = t; });
+          (newAct.tasks || []).forEach(newT => {
+            const origT = newT.letter && origByLetter[newT.letter];
+            if (origT && origT.attachment && !newT.attachment) {
+              newT.attachment = origT.attachment;
+            }
+          });
+        });
+      } catch (e) {
+        console.warn('[auto-apply] could not restore task attachments:', e);
       }
 
       // Re-run the full pipeline
