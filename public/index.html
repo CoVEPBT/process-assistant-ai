@@ -4778,10 +4778,51 @@ const APPROVED_VERBS = {
     'centralise','centralize','decentralise','decentralize',
     'standardise','standardize','harmonise','harmonize','unify','align',
     'phase in','phase out','transition','retire','sunset','decommission','replace'
+  ],
+  'General action verbs (everyday)': [
+    // Broadened to cover everyday action verbs that aren't typical business
+    // jargon but are unambiguously valid task verbs. Added after pilot testers
+    // flagged that common verbs like 'cook', 'heat', 'season', 'divide' were
+    // being incorrectly rejected as non-verbs.
+    'heat','cook','bake','roast','simmer','boil','grill','fry','toast','steam',
+    'season','mix','stir','blend','whisk','chop','slice','dice','pour','drain',
+    'serve','taste','sample','measure','weigh','combine','separate','divide',
+    'split','sort','group','arrange','organise','order','line','line up','queue',
+    'pack','unpack','load','unload','lift','lower','raise','drop','place','position',
+    'fold','unfold','wrap','unwrap','tie','untie','attach','detach','secure','release',
+    'apply','remove','put','take','give','receive','hand over','collect','gather',
+    'fetch','bring','carry','deliver','transport','move','shift','relocate',
+    'turn on','turn off','switch on','switch off','plug in','unplug',
+    'fill','empty','top up','refill','drain','dispose','recycle',
+    'sweep','wipe','clean','wash','rinse','dry','polish','tidy',
+    'stand','sit','walk','run','watch','wait','listen','observe','look',
+    'open','close','lock','unlock','enter','exit','leave','arrive','depart',
+    'choose','pick','find','locate','spot','identify',
+    'try','attempt','retry','repeat','redo','restart','resume','pause','stop','continue',
+    'guide','direct','lead','follow','accompany','escort','show'
   ]
 };
 const APPROVED_VERBS_FLAT = Object.values(APPROVED_VERBS).flat();
 const APPROVED_VERBS_SET = new Set(APPROVED_VERBS_FLAT);
+
+/**
+ * Split a role string into individual roles using SAFE separators only.
+ * Many RMIT job titles include commas (e.g. "Coordinator, Student Lifecycle",
+ * "Officer, Recruitment"). A naive .split(',') treats those as two roles,
+ * which is wrong. So we only split on unambiguous multi-role separators:
+ *   - semicolon ";"
+ *   - " and ", " & ", " + "
+ *   - " / " or " \ " (with surrounding spaces)
+ * Commas are NEVER used as separators - if the user really means two roles
+ * they should use one of the above. Returns an array of trimmed strings.
+ */
+function splitRoles(roleStr) {
+  if (!roleStr) return [];
+  return String(roleStr)
+    .split(/;|\s+and\s+|\s+&\s+|\s+\+\s+|\s+\/\s+|\s+\\\s+/i)
+    .map(r => r.trim())
+    .filter(Boolean);
+}
 
 /* Strip known prefixes from process titles before verb-first checking.
    Handles patterns like "CoVE - PBT -", "RMIT - HR -", etc.
@@ -5615,7 +5656,7 @@ function parseNintexPdf(lines) {
   if (sectionRanges.Procedure) {
     model.activities = parseProcedureBlock(sectionRanges.Procedure);
     model.roles = Array.from(new Set(
-      model.activities.flatMap(a => (a.role || '').split(',').map(r => r.trim()).filter(Boolean))
+      model.activities.flatMap(a => splitRoles(a.role))
     ));
   }
 
@@ -6342,7 +6383,9 @@ const US_TO_AU_SPELLINGS = {
   'traveled': 'travelled', 'traveling': 'travelling', 'traveler': 'traveller',
   'leveled': 'levelled', 'leveling': 'levelling',
   'fueled': 'fuelled', 'fueling': 'fuelling',
-  'enrolled': 'enrolled', // same, included for safety
+  // 'enrolled' is the same in AU + US, so it is NOT in this dictionary -
+  // including it caused a tautological flag ("American spelling enrolled - use
+  // Australian enrolled"). Only the noun differs: enrollment -> enrolment.
   'enrollment': 'enrolment', 'enrollments': 'enrolments',
   // -og / -ogue
   'catalog': 'catalogue', 'catalogs': 'catalogues',
@@ -6666,9 +6709,9 @@ function runRulesEngine(model) {
     const titleAfterPrefix = stripTitlePrefix(model.title);
     if (!startsWithApprovedVerb(titleAfterPrefix)) {
       push({ id:'title-verb', source:'Nintex', severity:'warning',
-        message:`Process title does not start with an approved verb (after prefix, starts with "${firstWord(titleAfterPrefix)}").`,
+        message:`Process title starts with "${firstWord(titleAfterPrefix)}", which isn\'t on our process-writing verb list.`,
         location: model.title,
-        suggestion:'Begin the title (after any "CoVE - PBT - " style prefix) with a verb from the categorised verb list, e.g. Create, Update, Manage, Plan.' });
+        suggestion:'If "' + firstWord(titleAfterPrefix) + '" is the right verb for your context, you can leave it. Otherwise consider a standard business verb like Create, Update, Manage, Plan, Onboard, or Process.' });
     }
     // Process title length: 3-8 words after the prefix. Matches the spirit of
     // the activity-title rule (2-7 words) - if the process title is doing too
@@ -6739,22 +6782,28 @@ function runRulesEngine(model) {
   }
 
   // ---------- ACTIVITY NUMBERING (RMIT) - detect gaps + duplicates ----------
-  // Each a.number is a string like "1.0", "2.0", "3.0". Extract the major
-  // number (the part before the first dot). If the major numbers don't form a
-  // contiguous 1..N sequence, flag it - an activity may be missing or renumbered.
+  // Each a.number is a string like "1.0", "2.0", "3.0", or in the
+  // sub-activity case "6.1", "6.2", "6.3" (multiple decimal levels of one
+  // activity). Use the FULL number string for the duplicate check so
+  // "6.1" and "6.2" are not falsely flagged as duplicates of activity 6.
+  // Use the MAJOR number for gap detection so 1.0 -> 3.0 still flags 2.0
+  // as missing.
   if (actCount >= 2) {
+    const fullNumbers = model.activities.map(a => String(a.number || '').trim()).filter(Boolean);
     const majors = model.activities.map(a => {
       const m = String(a.number || '').match(/^(\d+)/);
       return m ? parseInt(m[1], 10) : NaN;
     }).filter(n => !isNaN(n));
 
-    // Duplicates (same major number on two activities)
-    const seen = new Set();
+    // Duplicates - compare FULL numbers (so "6.1" and "6.2" are distinct).
+    const seenFull = new Set();
     const dups = [];
-    for (const n of majors) {
-      if (seen.has(n) && !dups.includes(n)) dups.push(n);
-      seen.add(n);
+    for (const fn of fullNumbers) {
+      if (seenFull.has(fn) && !dups.includes(fn)) dups.push(fn);
+      seenFull.add(fn);
     }
+    // Gap detection still needs the major-set view
+    const seen = new Set(majors);
     if (dups.length > 0) {
       push({ id:'activity-number-duplicate', source:'RMIT', severity:'warning',
         message:`Activity number${dups.length===1?'':'s'} ${dups.join(', ')} ${dups.length===1?'is':'are'} used more than once.`,
@@ -6792,9 +6841,9 @@ function runRulesEngine(model) {
     // Verb-first activity title (CoVE 6, RMIT, Nintex 5)
     if (a.title && !startsWithApprovedVerb(a.title)) {
       push({ id:`act-verb-${idx}`, source:'CoVE', severity:'warning',
-        message:`Activity ${a.number} title does not start with an approved verb (starts with "${firstWord(a.title)}").`,
+        message:`Activity ${a.number} starts with "${firstWord(a.title)}", which isn\'t on our process-writing verb list.`,
         location: loc,
-        suggestion:'Use a verb from the categorised verb list (Receive, Review, Approve, Notify, Close, etc.).' });
+        suggestion:'If "' + firstWord(a.title) + '" is the right verb for what this activity does, you can leave it. Otherwise consider Receive, Review, Approve, Notify, Close, or another standard process verb.' });
     }
 
     // Activity title length 2–7 words (RMIT)
@@ -6814,7 +6863,7 @@ function runRulesEngine(model) {
     } else {
       // The export pattern often shows multiple comma-separated roles for activities done jointly.
       // Flag two or more as info - sometimes intentional, but worth a check.
-      const roles = a.role.split(',').map(r => r.trim()).filter(Boolean);
+      const roles = splitRoles(a.role);
       if (roles.length > 1) {
         push({ id:`act-multirole-${idx}`, source:'CoVE', severity:'info',
           message:`Activity ${a.number} lists ${roles.length} roles: ${roles.join('; ')}.`,
@@ -6867,9 +6916,9 @@ function runRulesEngine(model) {
     a.tasks.forEach((t, ti) => {
       if (!startsWithApprovedVerb(t.text)) {
         push({ id:`task-verb-${idx}-${ti}`, source:'Nintex', severity:'warning',
-          message:`Task ${a.number}${t.letter} does not start with an approved verb (starts with "${firstWord(t.text)}").`,
+          message:`Task ${a.number}${t.letter} starts with "${firstWord(t.text)}", which isn\'t on our process-writing verb list.`,
           location: `Task ${a.number}${t.letter} – ${t.text}`,
-          suggestion:'Begin with a verb from the categorised verb list. The Nintex test: "What is the person expected to do?"' });
+          suggestion:'If "' + firstWord(t.text) + '" is the right verb for this step, you can leave it. Otherwise, try the Nintex test: "What is the person expected to do?"' });
       }
       // overly-long task (>30 words → likely transactional detail that belongs in a guide)
       const tw = t.text.split(/\s+/).filter(Boolean).length;
@@ -7041,7 +7090,7 @@ function recommendArtefactType(model) {
   const acts = model.activities.length;
   const totalTasks = model.activities.reduce((s,a) => s + a.tasks.length, 0);
   const distinctRoles = (new Set(
-    model.activities.flatMap(a => (a.role||'').split(',').map(r => r.trim()).filter(Boolean))
+    model.activities.flatMap(a => splitRoles(a.role))
   )).size;
   const decisions = model.activities.flatMap(a => a.tasks).filter(t => t.isDecision).length;
   const longTasks = model.activities.flatMap(a => a.tasks).filter(t => t.text.split(/\s+/).length > 25).length;
@@ -10671,6 +10720,26 @@ createChatSurface({
       '- "Process Objective\\n<one-two sentences>\\n\\nProcess Background\\n<two-three sentences>"; ' +
       '(3) Process Map - activity name followed by [Role Name], each task on its own line indented ' +
       'with a single tab character, NOTE: question + answer on the next line, blank line between activities.\n\n' +
+      'NO INVENTED FACTUAL DETAIL - THIS IS NON-NEGOTIABLE:\n' +
+      'You can enhance a half-written process by adding obvious next-step shape, but you can NEVER invent a specific noun the source doesn\'t mention.\n\n' +
+      '* HARD BAN on adding specifics not in the source:\n' +
+      '  - system / software / platform names (e.g. SAMS, ServiceNow, Promapp, Workday, Canvas)\n' +
+      '  - role / job titles or team names (e.g. "Coordinator, Student Lifecycle", "L&T Manager")\n' +
+      '  - document, form, template, or report names (e.g. "the Onboarding Form", "monthly digest")\n' +
+      '  - dates, deadlines, durations, SLAs (e.g. "within 5 business days", "by 1 March")\n' +
+      '  - frequencies (e.g. "monthly", "weekly", "quarterly")\n' +
+      '  - dollar amounts, percentages, counts, or any quantitative specifics\n' +
+      '  - person names, email addresses, URLs, phone numbers\n' +
+      '  - regulatory body / external party references not in the source\n\n' +
+      '* ALLOWED enhancements (use sparingly, only where the source is clearly incomplete):\n' +
+      '  - reword existing sentences for clarity, verb-first form, and the 18-word sentence cap\n' +
+      '  - consolidate near-duplicate tasks that clearly refer to the same step\n' +
+      '  - add a generic completeness step where the process clearly needs one: "Notify the requester of the outcome", "Record the decision", "File the form", "Close the request"\n' +
+      '  - any allowed addition must describe the action GENERICALLY - no specific system, person, document, or timeframe attached\n\n' +
+      '* PLAUSIBILITY TEST: for every NEW sentence in your output, ask "could a reviewer point at any specific noun in this and ask where it came from?" If yes and the source has no answer, delete or rewrite the sentence to remove the specific noun. If the addition is generic ("notify", "record", "close"), it can stay.\n\n' +
+      '* The Process Objective and Process Background sections may be rewritten for tone but must only describe what the source actually shows. Do not infer purposes, audiences, or business context the user has not stated.\n' +
+      '* If the source is genuinely missing required information, leave a visible placeholder (e.g. "[TBD]") rather than filling it in from imagination.\n' +
+      '* MANDATORY SELF-CHECK before emitting blocks: scan every specific noun in your output. If any of them (system names, roles, documents, dates, amounts) don\'t appear in the source, remove or rewrite that sentence.\n\n' +
       'TITLE PREFIX REQUIREMENT: The process title MUST begin with "CoVE - " (with the space-dash-space). ' +
       'If the original title already has a "CoVE - <Dept> - " prefix (e.g. "CoVE - PBT - "), preserve ' +
       'that exact prefix verbatim and only rewrite the part after it. If the original is missing the ' +
