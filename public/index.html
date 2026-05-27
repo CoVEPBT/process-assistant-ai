@@ -711,12 +711,26 @@
     padding-left: 8px;
   }
 
-  /* Pulse highlight when an activity is jumped to from an issue card */
+  /* Pulse highlight when a section / activity / task is jumped to from a flag card */
   .activity-highlight { animation: pulse-highlight 1.4s ease-in-out 3; }
   @keyframes pulse-highlight {
     0%, 100% { background: transparent; box-shadow: none; outline-color: transparent; }
     25%, 75% { background: #FFF1D6; box-shadow: 0 0 0 4px rgba(230, 30, 42, 0.30); outline: 2px solid rgba(230, 30, 42, 0.4); outline-offset: 2px; }
     50%      { background: #FFE0A0; box-shadow: 0 0 0 6px rgba(230, 30, 42, 0.45); outline: 2px solid rgba(230, 30, 42, 0.6); outline-offset: 2px; }
+  }
+  /* When the target is a task line (not the whole activity), give it a stronger
+     inline highlight so the user can see exactly which task they landed on -
+     task lines are visually smaller than activity blocks so the standard pulse
+     can get lost. Pilot testers reported "clicking the warning goes to the
+     activity, not the task" - this makes the task-level land obvious. */
+  .doc-preview .task.activity-highlight {
+    animation: pulse-task-highlight 1.6s ease-in-out 3;
+    border-radius: 4px;
+  }
+  @keyframes pulse-task-highlight {
+    0%, 100% { background: transparent; box-shadow: none; }
+    25%, 75% { background: #FFE0A0; box-shadow: 0 0 0 3px rgba(230, 30, 42, 0.55), inset 4px 0 0 #C73A2F; }
+    50%      { background: #FFD06A; box-shadow: 0 0 0 4px rgba(230, 30, 42, 0.70), inset 4px 0 0 #C73A2F; }
   }
 
   /* Clickable issue cards */
@@ -1013,6 +1027,15 @@
   .doc-section-header {
     display: flex; align-items: flex-start; justify-content: space-between;
     gap: 12px; flex-wrap: wrap; margin: 0 0 10px;
+    /* Sticky so Save changes + Export stay reachable when the user scrolls
+       deep into the generated document. Sits just below the page header +
+       results-top-tabs, using the same height variables those use. */
+    position: sticky;
+    top: calc(var(--header-height, 76px) + var(--results-tabs-height, 64px) + 4px);
+    background: #FFFFFF;
+    z-index: 80;
+    padding: 8px 0;
+    border-bottom: 1px solid #E2E8F0;
   }
   .doc-section-title-wrap {
     display: flex; align-items: center; gap: 10px;
@@ -1116,7 +1139,11 @@
      of the DOM text, so they can't be selected, deleted, or accidentally edited
      when the user types in the role field. The actual role value is the only
      thing the user can change. */
-  .doc-preview .activity .role::before {
+  /* Only show the "Role:" label for activities that ACTUALLY have a role.
+     For empty roles, the placeholder text "[Click to add accountable role]"
+     speaks for itself - prefixing it with "Role:" felt confusing to pilot
+     testers ("when I add a new activity it puts 'Role' in front of it"). */
+  .doc-preview .activity .role:not(.role-empty)::before {
     content: "Role: ";
     font-weight: 700;
     color: #475569;
@@ -3327,7 +3354,10 @@
   .choice-card {
     text-align: left;
     background: #FFF;
-    border: 1.5px solid #DCE7F5;
+    /* Stronger default border so the secondary card doesn't disappear next to
+       the navy primary card. Pilot testers reported the Review-yourself card
+       took 23+ minutes to notice - boosting visual weight here. */
+    border: 2px solid var(--rmit-red);
     border-radius: 10px;
     padding: 16px 18px;
     cursor: pointer;
@@ -3335,6 +3365,7 @@
     display: flex; flex-direction: column; gap: 6px;
     font: inherit;
     color: var(--rmit-text);
+    box-shadow: 0 2px 8px rgba(0, 52, 120, 0.10);
   }
   .choice-card:hover {
     border-color: var(--rmit-red);
@@ -5850,6 +5881,22 @@ function parseProcedureBlock(block) {
   const splitNoteTitleBody = (raw) => {
     const text = (raw || '').trim();
     if (!text) return { title: '', body: '' };
+    // Pilot feedback: notes were only capturing the title because the splitter
+    // required title to end with "?", "." or "!" AND body to start with a
+    // capital letter. Many real notes don't fit that shape. Try in this order:
+    //   1. If the raw text contains a newline, split on the FIRST newline -
+    //      title is line 1, body is the rest. Most reliable signal.
+    //   2. Otherwise look for a "?" boundary (notes are meant to be Q + A).
+    //   3. Fall back to the original "sentence-ending + capital" regex.
+    //   4. If nothing matches, return the whole thing as title.
+    const newlineIdx = text.search(/\r?\n/);
+    if (newlineIdx > 0) {
+      const title = text.slice(0, newlineIdx).trim();
+      const body = text.slice(newlineIdx).trim();
+      if (title && body) return { title, body };
+    }
+    const qm = text.match(/^([^?]+?\?)\s+([\s\S]+)$/);
+    if (qm) return { title: qm[1].trim(), body: qm[2].trim() };
     const m = text.match(/^([\s\S]+?[.?!])\s+([A-Z][\s\S]*)$/);
     if (m) return { title: m[1].trim(), body: m[2].trim() };
     return { title: text, body: '' };
@@ -6081,21 +6128,33 @@ function parseStructuredText(text) {
 
     const am = line.match(activityRe);
     if (am) {
-      // Disambiguation: if we're already inside an activity AND the separator is
-      // a simple "." / ")" / ":" / " -" (i.e. NOT a decimal sub-number like ".0" / ".1"),
-      // this is almost certainly a numbered TASK ("1. Open the portal"), not a new
-      // activity. Only ".N" decimal separators or top-level numbers when no activity
-      // exists yet count as activity headings.
+      // Disambiguation: when a numbered line like "2. Title" appears and we're
+      // already inside an activity, is it the next ACTIVITY ("2. Acknowledge...")
+      // or the next NUMBERED TASK ("2. Configure the build")? Three signals:
+      //   - Decimal separator (".0", ".1") -> always a new activity heading.
+      //   - The current activity has BULLET tasks (- * • +) -> the new "N." is
+      //     much more likely a new activity, because mixing numbered + bulleted
+      //     tasks under one activity is rare. This catches the "1. Heading /
+      //     - bullet / 2. Heading" pattern testers commonly paste.
+      //   - Number starts at 1 (i.e. "1. Title") AND we already have a current
+      //     activity numbered "1.N" -> the "1" is more likely a task, not a
+      //     restart. Fall through to task treatment.
       const sep = am[2];
       const isDecimalSep = /^\.\d+$/.test(sep);
-      if (current && !isDecimalSep) {
+      const currentHasBulletTasks = !!(current && current._taskStyle === 'bullet');
+      const treatAsActivity = isDecimalSep || !current || currentHasBulletTasks;
+      if (current && !treatAsActivity) {
         const idx = current.tasks.length;
         const letter = (idx < 26) ? String.fromCharCode(97 + idx) : 'z';
         current.tasks.push({ letter, text: am[3] });
+        if (!current._taskStyle) current._taskStyle = 'numeric';
         inNote = false;
         continue;
       }
-      if (current) model.activities.push(current);
+      if (current) {
+        delete current._taskStyle;  // internal field - don't ship in the model
+        model.activities.push(current);
+      }
       // Normalise the number: keep as "N.0" for display consistency.
       const number = isDecimalSep ? am[1] + sep : am[1] + '.0';
       current = { number, title: am[3], role: '', tasks: [], notes: [], links: [] };
@@ -6119,7 +6178,17 @@ function parseStructuredText(text) {
 
     const nm = line.match(noteRe);
     if (nm) {
-      currentNote = { title: nm[1], body: '' };
+      // If question + answer are on the same line ("NOTE What's the deadline?
+      // Within 5 days") split into title + body. Otherwise body accumulates
+      // from continuation lines. Pilot testers reported notes were only
+      // capturing the title - this is why.
+      const noteText = nm[1];
+      const qSplit = noteText.match(/^([^?]+?\?)\s+([\s\S]+)$/);
+      if (qSplit) {
+        currentNote = { title: qSplit[1].trim(), body: qSplit[2].trim() };
+      } else {
+        currentNote = { title: noteText, body: '' };
+      }
       current.notes.push(currentNote);
       inNote = true;
       continue;
@@ -6138,6 +6207,9 @@ function parseStructuredText(text) {
       const n = current.tasks.length;
       const letter = (n < 26) ? String.fromCharCode(97 + n) : 'z';
       current.tasks.push({ letter, text: bm2[1] });
+      // Mark this activity as using bullet-style tasks so later "N. Title"
+      // lines get treated as new activities, not continued numbered tasks.
+      if (!current._taskStyle) current._taskStyle = 'bullet';
       inNote = false;
       continue;
     }
@@ -6204,7 +6276,12 @@ function parseStructuredText(text) {
       currentNote.body += (currentNote.body ? ' ' : '') + line;
     }
   }
-  if (current) model.activities.push(current);
+  if (current) {
+    delete current._taskStyle;  // internal disambiguation field, don't ship it
+    model.activities.push(current);
+  }
+  // Also scrub _taskStyle from any earlier activities (defensive belt-and-braces)
+  model.activities.forEach(a => { delete a._taskStyle; });
 
   // CoVE process-title pattern: "CoVE - XX(X) - <text>" near the top of the
   // document is the team's house naming convention (e.g. "CoVE - SL - Pre-training
@@ -6895,7 +6972,9 @@ function runRulesEngine(model) {
         if (re.test(t.text)) {
           push({ id:`banned-${b.phrase}-${idx}-${ti}`, source:'RMIT', severity:'warning',
             message: b.message + ` (Task ${a.number}${t.letter})`,
-            location: loc });
+            // Use task-specific location so clicking jumps to the task line,
+            // not the activity header. The resolver matches "X.Ya" pattern.
+            location: `Task ${a.number}${t.letter} – ${t.text}` });
         }
       });
     });
@@ -6933,8 +7012,8 @@ function runRulesEngine(model) {
     // NOTES: must be Question + Answer (RMIT, Nintex 1, 6)
     a.notes.forEach((n, ni) => {
       if (!/\?\s*$/.test(n.title.trim())) {
-        push({ id:`note-question-${idx}-${ni}`, source:'RMIT', severity:'warning',
-          message:`Note "${truncate(n.title,60)}" is not phrased as a question.`,
+        push({ id:`note-question-${idx}-${ni}`, source:'RMIT', severity:'info', informational: true,
+          message:`Note "${truncate(n.title,60)}" reads like a statement, not a question.`,
           location: loc,
           suggestion:'NOTE titles must always be a question. The reader can then skip the body if they know the answer.' });
       }
@@ -6969,7 +7048,7 @@ function runRulesEngine(model) {
 
   // ---------- HANDOVER POINTS (CoVE 11) ----------
   // Heuristic: if activities have different roles, look for an explicit handover indicator
-  const roleSequence = model.activities.map(a => (a.role || '').split(',')[0].trim());
+  const roleSequence = model.activities.map(a => splitRoles(a.role)[0] || '');
   for (let i = 1; i < roleSequence.length; i++) {
     if (roleSequence[i] && roleSequence[i-1] && roleSequence[i] !== roleSequence[i-1]) {
       const prevAct = model.activities[i-1];
@@ -6977,9 +7056,12 @@ function runRulesEngine(model) {
       const prevTaskTexts = prevAct.tasks.map(t => t.text).join(' ');
       if (!handoverWords.test(prevTaskTexts)) {
         push({ id:`handover-${i}`, source:'CoVE', severity:'warning',
-          message:`Role change between ${prevAct.number} (${roleSequence[i-1]}) and ${model.activities[i].number} (${roleSequence[i]}) - handover may be unclear.`,
+          // Concise message - pilot testers said the role names made the card
+          // hard to scan. Reference activity numbers only; the user can see
+          // the role change by looking at the document.
+          message:`Handover between Activity ${prevAct.number} and ${model.activities[i].number} may be unclear (different roles).`,
           location: `${prevAct.number} → ${model.activities[i].number}`,
-          suggestion:'Make the handover explicit, e.g. a "Notify..." or "Send..." task at the end of the previous activity.' });
+          suggestion:'Add an explicit "Notify..." or "Send..." task at the end of Activity ' + prevAct.number + ' so the role change is visible.' });
       }
     }
   }
