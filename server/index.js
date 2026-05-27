@@ -426,18 +426,30 @@ Default to answering. Only refuse if the request is genuinely off-topic. If a us
 // Returns: { reply: string }
 // ---------------------------------------------------------------------------
 app.post('/api/chat', async (req, res) => {
-  const { messages, document, issues, temperature, max_tokens } = req.body || {};
+  const { messages, document, issues, temperature, max_tokens, mode } = req.body || {};
 
   if (!Array.isArray(messages) || messages.length === 0) {
     return res.status(400).json({ error: 'messages array is required' });
   }
 
+  // 'structure-only' mode: the client is asking the model to perform a strict
+  // grouping/structuring task and nothing else. Bypass the conversational
+  // system prompt and the Nintex knowledge corpus - both of which actively
+  // push the model toward rewriting and "improving" the user's content.
+  const isStructureOnly = mode === 'structure-only';
+
   // Build the prompt: system prompt + knowledge corpus + (optional) doc/issues + user messages
-  const fullMessages = [{ role: 'system', content: SYSTEM_PROMPT }];
+  const fullMessages = [{
+    role: 'system',
+    content: isStructureOnly
+      ? 'You are a strict structuring assistant. Follow the user\'s instructions exactly and literally. Do not apply any external guidelines, standards, conventions or "improvements" the user has not explicitly asked for. Copy user-supplied text character-for-character unless the instructions explicitly tell you to transform it.'
+      : SYSTEM_PROMPT
+  }];
 
   // Knowledge corpus - loaded from ./knowledge/ on startup. Included as a
   // separate system message so the AI can cite specific source documents.
-  if (KNOWLEDGE_CORPUS) {
+  // Skipped in structure-only mode so it can't bias the output.
+  if (KNOWLEDGE_CORPUS && !isStructureOnly) {
     fullMessages.push({
       role: 'system',
       content:

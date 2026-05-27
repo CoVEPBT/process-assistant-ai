@@ -5135,20 +5135,30 @@ function looksLikeRoughNotes(text) {
 // structured text (extracted from the AI's code block) or throws on failure.
 async function structureNotesWithAI(rough, titleHint) {
   const prompt =
-    "Please convert the rough process notes below into the standard CoVE format. " +
-    "Return ONLY the structured text inside a single fenced code block (```). " +
-    "No commentary outside the code block.\n\n" +
-    "Format requirements:\n" +
-    "- Number activities as 1.0, 2.0, 3.0 (max 7 activities).\n" +
-    "- Activity titles must be verb-first and 2-7 words.\n" +
-    "- Under each activity, list tasks lettered a., b., c. (max 10 per activity, verb-first).\n" +
-    "- If you see 'if X, then Y' phrases, convert them to NOTEs after the relevant activity. " +
-    "Format each NOTE as:\n" +
-    "  NOTE: <question, e.g. 'What if X happens?'>\n" +
-    "  <answer to the question>\n" +
-    "- Use Australian English spelling (organise, customise, centre, colour).\n" +
-    "- Do NOT invent steps that aren't implied by the notes.\n" +
-    (titleHint ? "- The process is called: " + titleHint + "\n" : "") +
+    "You are a strict structuring assistant. The user has provided rough process notes.\n" +
+    "Your ONLY two jobs are:\n" +
+    "  1. GROUP the user's existing steps into activities (collections of related steps).\n" +
+    "  2. SUGGEST a short activity title for each group.\n\n" +
+    "HARD RULES - do not break these:\n" +
+    "- NEVER add, invent, infer, or imply steps, tasks, sub-steps, or content the user did not write.\n" +
+    "- NEVER reword, rewrite, paraphrase, summarise or 'tidy up' the user's steps. Copy each step VERBATIM, character-for-character.\n" +
+    "- NEVER add NOTEs, decisions, branches, explanations, rationale, or commentary.\n" +
+    "- NEVER 'correct' the user's spelling, grammar, punctuation or capitalisation. Leave it exactly as written.\n" +
+    "- NEVER merge two of the user's lines into one, or split one line into two.\n" +
+    "- Activity titles are the ONLY new text you produce. Keep them verb-first and 2-7 words.\n\n" +
+    "Output format - return ONLY this, inside a single fenced code block, no commentary before or after:\n" +
+    "```\n" +
+    "1.0 <activity title you suggest>\n" +
+    "a <user's first step, verbatim>\n" +
+    "b <user's second step, verbatim>\n" +
+    "\n" +
+    "2.0 <next activity title you suggest>\n" +
+    "a <user's next step, verbatim>\n" +
+    "...\n" +
+    "```\n\n" +
+    "Numbering: activities as 1.0, 2.0, 3.0... (max 7). Tasks lettered a, b, c... within each activity (max 10).\n" +
+    "Each line of the user's notes that describes an action becomes exactly ONE task, in the user's exact words.\n" +
+    (titleHint ? "\nThe process is called: " + titleHint + "\n" : "") +
     "\nRough notes to structure:\n" +
     rough;
 
@@ -5159,6 +5169,10 @@ async function structureNotesWithAI(rough, titleHint) {
       messages: [{ role: 'user', content: prompt }],
       document: '',
       issues: [],
+      // Strip the conversational system prompt + knowledge corpus on the server
+      // so the model isn't pushed to rewrite the user's steps.
+      mode: 'structure-only',
+      temperature: 0,
     }),
   });
   if (!resp.ok) {
@@ -5787,12 +5801,38 @@ function parseProcedureBlock(block) {
     return prev ? (prev + ' ' + next) : next;
   };
 
+  // Nintex NOTE blocks have a bold "title" followed by an optional unbolded
+  // "body". PDF text extraction strips formatting, so we collect the whole
+  // NOTE content first, then split on the first sentence terminator followed
+  // by a capital letter - that's where the bold title ends. If no such split
+  // exists, the whole content is the title (no body).
+  const splitNoteTitleBody = (raw) => {
+    const text = (raw || '').trim();
+    if (!text) return { title: '', body: '' };
+    const m = text.match(/^([\s\S]+?[.?!])\s+([A-Z][\s\S]*)$/);
+    if (m) return { title: m[1].trim(), body: m[2].trim() };
+    return { title: text, body: '' };
+  };
+  const finalizeNote = (note) => {
+    if (!note) return;
+    const split = splitNoteTitleBody(note._raw || '');
+    note.title = split.title;
+    note.body = split.body;
+    delete note._raw;
+  };
+  const closeNoteAndReset = () => {
+    if (currentNote) finalizeNote(currentNote);
+    currentNote = null;
+    inNote = false;
+  };
+
   for (const line of lines) {
     const am = line.match(activityRe);
     if (am) {
+      closeNoteAndReset();
       if (current) activities.push(current);
       current = { number: am[1], title: am[2], role: '', tasks: [], notes: [], links: [] };
-      currentTask = null; inNote = false; currentNote = null;
+      currentTask = null;
       expectingRole = true;
       continue;
     }
@@ -5823,7 +5863,8 @@ function parseProcedureBlock(block) {
 
     const nm = line.match(noteRe);
     if (nm) {
-      currentNote = { title: nm[1].trim(), body: '' };
+      closeNoteAndReset();
+      currentNote = { title: '', body: '', _raw: nm[1].trim() };
       current.notes.push(currentNote);
       inNote = true; currentTask = null;
       continue;
@@ -5831,16 +5872,17 @@ function parseProcedureBlock(block) {
 
     const pm = line.match(procRe);
     if (pm) {
+      closeNoteAndReset();
       current.links.push({ type: 'process', name: pm[1].trim() });
-      inNote = false; currentTask = null;
+      currentTask = null;
       continue;
     }
 
     const tm = line.match(taskRe);
     if (tm) {
+      closeNoteAndReset();
       currentTask = { letter: tm[1], text: tm[2].trim(), attachment: null };
       current.tasks.push(currentTask);
-      inNote = false;
       continue;
     }
 
@@ -5848,7 +5890,8 @@ function parseProcedureBlock(block) {
     // section headings that may leak in from page-break artifacts in the PDF.
     if (SECTION_HEADINGS_RE.test(line)) continue;
     if (inNote && currentNote) {
-      currentNote.body = appendContinuation(currentNote.body, line);
+      // Accumulate raw note content; title/body split happens at finalization.
+      currentNote._raw = appendContinuation(currentNote._raw || '', line);
     } else if (currentTask) {
       if (/^https?:\/\//i.test(line)) {
         currentTask.attachment = (currentTask.attachment || '') + ' ' + line;
@@ -5860,6 +5903,8 @@ function parseProcedureBlock(block) {
       }
     }
   }
+  // Close out any in-progress note before finalising the last activity.
+  closeNoteAndReset();
   if (current) activities.push(current);
 
   // detect decisions: tasks containing "?", "Yes/No", "if approval", etc.
