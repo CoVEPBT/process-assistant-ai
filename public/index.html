@@ -783,6 +783,63 @@
   .issue.issue-active .issue-pill {
     background: #2E7D32; color: #FFFFFF; border-color: #2E7D32;
   }
+  /* v2 #23 - per-card dismiss "x" button. Sits at the top-right of each
+     quality-flag card. Subtle by default, more obvious on hover, with a
+     focusable outline for keyboard users. The button is small (28x28) so
+     it doesn't compete visually with the severity/jump pill, but still
+     meets the 44px touch target via padding when tapped on mobile. */
+  .issue-dismiss-btn {
+    appearance: none; -webkit-appearance: none;
+    background: transparent; border: 1px solid transparent;
+    color: #94A3B8; cursor: pointer;
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    font-size: 18px; line-height: 1;
+    display: inline-flex; align-items: center; justify-content: center;
+    margin-left: 6px;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+  }
+  .issue-dismiss-btn:hover {
+    background: #FEE2E2; color: #C62828; border-color: #FCA5A5;
+  }
+  .issue-dismiss-btn:focus-visible {
+    outline: 2px solid var(--rmit-red); outline-offset: 2px;
+  }
+  /* "N flags dismissed this session - Restore all" footer row. Discreet
+     so it doesn't clutter the sidebar, but easy to find when the user
+     wants to bring something back. */
+  .dismissed-note {
+    margin-top: 12px; padding: 10px 12px;
+    background: #F8FAFC; border: 1px dashed #CBD5E1;
+    border-radius: 6px;
+    font-size: 12.5px; color: #475569;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 8px;
+  }
+  .dismissed-restore-link {
+    appearance: none; -webkit-appearance: none;
+    background: none; border: none; padding: 0;
+    color: var(--rmit-red); cursor: pointer;
+    font-size: 12.5px; font-weight: 600;
+    text-decoration: underline;
+  }
+  .dismissed-restore-link:hover { text-decoration: none; }
+  .dismissed-restore-link:focus-visible {
+    outline: 2px solid var(--rmit-red); outline-offset: 2px;
+  }
+  /* Inline "Undo" button inside the dismissal confirmation toast. */
+  .toast-undo-btn {
+    appearance: none; -webkit-appearance: none;
+    background: none; border: none; padding: 0 0 0 6px;
+    color: var(--rmit-red); cursor: pointer;
+    font-size: 14px; font-weight: 700;
+    text-decoration: underline;
+  }
+  .toast-undo-btn:hover { text-decoration: none; }
+  .toast-undo-btn:focus-visible {
+    outline: 2px solid var(--rmit-red); outline-offset: 2px;
+  }
 
   /* Toast (inline validation replacement for alert()) */
   #toast {
@@ -4702,7 +4759,10 @@ window.addEventListener('load', () => { window.scrollTo(0, 0); });
 window.updateSidebarOppsCount = function() {
   const badge = document.getElementById('sidebarOppsCount');
   if (!badge) return;
-  const list = (typeof currentIssues !== 'undefined' && Array.isArray(currentIssues)) ? currentIssues : [];
+  // v2 #23: count only ACTIVE flags (excludes user-dismissed ones).
+  const list = (typeof getActiveIssues === 'function')
+    ? getActiveIssues()
+    : (Array.isArray(currentIssues) ? currentIssues : []);
   const actionable = list.filter(i => !i.informational);
   const n = actionable.length;
   if (n === 0) {
@@ -5004,6 +5064,40 @@ let currentBpmnXml = '';
 let bpmnViewer = null;
 let originalDocHtml = '';   // initial generated HTML, used by Reset edits
 
+// ---------------------------------------------------------------------------
+// v2 #23 - Per-session "dismiss a quality flag" state.
+// ---------------------------------------------------------------------------
+// dismissedFlagKeys stores stable per-flag fingerprints. A dismissed flag is
+// hidden from the sidebar list, the inline-in-doc view, the "N to review"
+// count badge, the summary chip, the Export error gate, AND the ISSUES
+// FLAGGED block sent to the AI - so the user gets a clean "this is gone"
+// experience until they Reset / Analyse-another (which clears the set).
+//
+// Persistence: explicitly per-session. We don't write to localStorage, in
+// line with the pilot's "no client-side data" posture. Reload = fresh start.
+let dismissedFlagKeys = new Set();
+window.dismissedFlagKeys = dismissedFlagKeys;
+
+// Stable fingerprint: id + location + message uniquely identifies a flag
+// across re-runs (Save changes re-runs the rules, so we need an identity that
+// survives a re-render). If the user fixes the issue, the rule won't emit
+// the same message and the dismissal naturally becomes harmless.
+function flagKey(issue) {
+  if (!issue) return '';
+  return (issue.id || '') + '|' + (issue.location || '') + '|' + (issue.message || '');
+}
+
+// Filtered view used everywhere the user-facing flag count + list lives.
+function getActiveIssues() {
+  const src = Array.isArray(currentIssues) ? currentIssues : [];
+  if (!dismissedFlagKeys || !dismissedFlagKeys.size) return src.slice();
+  return src.filter(i => !dismissedFlagKeys.has(flagKey(i)));
+}
+window.getActiveIssues = getActiveIssues;
+
+// Buffer the most-recent dismissal so the toast's Undo action can restore it.
+let lastDismissed = null;
+
 // Prevent BPMN canvas from trapping plain wheel events.
 // Without this, scrolling over the diagram zooms the canvas instead of scrolling
 // the page, making it hard to reach content below. Hold Ctrl/Cmd to zoom.
@@ -5223,6 +5317,9 @@ document.getElementById('headerResetBtn').addEventListener('click', () => {
   if (dp) dp.innerHTML = '';
   originalDocHtml = '';
   currentModel = null; currentIssues = []; currentRecommendation = null; currentMermaid = '';
+  // v2 #23: clear per-session dismissals on Reset so the next analysis starts fresh.
+  if (dismissedFlagKeys) dismissedFlagKeys.clear();
+  lastDismissed = null;
   // Send the user back to the home view: hide the work area and the Reset button
   if (inputWorkArea) inputWorkArea.hidden = true;
   // Reset button stays visible at all times now
@@ -5469,6 +5566,9 @@ document.getElementById('analyseBtn').addEventListener('click', async () => {
 
     currentModel = model;
     currentIssues = runRulesEngine(model);
+    // v2 #23: a new analysis is a clean slate - past dismissals don't carry over.
+    if (dismissedFlagKeys) dismissedFlagKeys.clear();
+    lastDismissed = null;
     currentRecommendation = recommendArtefactType(model);
     currentMermaid = buildMermaid(model);
     currentBpmnXml = buildBpmnXml(model);
@@ -8102,6 +8202,84 @@ function attachIssueNav() {
   });
 }
 
+// v2 #23 - dismiss a quality flag (per-session). Wire each ".issue-dismiss-btn"
+// inside the issue list, plus the "Restore all" link in the dismissed-summary
+// row. Click stops propagation so it doesn't also trigger the card's
+// jump-to-section behaviour.
+window.attachDismissHandlers = function () {
+  document.querySelectorAll('.issue-dismiss-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const key = btn.dataset.flagKey;
+      if (!key) return;
+      // Capture the matching issue object so the toast Undo can restore it.
+      const match = (Array.isArray(currentIssues) ? currentIssues : []).find(i => flagKey(i) === key);
+      lastDismissed = match ? { key, issue: match } : { key };
+      dismissedFlagKeys.add(key);
+      // Re-render the sidebar list + count badge so the dismissal takes effect.
+      if (typeof window.refreshIssuesSidebar === 'function') window.refreshIssuesSidebar();
+      if (typeof window.updateSidebarOppsCount === 'function') window.updateSidebarOppsCount();
+      // Refresh the summary chip + Export error gate to mirror the dismissal.
+      const active = (typeof getActiveIssues === 'function') ? getActiveIssues() : currentIssues;
+      const actionable = active.filter(i => !i.informational).length;
+      const errorCount = active.filter(i => i.severity === 'error').length;
+      const oppsCount = document.getElementById('summaryChipOppsCount');
+      if (oppsCount) oppsCount.textContent = String(actionable);
+      const oppsChip = document.getElementById('summaryChipOpps');
+      if (oppsChip) oppsChip.style.display = (actionable > 0) ? '' : 'none';
+      const errBadge = document.getElementById('actionExportErrorBadge');
+      if (errBadge) {
+        if (errorCount > 0) {
+          errBadge.textContent = '⚠ ' + errorCount + ' error' + (errorCount === 1 ? '' : 's');
+          errBadge.classList.remove('hidden');
+        } else {
+          errBadge.classList.add('hidden');
+        }
+      }
+      // Show a toast with an Undo affordance. Toast lasts long enough for the
+      // user to react if the dismissal was an accident. showToast renders the
+      // message via innerHTML so the inline button is interactive.
+      if (typeof showToast === 'function') {
+        showToast('Flag dismissed. <button type="button" class="toast-undo-btn" id="undoDismissBtn">Undo</button>', 'info', 6000);
+        requestAnimationFrame(() => {
+          const undoBtn = document.getElementById('undoDismissBtn');
+          if (undoBtn) {
+            undoBtn.addEventListener('click', () => {
+              if (lastDismissed && lastDismissed.key) {
+                dismissedFlagKeys.delete(lastDismissed.key);
+                lastDismissed = null;
+                if (typeof window.refreshIssuesSidebar === 'function') window.refreshIssuesSidebar();
+                if (typeof window.updateSidebarOppsCount === 'function') window.updateSidebarOppsCount();
+                // Hide the toast immediately on undo
+                const t = document.getElementById('toast');
+                if (t) t.style.display = 'none';
+              }
+            });
+          }
+        });
+      }
+    });
+  });
+  // "Restore all" link at the bottom of the sidebar when there's at least one
+  // dismissed flag - lets the user bring everything back in one click.
+  document.querySelectorAll('.dismissed-restore-link').forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!dismissedFlagKeys || !dismissedFlagKeys.size) return;
+      const n = dismissedFlagKeys.size;
+      dismissedFlagKeys.clear();
+      lastDismissed = null;
+      if (typeof window.refreshIssuesSidebar === 'function') window.refreshIssuesSidebar();
+      if (typeof window.updateSidebarOppsCount === 'function') window.updateSidebarOppsCount();
+      if (typeof showToast === 'function') {
+        showToast(n + ' dismissed flag' + (n === 1 ? '' : 's') + ' restored.', 'success', 3500);
+      }
+    });
+  });
+};
+
 async function renderResults() {
   document.getElementById('resultsCard').classList.remove('hidden');
   // Hide the input card now that results are showing - keeps the screen focused
@@ -8366,13 +8544,22 @@ async function renderResults() {
     const numberBadge = (typeof displayNumber === 'number')
       ? '<span class="issue-number" aria-label="Flag ' + displayNumber + '">' + displayNumber + '</span>'
       : '';
-    return '<div class="' + cls + '"' + tabAttr + ' data-flag-number="' + (displayNumber || '') + '">' +
+    // v2 #23 - per-card dismiss button. Hidden via aria when not interactive.
+    // The key is escaped because it can contain quotes / special chars from
+    // the underlying rule message.
+    const fkey = flagKey(i);
+    const dismissBtn = '<button type="button" class="issue-dismiss-btn" data-flag-key="' +
+      escapeHtml(fkey) +
+      '" title="Dismiss this flag" aria-label="Dismiss this quality flag">&times;</button>';
+    return '<div class="' + cls + '"' + tabAttr + ' data-flag-number="' + (displayNumber || '') +
+      '" data-flag-key="' + escapeHtml(fkey) + '">' +
       '<div class="row1">' +
         '<div class="issue-meta">' +
           numberBadge +
           '<span class="severity">' + (SEVERITY_ICONS[i.severity] || '') + ' ' + i.severity + '</span>' +
         '</div>' +
         affordance +
+        dismissBtn +
       '</div>' +
       '<div class="message">' + i.message + '</div>' +
       (i.suggestion ? '<div class="suggestion"><strong>Try:</strong> ' + i.suggestion + '</div>' : '') +
@@ -8382,7 +8569,12 @@ async function renderResults() {
   // shows, so the AI's "Flag 3" matches the card the user is looking at.
   // Errors first, then warnings, then info-level suggestions.
   function getOrderedIssuesForAi() {
-    const src = (typeof currentIssues !== 'undefined' && Array.isArray(currentIssues)) ? currentIssues : [];
+    // v2 #23: AI sees the same dismissal-filtered list the user sees, so
+    // "Flag 3" in chat lines up with card #3 in the sidebar, and the AI
+    // doesn't keep advising on flags the user has already set aside.
+    const src = (typeof getActiveIssues === 'function')
+      ? getActiveIssues()
+      : ((typeof currentIssues !== 'undefined' && Array.isArray(currentIssues)) ? currentIssues : []);
     const g = { error: [], warning: [], info: [] };
     src.forEach(i => (g[i.severity] || g.info).push(i));
     return [].concat(g.error, g.warning, g.info);
@@ -8459,22 +8651,37 @@ async function renderResults() {
   window.refreshIssuesSidebar = function () {
     const out = document.getElementById('issuesOut');
     if (!out || typeof currentIssues === 'undefined') return;
+    // Filter dismissed flags out before rendering. The full currentIssues
+    // list is kept untouched so Reset/Analyse-another can restore everything.
+    const active = (typeof getActiveIssues === 'function') ? getActiveIssues() : currentIssues;
     const g = { error: [], warning: [], info: [] };
-    currentIssues.forEach((i, idx) => { i._idx = idx; (g[i.severity] || g.info).push(i); });
+    active.forEach((i, idx) => { i._idx = idx; (g[i.severity] || g.info).push(i); });
     const ordered = [].concat(g.error, g.warning, g.info);
-    out.innerHTML = currentIssues.length === 0
-      ? '<p>No quality flags - your draft already meets the standards.</p>'
-      : '<div class="issues-scroll">' + ordered.map((i, idx) => renderIssue(i, idx + 1)).join('') + '</div>';
+    const dismissedCount = currentIssues.length - active.length;
+    const dismissedNote = dismissedCount > 0
+      ? '<div class="dismissed-note">' + dismissedCount +
+        ' flag' + (dismissedCount === 1 ? '' : 's') + ' dismissed this session. ' +
+        '<button type="button" class="dismissed-restore-link">Restore all</button>' +
+        '</div>'
+      : '';
+    if (active.length === 0 && currentIssues.length > 0) {
+      out.innerHTML = '<p>All flags dismissed for this session - nothing to review.</p>' + dismissedNote;
+    } else if (active.length === 0) {
+      out.innerHTML = '<p>No quality flags - your draft already meets the standards.</p>';
+    } else {
+      out.innerHTML = '<div class="issues-scroll">' + ordered.map((i, idx) => renderIssue(i, idx + 1)).join('') + '</div>' + dismissedNote;
+    }
     attachIssueNav();
+    if (typeof window.attachDismissHandlers === 'function') window.attachDismissHandlers();
     if (typeof window.refreshInlineFlags === 'function') window.refreshInlineFlags();
   };
 
-  // Issues panel - flat list (no subheadings). Errors first, then warnings,
-  // then suggestions. Severity is shown on each card via the inline label.
-  const orderedIssues = [].concat(grouped.error, grouped.warning, grouped.info);
-  document.getElementById('issuesOut').innerHTML = currentIssues.length === 0
-    ? '<p>No quality flags - your draft meets the encoded standards.</p>'
-    : '<div class="issues-scroll">' + orderedIssues.map((i, idx) => renderIssue(i, idx + 1)).join('') + '</div>';
+  // Issues panel - delegate to the unified refreshIssuesSidebar() so we get
+  // dismissal-filtering, the dismiss-button wiring, and consistent rendering
+  // in one place. (Earlier first-render duplicated the logic; consolidating.)
+  if (typeof window.refreshIssuesSidebar === 'function') {
+    window.refreshIssuesSidebar();
+  }
 
   // Workflow - render with bpmn-js (Mermaid kept as fallback)
   const wf = document.getElementById('workflowRender');
@@ -11210,6 +11417,43 @@ createChatSurface({
       'KEEP TASK ORDER STABLE: do not reorder tasks within an activity unless one is a genuine duplicate. ' +
       'The tool matches URL attachments back to tasks by their position (a, b, c, ...) so reordering ' +
       'will misalign the link rendering.\n\n' +
+      'PRESERVE NOTES - THIS IS NON-NEGOTIABLE:\n' +
+      'Every NOTE block in the source MUST appear in your output, under the SAME activity, in the SAME order. ' +
+      'NOTEs encode the 20% of variations / exceptions the process owner has explicitly chosen to document - ' +
+      'they\'re load-bearing, not commentary. Do NOT drop a NOTE, do NOT merge two NOTEs together, do NOT move ' +
+      'a NOTE to a different activity, do NOT swallow the NOTE content into a task description.\n' +
+      '* Output format for a NOTE: a line beginning "NOTE:" followed by the question, then the answer on the ' +
+      'very next line (no blank line between them). Example:\n' +
+      '    NOTE: What if the requester is unavailable?\n' +
+      '    Reassign the ticket to their delegate and proceed.\n' +
+      '* You MAY tighten a NOTE\'s wording for clarity (verb-first, ≤18 words) - but the question and the ' +
+      'answer must stay recognisable as the same content. You can polish; you cannot omit.\n' +
+      '* MANDATORY SELF-CHECK before emitting blocks: count the NOTEs in the source and count the NOTEs in ' +
+      'your output. They must match. If they don\'t, redo the Process Map block and put the missing NOTEs back.\n\n' +
+      'PRESERVE ROLES - THIS IS NON-NEGOTIABLE:\n' +
+      'The role list (the [Role Name] segment in square brackets at the end of each activity heading line) ' +
+      'is the process owner\'s explicit decision about who is accountable. Do NOT add roles, do NOT remove ' +
+      'roles, do NOT rename roles, do NOT split a single role into two, do NOT merge two roles into one, ' +
+      'do NOT reword the role string. Copy each role exactly as it appears in the source, character for ' +
+      'character, including punctuation, abbreviations, ampersands, and capitalisation.\n' +
+      '* If the source role is "CoVE - Delivery Planning & Support, CoVE - Quality & Compliance" then your ' +
+      'output for that activity must be exactly "[CoVE - Delivery Planning & Support, CoVE - Quality & Compliance]". ' +
+      'Not "[CoVE - Delivery Planning Support]". Not "[CoVE - Delivery Support; Quality Support]". Verbatim.\n' +
+      '* If you must consolidate two source activities into one because they\'re true duplicates, the merged ' +
+      'activity\'s role list is the UNION of both source role lists (deduplicated, in source order).\n' +
+      '* MANDATORY SELF-CHECK before emitting blocks: for each activity, compare the role string in your ' +
+      'output to the role string in the source for the SAME activity. They must be character-identical. ' +
+      'If they aren\'t, fix it before emitting.\n\n' +
+      'ACTIVITY HEADING LENGTH - THIS IS NON-NEGOTIABLE:\n' +
+      'Each activity heading (the title on the line with [Role Name]) MUST be 2-7 words. Hard cap: 8 words. ' +
+      'If a heading is longer, the activity is doing too much - tighten the wording. Examples:\n' +
+      '  GOOD: "Verify requester eligibility"             (3 words)\n' +
+      '  GOOD: "Determine if RAF required"                (4 words)\n' +
+      '  BAD : "Verify requester eligibility and submit the request to the approver"  (11 words - split into two activities or shorten)\n' +
+      '* Activity headings are verb-first imperative phrases. Drop filler ("the", "a"), prepositions, and ' +
+      'pad-words ("ensure", "in order to").\n' +
+      '* MANDATORY SELF-CHECK before emitting blocks: count the words in every activity heading (the line ' +
+      'with [Role Name] at the end). Any heading over 8 words MUST be shortened.\n\n' +
       'No preamble. No commentary. No "Here are the blocks" sentence. No closing question. ' +
       'No <<nintex-ready>> marker. The very first character of your reply must be the opening ``` of the first block.';
 
@@ -11284,6 +11528,79 @@ createChatSurface({
         });
       } catch (e) {
         console.warn('[auto-apply] could not restore task attachments:', e);
+      }
+
+      // Restore the role list verbatim from the original model. The role
+      // assignments are the process owner's explicit accountability decision -
+      // the AI is instructed to copy them character-for-character, but on a
+      // bad run it can still rename or drop roles. We overwrite the new
+      // activity's role with the original by activity index, every time.
+      // The user can still edit the role via Save changes if they wanted to.
+      try {
+        const origActs = (originalSnapshot.model && originalSnapshot.model.activities) || [];
+        let touched = 0;
+        newModel.activities.forEach((newAct, ai) => {
+          const origAct = origActs[ai];
+          if (!origAct) return;
+          // Normalised compare so we don't churn for purely whitespace differences.
+          const norm = (s) => String(s || '').replace(/\s+/g, ' ').trim();
+          if (norm(newAct.role) !== norm(origAct.role)) {
+            newAct.role = origAct.role || '';
+            touched++;
+          }
+        });
+        if (touched > 0) {
+          console.log('[auto-apply] restored ' + touched + ' role string(s) the AI had altered');
+        }
+      } catch (e) {
+        console.warn('[auto-apply] could not restore role strings:', e);
+      }
+
+      // Restore NOTE blocks the AI may have dropped. Mirror of the URL-restore
+      // pass: match new activities to original activities by index, and for
+      // every NOTE in the original that has NO equivalent in the new activity
+      // (no fuzzy-match on either title or body), put the original NOTE back.
+      // Equivalence check is loose - normalised lowercase comparison of the
+      // first 40 chars of the title - because the AI may have tightened
+      // wording per the "you may polish, you cannot omit" instruction.
+      try {
+        const origActs = (originalSnapshot.model && originalSnapshot.model.activities) || [];
+        const noteKey = (n) => (
+          (n.title || '').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 40)
+        );
+        let restored = 0;
+        newModel.activities.forEach((newAct, ai) => {
+          const origAct = origActs[ai];
+          if (!origAct || !origAct.notes || !origAct.notes.length) return;
+          const newKeys = new Set((newAct.notes || []).map(noteKey));
+          origAct.notes.forEach(origNote => {
+            const key = noteKey(origNote);
+            // Skip if the new activity already has a NOTE whose title (first 40
+            // normalised chars) matches the original - the AI's polish is fine.
+            if (key && newKeys.has(key)) return;
+            // Also skip if the new activity has a NOTE whose title CONTAINS the
+            // first ~20 chars of the original - catches cases where the AI
+            // rewrote the question to be a touch longer but covers the same point.
+            const shortKey = key.slice(0, 20);
+            const fuzzyHit = (newAct.notes || []).some(nn => {
+              const nk = noteKey(nn);
+              return shortKey && (nk.includes(shortKey) || (shortKey.length > 8 && shortKey.includes(nk.slice(0, 20))));
+            });
+            if (fuzzyHit) return;
+            // Otherwise the NOTE was dropped - restore it.
+            if (!Array.isArray(newAct.notes)) newAct.notes = [];
+            newAct.notes.push({
+              title: origNote.title || '',
+              body: origNote.body || ''
+            });
+            restored++;
+          });
+        });
+        if (restored > 0) {
+          console.log('[auto-apply] restored ' + restored + ' NOTE block(s) the AI had dropped');
+        }
+      } catch (e) {
+        console.warn('[auto-apply] could not restore NOTE blocks:', e);
       }
 
       // Re-run the full pipeline
@@ -11964,7 +12281,13 @@ createChatSurface({
     // Re-run the rules engine + refresh the quality flags sidebar (every save)
     let resolvedCount = 0;
     if (_runRules) {
-      const oldCount = (currentIssues || []).filter(i => !i.informational).length;
+      // v2 #23: track ACTIVE issues for the "N resolved" toast so dismissed
+      // flags don't count toward "resolved by editing".
+      const oldActiveCount = (typeof getActiveIssues === 'function'
+        ? getActiveIssues()
+        : (currentIssues || [])
+      ).filter(i => !i.informational).length;
+      const oldCount = oldActiveCount;
       currentIssues = _runRules(newModel);
       console.log('[save-edits] new issues:', currentIssues.length, currentIssues.map(i => i.id));
       if (typeof window.refreshIssuesSidebar === 'function') window.refreshIssuesSidebar();
@@ -11988,7 +12311,10 @@ createChatSurface({
         };
         badge.addEventListener('animationend', clearPulse);
       }
-      const newCount = currentIssues.filter(i => !i.informational).length;
+      // v2 #23: count ACTIVE issues so dismissed flags don't keep the user
+      // soft-gated after Save changes re-runs the rules.
+      const activeIssues = (typeof getActiveIssues === 'function') ? getActiveIssues() : currentIssues;
+      const newCount = activeIssues.filter(i => !i.informational).length;
       resolvedCount = Math.max(0, oldCount - newCount);
       const oppsCount = document.getElementById('summaryChipOppsCount');
       if (oppsCount) oppsCount.textContent = String(newCount);
@@ -11996,7 +12322,7 @@ createChatSurface({
       if (oppsChip) oppsChip.style.display = (newCount > 0) ? '' : 'none';
 
       // Update the Export button's error badge - soft-gate is driven by error count
-      const errorCount = currentIssues.filter(i => i.severity === 'error').length;
+      const errorCount = activeIssues.filter(i => i.severity === 'error').length;
       const errBadge = document.getElementById('actionExportErrorBadge');
       if (errBadge) {
         if (errorCount > 0) {
