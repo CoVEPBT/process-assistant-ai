@@ -1564,6 +1564,26 @@
   .sidebar-opps-count.is-clear {
     background: #E8F5E9; color: #1B5E20; border-color: #B7EBD0;
   }
+  /* Pulse animation - briefly highlights the count badge after the user
+     hits "Save changes" so their eye lands on the refreshed number. We use
+     a soft amber outer glow + scale bump that fades over ~1.2s. The class
+     is added by saveEditsAndRefresh() and removed at animation end. */
+  @keyframes opps-count-pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.55); transform: scale(1); }
+    35%  { box-shadow: 0 0 0 8px rgba(245, 158, 11, 0.25); transform: scale(1.12); }
+    100% { box-shadow: 0 0 0 16px rgba(245, 158, 11, 0); transform: scale(1); }
+  }
+  @keyframes opps-count-pulse-clear {
+    0%   { box-shadow: 0 0 0 0 rgba(34, 139, 34, 0.55); transform: scale(1); }
+    35%  { box-shadow: 0 0 0 8px rgba(34, 139, 34, 0.25); transform: scale(1.12); }
+    100% { box-shadow: 0 0 0 16px rgba(34, 139, 34, 0); transform: scale(1); }
+  }
+  .sidebar-opps-count.is-pulsing            { animation: opps-count-pulse       1.2s ease-out 1; }
+  .sidebar-opps-count.is-pulsing.is-clear   { animation: opps-count-pulse-clear 1.2s ease-out 1; }
+  @media (prefers-reduced-motion: reduce) {
+    .sidebar-opps-count.is-pulsing,
+    .sidebar-opps-count.is-pulsing.is-clear { animation: none; }
+  }
   .doc-sidebar-close {
     background: #FFFFFF; border: 1px solid #C7DBF2; color: var(--rmit-text);
     border-radius: 50%; width: 28px; height: 28px;
@@ -11951,6 +11971,22 @@ createChatSurface({
       // Update the discreet count pill next to the sidebar QUALITY FLAGS header
       if (typeof window.updateSidebarOppsCount === 'function') {
         window.updateSidebarOppsCount();
+      }
+      // Pilot feedback item 19: pulse the count badge so the user's eye
+      // lands on the refreshed number. Re-trigger by removing the class
+      // first (so consecutive saves replay the animation).
+      const badge = document.getElementById('sidebarOppsCount');
+      if (badge) {
+        badge.classList.remove('is-pulsing');
+        // force a reflow so the animation restarts cleanly on rapid saves
+        // eslint-disable-next-line no-unused-expressions
+        badge.offsetWidth;
+        badge.classList.add('is-pulsing');
+        const clearPulse = () => {
+          badge.classList.remove('is-pulsing');
+          badge.removeEventListener('animationend', clearPulse);
+        };
+        badge.addEventListener('animationend', clearPulse);
       }
       const newCount = currentIssues.filter(i => !i.informational).length;
       resolvedCount = Math.max(0, oldCount - newCount);
