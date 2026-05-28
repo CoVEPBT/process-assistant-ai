@@ -5475,8 +5475,19 @@ document.getElementById('headerResetBtn').addEventListener('click', () => {
    ============================================================ */
 
 // Heuristic: does this paste content already have activity headers?
+// Returns true when the content looks like rough unstructured notes that
+// would benefit from AI structuring. Returns false when it's already
+// structured (numbered activities, or Nintex procedure-text-export format
+// with "Title [Role;Role]" headings).
 function looksLikeRoughNotes(text) {
   if (!text || text.trim().length < 20) return false;
+  // Don't offer to "structure" content that's already in Nintex's
+  // Export Procedure Text format - it has its own activity heading shape
+  // (flush-left title followed by "[Role;Role]") and the procedure-text
+  // parser handles it natively.
+  if (typeof looksLikeProcedureTextExport === 'function' && looksLikeProcedureTextExport(text)) {
+    return false;
+  }
   // Match common activity markers: "1.0 Title", "1.", "1)", "Activity 1", "Step 1"
   const activityPattern = /^(?:\d+(?:\.\d+)?\s*[.):-]?\s*\S|activity\s+\d+|step\s+\d+)/i;
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean);

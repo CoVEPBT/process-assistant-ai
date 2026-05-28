@@ -1,44 +1,27 @@
-v2 #26 + #26b: group quality flags by rule type, with collapsible groups
+Fix: skip auto-structure offer for Nintex procedure-text paste
 
-The sidebar previously rendered flags as a flat list ordered by severity
-(error -> warning -> info). For longer processes this produced a wall of
-cards that was hard to skim. Cards now cluster within each severity tier
-by their underlying rule.
+Natalie pasted content in Nintex's "Export Procedure Text" format
+(activity headings like "Title [Role A;Role B]" + 6-space indented
+tasks). The looksLikeRoughNotes() detector only checked for numbered
+headings ("1.0 Title", "Activity 1"), so it incorrectly classified
+the already-structured procedure-text format as "rough notes" and
+offered to AI-structure it. The AI then tried to restructure already-
+structured input and produced garbled output - activity titles got
+an "a " prefix and the tasks disappeared.
 
-How it works:
-  - A new flagGroup() mapper maps each rule id to a friendly group label
-    (e.g. act-verb-* -> "Activity title doesn't start with a verb",
-    task-verb-* -> "Task verb not on approved list",
-    handover-* -> "Handover between activities").
-  - orderIssuesForDisplay() returns severity tier -> group (largest group
-    first within a tier) -> flag-in-document-order.
-  - Every group renders a small uppercase heading + count chip above
-    its first card, regardless of how many flags it contains, so
-    single-rule flags ("Activity has multiple roles", "Handover between
-    activities", etc.) are still labelled and collapsible.
-  - Heading colour mirrors the severity tint (error red, warning amber,
-    info blue) so the user can still see the tier at a glance.
+Fix: looksLikeRoughNotes() now calls looksLikeProcedureTextExport()
+first; if true, it returns false (already structured, no need to
+re-structure). The Analyse flow then routes the paste straight to
+parseStructuredText() which auto-detects the procedure-text format
+and dispatches to parseProcedureTextExport() for clean parsing.
 
-Knock-on consistency:
-  - getOrderedIssuesForAi() now uses the same grouped ordering, so the
-    AI's "Flag 5" still points at the 5th card the user sees.
-  - Display numbers (the badge on each card) increment continuously
-    across groups, so the chat reference + sidebar number stay in sync.
-
-Collapsible groups (v2 #26b):
-  - Each group heading is now a focusable button with a chevron icon.
-    Click (or Enter / Space) toggles collapse / expand of the cards
-    underneath. Chevron rotates 0deg -> -90deg to indicate state.
-  - Collapsed headings get a muted opacity + dashed bottom border so
-    the user can see at a glance which groups they've hidden. The
-    count chip stays visible so "Task verb not on approved list (3)"
-    still tells the user 3 cards are tucked away.
-  - Collapse state is per-session, stored in collapsedFlagGroups
-    keyed by "<severity>:<groupKey>". Resets on Reset / Analyse /
-    Analyse another, same lifecycle as dismissals from #23.
-  - Display numbers keep incrementing across collapsed groups, so
-    chat references ("tell me about flag 5") still point at the
-    same flag even when it's currently hidden.
-
-Dismissal + restore-all behaviour from v2 #23 still applies on top of
-the new grouped layout.
+Reproduction: paste content of the form
+    Title 1 [Role A;Role B]
+          Task one
+          Task two
+    Title 2 [Role C]
+          Task three
+- before this fix, auto-structure modal opens and re-mangles the
+  text on click-through
+- after this fix, the modal is suppressed; Analyse goes straight
+  through and parseProcedureTextExport handles it correctly.
