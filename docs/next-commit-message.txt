@@ -1,27 +1,47 @@
-Fix: skip auto-structure offer for Nintex procedure-text paste
+Auto-structure hardening + v2 #27 add-task/note/activity buttons
 
-Natalie pasted content in Nintex's "Export Procedure Text" format
-(activity headings like "Title [Role A;Role B]" + 6-space indented
-tasks). The looksLikeRoughNotes() detector only checked for numbered
-headings ("1.0 Title", "Activity 1"), so it incorrectly classified
-the already-structured procedure-text format as "rough notes" and
-offered to AI-structure it. The AI then tried to restructure already-
-structured input and produced garbled output - activity titles got
-an "a " prefix and the tasks disappeared.
+Two fixes for the "Structure these for me" / auto-structure feature.
 
-Fix: looksLikeRoughNotes() now calls looksLikeProcedureTextExport()
-first; if true, it returns false (already structured, no need to
-re-structure). The Analyse flow then routes the paste straight to
-parseStructuredText() which auto-detects the procedure-text format
-and dispatches to parseProcedureTextExport() for clean parsing.
+1. Skip the auto-structure offer for already-structured Nintex paste.
+   looksLikeRoughNotes() only checked for numbered headings ("1.0 Title",
+   "Activity 1"), so it classified Nintex's "Export Procedure Text"
+   format (activity heading like "Title [Role A;Role B]" + 6-space
+   indented tasks) as rough notes and offered to AI-structure it. The
+   AI then tried to restructure already-structured input and produced
+   garbled output - activity titles got an "a " prefix and tasks
+   disappeared.
 
-Reproduction: paste content of the form
-    Title 1 [Role A;Role B]
-          Task one
-          Task two
-    Title 2 [Role C]
-          Task three
-- before this fix, auto-structure modal opens and re-mangles the
-  text on click-through
-- after this fix, the modal is suppressed; Analyse goes straight
-  through and parseProcedureTextExport handles it correctly.
+   Fix: looksLikeRoughNotes() now calls looksLikeProcedureTextExport()
+   first and returns false if the format is detected. parseStructuredText
+   already routes that shape to parseProcedureTextExport, which parses
+   it natively.
+
+2. Harden the auto-structure prompt so the AI doesn't edit content.
+   Symptoms: occasional drift where the AI tidied wording, capitalised
+   role names, paraphrased, or inserted a step the user didn't write -
+   despite the existing HARD RULES.
+
+   Prompt changes:
+     - Reframed as "you are a SORTER + LABELLER, NOT a writer".
+     - Worked example showing CORRECT output vs WRONG output side by
+       side (highlighting paraphrase, capitalisation change, and an
+       invented step as wrong).
+     - HARD RULES tightened: "If the user wrote 4 steps, your output
+       has 4 task lines. Not 5. Not 3. Exactly 4." Plus an explicit
+       "1 source line = 1 output task line" rule.
+     - Mandatory self-check (3 steps: count lines, verify each task
+       matches a source line character-identically, confirm no
+       merging / splitting / dropping / rewording).
+
+   Post-process drift verification (safety net):
+     - After the AI replies, the JS splits both the original notes
+       and the AI's task lines, then checks each AI task is a near-
+       exact match for some source line.
+     - If drift is detected, surfaces a warning toast: "Heads up:
+       the AI may have edited some task wording (N tasks did not
+       match your original notes exactly, e.g. '...'). Spot-check
+       the result before analysing."
+     - The warning is soft - the structured result still applies so
+       the user can keep what's useful and edit anything that drifted.
+
+3. v2 #27 - "

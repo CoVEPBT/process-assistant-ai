@@ -290,11 +290,19 @@ PENDING (post-pilot backlog - new features, bigger work)
 
 27. Easier to add new tasks / activities in the generated document
     Source: file 2 #7
-    Status: [PENDING]
-    Notes: today the doc preview is contenteditable, so users can
-    type new lines, but there's no explicit "+ Add task" affordance.
-    Could add inline action buttons that drop a properly-numbered
-    task or activity.
+    Status: [DONE]
+    Implementation: each activity card now has discreet "+ Add task"
+    and "+ Add note" buttons at the bottom; a "+ Add activity"
+    button sits below the last activity. Clicking inserts a
+    properly-formatted, auto-numbered placeholder (next letter for
+    tasks, next decimal for activities) with the caret placed
+    inside, ready to type.
+
+    Buttons sit in contenteditable="false" wrappers so the
+    surrounding editable doc treats them as buttons not text.
+    extractModelFromDocPreview filters out unedited placeholders
+    ("[Click to add task]", "[New activity title]") so they don't
+    get saved or flagged by the rules engine.
 
 28. Add back option to view quality flags WITHIN the document
     Source: file 2 #13
@@ -389,58 +397,23 @@ PENDING (post-pilot backlog - new features, bigger work)
     from item 29 (flags-only export) which stays separate as the
     lighter sharing format.
 
+32. Auto-apply leaves empty task before a Link row
+    Source: Natalie 28 May 2026 (BARB/FLOSS doc test)
+    Status: [PENDING]
+    Notes: when a source task has descriptive text + an attached
+    URL, auto-apply sometimes drops the text and leaves an empty
+    task letter followed by just a "Link:" row. E.g. source had
+    "c. Class Scheduling Process" with a SafeLinks URL attached;
+    polished version shows "c." (no text) + the Link row. The
+    URL post-process restoration re-attaches the URL but doesn't
+    restore the task description.
+    Likely fix: in the post-process pass that restores URLs, ALSO
+    restore the original task text when the new task text is
+    empty / whitespace-only but the source task had text.
+    Adjacent fix: tell the AI to drop the "[Web Link]" marker
+    when it strips a URL into the attachment slot - it's leaking
+    into output as a literal prefix ("[Web Link] Trades & Dental
+    Weekly TT").
 
-============================================================
-NUMBERING CROSS-REFERENCE
-============================================================
-
-This tracker re-numbered 1-29 for clarity. Original feedback
-items mapped:
-
-File 1 (10 items):  #1 = 1, #2 = 16, #3 = 21, #4 = 20, #5 = 22,
-                    #6 = 11, #7 = 23, #8 = 19, #9 = 24, #10 = 8,
-                    #11 = 3, #12 = 25
-File 2 (15 items):  #1 = 9, #2 = 10, #3 = 6, #4 = 14, #5 = 12,
-                    #6 = 26, #7 = 27, #8 = 17, #9 = 7, #10 = 5,
-                    #11 = 18, #12 = 13, #13 = 28, #14 = 4,
-                    #15 = 29, #16 = 2
-
-
-============================================================
-SUMMARY
-============================================================
-
-  Done                   23
-  Needs sample input      0
-  Partial / follow-up     1 (skipped - procedure-vs-process language pass)
-  Pending backlog         7
-  ----
-  Total                  31
-
-(Item 30 added 27 May - admin review-pack export request from Natalie.
- Item 31 added 27 May - AI regression: auto-apply was dropping NOTEs and
- activity titles were drifting over the 7-word cap. Neither is part of
- the original pilot feedback so they don't change the
- "X of 26 raw items shipped" stat below.)
-
-19 of 26 raw feedback items are now shipped (some items consolidated
-or split during triage, hence 29 entries in the tracker).
-
-Four batches deployed:
-  Batch 1 - 27 May - verb list, hallucination guards, role split,
-            activity-number duplicate, enrolled bug
-  Batch 2 - 27 May - task-level warning click, note body, role
-            prefix, Review card prominence, sticky save bar,
-            note-question wording, handover concision
-  Batch 3 - 27 May - Nintex PDF title parser (item 17) + role-line
-            detection (item 18). Verified against the AHPRA PDF and
-            the TeachVE PDF.
-  Batch 4 - 27 May - count-badge pulse on Save changes (item 19)
-            + Nintex "Export Procedure Text" format support
-            (bonus, not from the original feedback list).
-
-Next session priorities:
-  1. Triage backlog items 21-29 (drag/drop, dismiss, chat-to-doc,
-     group-by-type, etc.) and pick what to ship in v2.
-  2. Update the pilot tester pack to mention the procedure-text
-     export option.
+33. Auto-apply dropping in-task context / specifics
+    Source: Natalie

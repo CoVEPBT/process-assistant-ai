@@ -2123,6 +2123,44 @@
   .task-link-row a:hover { text-decoration: none; }
   .task-link-row strong { color: #475569; margin-right: 4px; }
 
+  /* v2 #27 - inline "+ Add task / + Add note / + Add activity" affordances
+     in the doc preview. Discreet by default, brand-coloured on hover. They
+     sit inside contenteditable="false" wrappers so the surrounding
+     contenteditable doc treats them as buttons, not text. */
+  .doc-add-actions {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    margin: 10px 0 4px;
+    padding: 6px 0 2px;
+    border-top: 1px dashed #E2E8F0;
+  }
+  .doc-add-actions-end {
+    margin: 16px 0 8px;
+    border-top: none;
+    padding-top: 0;
+    justify-content: flex-start;
+  }
+  .doc-add-btn {
+    appearance: none; -webkit-appearance: none;
+    background: transparent;
+    border: 1px dashed #CBD5E1;
+    color: #64748B;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-family: inherit; font-size: 12.5px; font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .doc-add-btn:hover {
+    border-color: var(--rmit-red);
+    background: #FFF5F5;
+    color: var(--rmit-red);
+    border-style: solid;
+  }
+  .doc-add-btn:focus-visible {
+    outline: 2px solid var(--rmit-red);
+    outline-offset: 2px;
+  }
+
   /* ============================================================
      COMPARE-WITH-ORIGINAL SWITCH (home v3 - Move 3)
      Replaces the three-button Updated / Show changes / Original toggle.
@@ -5496,31 +5534,69 @@ function looksLikeRoughNotes(text) {
 
 // Call the chat endpoint with a one-shot structuring prompt. Returns the
 // structured text (extracted from the AI's code block) or throws on failure.
+// After the AI replies we ALSO verify each output task line matches an
+// input line verbatim, so the user gets a warning if the AI drifted.
 async function structureNotesWithAI(rough, titleHint) {
   const prompt =
-    "You are a strict structuring assistant. The user has provided rough process notes.\n" +
+    "You are a STRICT structuring assistant. The user has provided rough process notes.\n" +
     "Your ONLY two jobs are:\n" +
-    "  1. GROUP the user's existing steps into activities (collections of related steps).\n" +
-    "  2. SUGGEST a short activity title for each group.\n\n" +
-    "HARD RULES - do not break these:\n" +
-    "- NEVER add, invent, infer, or imply steps, tasks, sub-steps, or content the user did not write.\n" +
-    "- NEVER reword, rewrite, paraphrase, summarise or 'tidy up' the user's steps. Copy each step VERBATIM, character-for-character.\n" +
+    "  1. ASSIGN activity numbers (1.0, 2.0, 3.0...) to group related steps together.\n" +
+    "  2. ASSIGN task letters (a, b, c...) within each activity, in the user's order.\n" +
+    "  3. SUGGEST a short activity title (2-7 verb-first words) for each group.\n\n" +
+    "Everything else - the actual step text - is COPIED VERBATIM from the user's notes.\n" +
+    "You are NOT a writer. You are NOT an editor. You are a SORTER + LABELLER. Your output\n" +
+    "is the user's exact words plus numbering + group labels.\n\n" +
+    "HARD RULES - violating any of these makes your output WORSE than no structuring at all:\n" +
+    "- NEVER add, invent, infer, or imply steps the user did not write. If the user wrote 4 steps,\n" +
+    "  your output has 4 task lines. Not 5. Not 3. Exactly 4.\n" +
+    "- NEVER reword, rewrite, paraphrase, summarise, expand, or 'tidy up' a step. Copy it\n" +
+    "  CHARACTER-FOR-CHARACTER, including punctuation, capitalisation, brackets, URLs, email\n" +
+    "  addresses, and any typos. The user can fix typos later.\n" +
     "- NEVER add NOTEs, decisions, branches, explanations, rationale, or commentary.\n" +
-    "- NEVER 'correct' the user's spelling, grammar, punctuation or capitalisation. Leave it exactly as written.\n" +
-    "- NEVER merge two of the user's lines into one, or split one line into two.\n" +
+    "- NEVER 'correct' spelling, grammar, punctuation or capitalisation. Leave it EXACTLY as written.\n" +
+    "- NEVER merge two of the user's lines into one task, or split one line into two tasks.\n" +
+    "  1 source line = 1 output task line.\n" +
+    "- NEVER drop a step, even if it looks redundant, off-topic, or out of place. Include it as-is\n" +
+    "  in whichever activity group fits best.\n" +
     "- Activity titles are the ONLY new text you produce. Keep them verb-first and 2-7 words.\n\n" +
     "Output format - return ONLY this, inside a single fenced code block, no commentary before or after:\n" +
     "```\n" +
     "1.0 <activity title you suggest>\n" +
-    "a <user's first step, verbatim>\n" +
-    "b <user's second step, verbatim>\n" +
+    "a <user's first step, copied verbatim>\n" +
+    "b <user's second step, copied verbatim>\n" +
     "\n" +
     "2.0 <next activity title you suggest>\n" +
-    "a <user's next step, verbatim>\n" +
+    "a <user's next step, copied verbatim>\n" +
     "...\n" +
     "```\n\n" +
-    "Numbering: activities as 1.0, 2.0, 3.0... (max 7). Tasks lettered a, b, c... within each activity (max 10).\n" +
-    "Each line of the user's notes that describes an action becomes exactly ONE task, in the user's exact words.\n" +
+    "Numbering: activities as 1.0, 2.0, 3.0... (max 7). Tasks lettered a, b, c... within each\n" +
+    "activity (max 10). Each line of the user's notes that describes an action becomes EXACTLY ONE\n" +
+    "task, in the user's EXACT words.\n\n" +
+    "WORKED EXAMPLE:\n" +
+    "  INPUT:\n" +
+    "    request a new class from student lifecycle\n" +
+    "    they email back with confirmation\n" +
+    "    update SAMS with the new class details\n" +
+    "    notify the program coordinator once done\n" +
+    "  CORRECT OUTPUT:\n" +
+    "    1.0 Request new class\n" +
+    "    a request a new class from student lifecycle\n" +
+    "    b they email back with confirmation\n" +
+    "    \n" +
+    "    2.0 Update SAMS\n" +
+    "    a update SAMS with the new class details\n" +
+    "    b notify the program coordinator once done\n" +
+    "  WRONG OUTPUT (do NOT do this):\n" +
+    "    1.0 Request New Class                          <- DO NOT change capitalisation\n" +
+    "    a Request a new class from Student Lifecycle.  <- DO NOT 'tidy' the step\n" +
+    "    b Student Lifecycle confirms via email.        <- DO NOT paraphrase\n" +
+    "    c First check if a class already exists.       <- DO NOT add steps the user didn't write\n\n" +
+    "MANDATORY SELF-CHECK before emitting the code block:\n" +
+    "  1. Count the lines in the user's notes that describe an action. Count the task lines in\n" +
+    "     your output. They must be EQUAL.\n" +
+    "  2. For each task line in your output, find the matching source line in the user's notes.\n" +
+    "     The task text must be character-identical to that source line. If not, fix it.\n" +
+    "  3. Confirm you haven't added, merged, split, dropped, or reworded any step.\n" +
     (titleHint ? "\nThe process is called: " + titleHint + "\n" : "") +
     "\nRough notes to structure:\n" +
     rough;
@@ -5548,6 +5624,49 @@ async function structureNotesWithAI(rough, titleHint) {
   const m = reply.match(/```[a-zA-Z]*\n([\s\S]*?)```/);
   const structured = m ? m[1].trim() : reply.trim();
   if (!structured) throw new Error('AI returned an empty response.');
+
+  // Post-process verification: confirm the AI hasn't edited content.
+  // Extract every task line ("a X", "b X", "c X" - lowercase letter then space)
+  // from the structured output and check each one appears verbatim in the
+  // user's original rough notes. If any drift is detected we surface a soft
+  // warning via toast so the user knows to spot-check the result.
+  try {
+    const norm = (s) => String(s || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    const sourceLines = new Set(
+      String(rough || '').split(/\r?\n/).map(norm).filter(Boolean)
+    );
+    const taskLineRe = /^[a-z]\s+(.+)$/;
+    const drifted = [];
+    structured.split(/\r?\n/).forEach(line => {
+      const t = line.trim();
+      const mm = t.match(taskLineRe);
+      if (!mm) return;
+      const taskText = norm(mm[1]);
+      if (!taskText) return;
+      // Loose match: exact match OR a substring match in either direction
+      // (handles the AI legitimately stripping a leading bullet marker).
+      let matched = sourceLines.has(taskText);
+      if (!matched) {
+        for (const src of sourceLines) {
+          if (src.includes(taskText) || taskText.includes(src)) { matched = true; break; }
+        }
+      }
+      if (!matched) drifted.push(mm[1].slice(0, 60));
+    });
+    if (drifted.length && typeof showToast === 'function') {
+      const sample = drifted[0] + (drifted[0].length === 60 ? '…' : '');
+      showToast(
+        'Heads up: the AI may have edited some task wording (' + drifted.length +
+        ' task' + (drifted.length === 1 ? '' : 's') +
+        ' did not match your original notes exactly, e.g. "' + sample +
+        '"). Spot-check the result before analysing.',
+        'warning', 8000
+      );
+    }
+  } catch (e) {
+    console.warn('[structure] verification failed:', e);
+  }
+
   return structured;
 }
 
@@ -9089,13 +9208,28 @@ function renderDocPreview(m) {
     });
     a.notes.forEach((n, ni) => {
       const noteId = 'doc-note-' + actId + '-' + ni;
-      html += `<div class="note" id="${noteId}"><strong>NOTE:</strong> ${escapeHtml(n.title)}<br>${escapeHtml(n.body||'')}</div>`;
+      // The CSS .note::before renders the orange "NOTE" pill, so we don't
+      // also write "NOTE:" inline. Title sits next to the pill, body below.
+      html += `<div class="note" id="${noteId}"><strong class="note-title">${escapeHtml(n.title)}</strong><br>${escapeHtml(n.body||'')}</div>`;
     });
     a.links.forEach(l => {
       html += `<div class="task" style="font-style:italic;color:#666;">&#x21B3; Linked process: ${escapeHtml(l.name)}</div>`;
     });
+    // v2 #27 - discreet "Add task" / "Add note" buttons inside each activity.
+    // contenteditable="false" stops the contenteditable parent from treating
+    // the button as text. data-act-num lets the click handler find the right
+    // activity when inserting.
+    html += '<div class="doc-add-actions" contenteditable="false">' +
+      '<button type="button" class="doc-add-btn doc-add-task" data-act-num="' + escapeHtml(a.number) + '">+ Add task</button>' +
+      '<button type="button" class="doc-add-btn doc-add-note" data-act-num="' + escapeHtml(a.number) + '">+ Add note</button>' +
+      '</div>';
     html += `</div>`;
   });
+  // v2 #27 - "Add activity" button after the last activity. Outside any
+  // .activity wrapper so a new card can be appended.
+  html += '<div class="doc-add-actions doc-add-actions-end" contenteditable="false">' +
+    '<button type="button" class="doc-add-btn doc-add-activity">+ Add activity</button>' +
+    '</div>';
   return html;
 }
 
@@ -10907,6 +11041,118 @@ if (docPreviewEl && docLiveRegion) {
   });
 }
 
+// v2 #27 - inline "+ Add task / + Add note / + Add activity" buttons.
+// Event delegation off the doc preview so newly-added activities also work
+// without re-wiring. Numbering is computed at click time from the current
+// DOM state, so manual renumbers by the user are respected.
+if (docPreviewEl) {
+  // Place caret inside a freshly-inserted element so the user can type
+  // straight away. Wrapped in rAF so the browser has laid the element out.
+  const focusNewElement = (el) => {
+    if (!el) return;
+    requestAnimationFrame(() => {
+      try {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Select the placeholder text so the next keystroke replaces it.
+        const range = document.createRange();
+        const sel = window.getSelection();
+        // Find the deepest text node and select its content.
+        const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null);
+        let last = null;
+        while (walker.nextNode()) last = walker.currentNode;
+        if (last) {
+          range.selectNodeContents(last);
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+        el.focus({ preventScroll: true });
+      } catch (e) { /* best-effort */ }
+    });
+  };
+
+  docPreviewEl.addEventListener('click', (e) => {
+    const target = e.target.closest('.doc-add-btn');
+    if (!target) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    // -------- + Add task ----------
+    if (target.classList.contains('doc-add-task')) {
+      const actCard = target.closest('.activity');
+      if (!actCard) return;
+      // Compute the next letter based on the existing .task children.
+      const existingTasks = actCard.querySelectorAll('.task');
+      const nextLetter = (existingTasks.length < 26)
+        ? String.fromCharCode(97 + existingTasks.length)
+        : 'z';
+      const actId = actCard.id.replace(/^doc-activity-/, '');
+      const newTask = document.createElement('div');
+      newTask.className = 'task';
+      newTask.id = 'doc-task-' + actId + '-' + nextLetter;
+      newTask.innerHTML = '<strong>' + nextLetter + '.</strong> [Click to add task]';
+      // Insert before the .doc-add-actions row so the buttons stay last.
+      const actionsRow = actCard.querySelector('.doc-add-actions');
+      actCard.insertBefore(newTask, actionsRow);
+      focusNewElement(newTask);
+      return;
+    }
+
+    // -------- + Add note ----------
+    if (target.classList.contains('doc-add-note')) {
+      const actCard = target.closest('.activity');
+      if (!actCard) return;
+      const noteCount = actCard.querySelectorAll('.note').length;
+      const actId = actCard.id.replace(/^doc-activity-/, '');
+      const newNote = document.createElement('div');
+      newNote.className = 'note';
+      newNote.id = 'doc-note-' + actId + '-' + noteCount;
+      newNote.innerHTML = '<strong class="note-title">[Question?]</strong><br>[Answer]';
+      const actionsRow = actCard.querySelector('.doc-add-actions');
+      actCard.insertBefore(newNote, actionsRow);
+      focusNewElement(newNote);
+      return;
+    }
+
+    // -------- + Add activity ----------
+    if (target.classList.contains('doc-add-activity')) {
+      // Compute next activity number by looking at the last .activity in the doc.
+      const acts = docPreviewEl.querySelectorAll('.activity');
+      let nextNum = '1.0';
+      if (acts.length) {
+        const lastNum = acts[acts.length - 1].querySelector('.num');
+        if (lastNum) {
+          const m = String(lastNum.textContent || '').match(/^(\d+)/);
+          if (m) nextNum = (parseInt(m[1], 10) + 1) + '.0';
+        }
+      }
+      const actId = nextNum.replace('.', '-');
+      const newAct = document.createElement('div');
+      newAct.className = 'activity';
+      newAct.id = 'doc-activity-' + actId;
+      newAct.innerHTML =
+        '<div><span class="num">' + nextNum + '</span> <strong>[New activity title]</strong></div>' +
+        '<div class="role role-empty" data-empty="1"><span class="role-placeholder">[Click to add accountable role]</span></div>' +
+        '<div class="task" id="doc-task-' + actId + '-a"><strong>a.</strong> [Click to add task]</div>' +
+        '<div class="doc-add-actions" contenteditable="false">' +
+          '<button type="button" class="doc-add-btn doc-add-task" data-act-num="' + nextNum + '">+ Add task</button>' +
+          '<button type="button" class="doc-add-btn doc-add-note" data-act-num="' + nextNum + '">+ Add note</button>' +
+        '</div>';
+      // The "Add activity" button sits in a wrapper outside any .activity;
+      // insert the new activity just before that wrapper to keep the button last.
+      const endRow = target.closest('.doc-add-actions-end');
+      if (endRow && endRow.parentNode) {
+        endRow.parentNode.insertBefore(newAct, endRow);
+      } else {
+        docPreviewEl.appendChild(newAct);
+      }
+      // Focus the title <strong> so the user can type the activity title.
+      const titleEl = newAct.querySelector('strong');
+      focusNewElement(titleEl);
+      return;
+    }
+  });
+}
+
 // P3 #13: Two-step confirmation for the destructive 'Restore original' action
 let restoreConfirmTimer = null;
 const restoreBtn = document.getElementById('resetEditsBtn');
@@ -12695,467 +12941,4 @@ createChatSurface({
 
     // Render process-wide banner
     if (processWide.length > 0 && procEl) {
-      const banner = document.createElement('div');
-      banner.id = 'inlineProcessFlags';
-      banner.className = 'inline-process-flags';
-      banner.innerHTML = '<strong>' + processWide.length + ' process-wide ' +
-        (processWide.length === 1 ? 'item' : 'items') + ':</strong><ul>' +
-        processWide.map(i => '<li>' + i.message + (i.suggestion ? ' - <em>' + i.suggestion + '</em>' : '') + '</li>').join('') +
-        '</ul>';
-      procEl.insertAdjacentElement('beforebegin', banner);
-    }
-  }
-
-  function setMode(next) {
-    mode = next;
-    try { localStorage.setItem(KEY, mode); } catch (e) {}
-    const sidebarBtn = document.getElementById('flagsViewSidebarBtn');
-    const inlineBtn  = document.getElementById('flagsViewInlineBtn');
-    const sidebar = document.getElementById('docSidebar');
-    if (sidebarBtn) { sidebarBtn.classList.toggle('is-active', mode === 'sidebar'); sidebarBtn.setAttribute('aria-selected', String(mode === 'sidebar')); }
-    if (inlineBtn)  { inlineBtn.classList.toggle('is-active', mode === 'inline');  inlineBtn.setAttribute('aria-selected', String(mode === 'inline')); }
-    if (sidebar) sidebar.classList.toggle('inline-mode', mode === 'inline');
-    if (mode === 'inline') applyInlineFlags();
-    else clearInlineFlags();
-  }
-
-  // Expose so re-renders can re-apply
-  window.refreshInlineFlags = function () { if (mode === 'inline') applyInlineFlags(); };
-
-  document.addEventListener('DOMContentLoaded', () => {
-    const sidebarBtn = document.getElementById('flagsViewSidebarBtn');
-    const inlineBtn  = document.getElementById('flagsViewInlineBtn');
-    if (sidebarBtn) sidebarBtn.addEventListener('click', () => setMode('sidebar'));
-    if (inlineBtn)  inlineBtn.addEventListener('click',  () => setMode('inline'));
-    // Restore saved mode visually (rendering happens after analyse)
-    setMode(mode);
-  });
-})();
-</script>
-
-
-<script>
-// 'Switch path' button - brings the two action cards back so the user can pick again
-(function wirePathStatusSwitch() {
-  document.addEventListener('DOMContentLoaded', () => {
-    const btn = document.getElementById('pathStatusSwitch');
-    if (!btn) return;
-    btn.addEventListener('click', () => {
-      const cards = document.getElementById('resultsActionCards');
-      const ps = document.getElementById('pathStatus');
-      if (cards) cards.classList.remove('hidden');
-      if (ps) ps.classList.add('hidden');
-      // Scroll to the cards so the user sees them again
-      if (cards) cards.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    });
-  });
-})();
-</script>
-
-
-<script>
-// Discreet summary chips - show counts in the corner instead of inline banners
-(function wireSummaryChips() {
-  function showChips() {
-    const flagEl = document.getElementById('flagHeadline');
-    const autoFix = document.getElementById('combinedFixBanner');
-    const chipsWrap = document.getElementById('summaryChips');
-    const chipOpps = document.getElementById('summaryChipOpps');
-    const chipFixes = document.getElementById('summaryChipFixes');
-    const oppsCount = document.getElementById('summaryChipOppsCount');
-    const fixesCount = document.getElementById('summaryChipFixesCount');
-
-    // Read counts from existing data
-    const issues = (typeof currentIssues !== 'undefined' ? currentIssues : [])
-      .filter(i => !i.informational);
-    const totalOpps = issues.length;
-    const autoFixHidden = autoFix && autoFix.classList.contains('hidden');
-    const fixesText = (document.getElementById('combinedFixBannerText') || {}).innerText || '';
-    const fixesMatch = fixesText.match(/(\d+)/);
-    const fixesNum = fixesMatch ? parseInt(fixesMatch[1], 10) : 0;
-
-    // Populate chip counts
-    if (oppsCount) oppsCount.textContent = String(totalOpps);
-    if (fixesCount) fixesCount.textContent = String(fixesNum);
-
-    // Summary chips disabled per UX request - they looked floating and orphaned
-    // next to the doc. The quality flags count is already shown in the sidebar
-    // header (via the sidebar list itself), and the auto-fix list lives in the
-    // green note above the doc. We force-hide all chip UI so nothing renders.
-    if (chipOpps) chipOpps.style.display = 'none';
-    if (chipFixes) chipFixes.style.display = 'none';
-    if (chipsWrap) chipsWrap.classList.add('hidden');
-    // Leave the flag headline + auto-fix banner visible (we no longer swap them
-    // for the chip strip).
-  }
-
-  document.addEventListener('DOMContentLoaded', () => {
-    // Opps chip - scroll to the sidebar / inline flag area
-    const chipOpps = document.getElementById('summaryChipOpps');
-    if (chipOpps) chipOpps.addEventListener('click', () => {
-      const sidebar = document.getElementById('docSidebar');
-      if (sidebar && !sidebar.hidden) {
-        sidebar.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      } else if (typeof window.openFlagsSidebar === 'function') {
-        window.openFlagsSidebar();
-      }
-    });
-    // Fixes chip - open the 'what I changed' modal
-    const chipFixes = document.getElementById('summaryChipFixes');
-    if (chipFixes) chipFixes.addEventListener('click', () => {
-      const m = document.getElementById('autofixModal');
-      if (m) m.setAttribute('aria-hidden', 'false');
-    });
-  });
-
-  window.showSummaryChips = showChips;
-})();
-</script>
-
-
-<script>
-// Save edits - extract the edited model from the doc preview DOM and re-render
-// the workflow (BPMN + Mermaid) so it reflects the user's text changes.
-(function wireSaveEdits() {
-  function extractText(el) {
-    if (!el) return '';
-    return (el.innerText || el.textContent || '').replace(/\s+/g, ' ').trim();
-  }
-  function stripLabel(text, label) {
-    // "Owner: Sarah Chen" -> "Sarah Chen". Tolerates dash separators too.
-    const re = new RegExp('^\\s*' + label + '\\s*[:\\-\\u2013\-]\\s*', 'i');
-    return text.replace(re, '').trim();
-  }
-
-  function extractModelFromDocPreview() {
-    const dp = document.getElementById('docPreview');
-    if (!dp || typeof currentModel === 'undefined' || !currentModel) return null;
-    const m = JSON.parse(JSON.stringify(currentModel));
-
-    const titleEl = dp.querySelector('#doc-title');
-    if (titleEl) m.title = extractText(titleEl);
-
-    // Meta fields - strip the bold label prefix, treat '-' as empty
-    const metaFields = [
-      { id: 'doc-meta-owner', label: 'Owner', key: 'owner' },
-      { id: 'doc-meta-expert', label: 'Expert', key: 'expert' },
-      { id: 'doc-meta-trigger', label: 'Trigger', key: 'trigger' },
-      { id: 'doc-meta-inputs', label: 'Inputs', key: 'inputs' },
-      { id: 'doc-meta-outputs', label: 'Outputs', key: 'outputs' }
-    ];
-    metaFields.forEach(({ id, label, key }) => {
-      const el = dp.querySelector('#' + id);
-      if (!el) {
-        console.warn('[save-edits] missing element for', id, '- keeping previous value:', m[key]);
-        return;
-      }
-      let txt = stripLabel(extractText(el), label);
-      // Collapse internal whitespace + strip Unicode dashes used for placeholder
-      txt = txt.replace(/\s+/g, ' ').trim();
-      if (txt === '-' || txt === '-' || txt === '\u2013') txt = '';
-      m[key] = txt;
-    });
-
-    // Objective + Background - h2 followed by <p>
-    const obj = dp.querySelector('#doc-objective');
-    if (obj && obj.nextElementSibling) m.objective = extractText(obj.nextElementSibling);
-    const bg = dp.querySelector('#doc-background');
-    if (bg && bg.nextElementSibling) m.background = extractText(bg.nextElementSibling);
-
-    // Activities - rebuild from the DOM
-    const actEls = dp.querySelectorAll('.activity');
-    if (actEls.length > 0) {
-      m.activities = [];
-      actEls.forEach((actEl, idx) => {
-        const numEl = actEl.querySelector('.num');
-        const number = numEl ? extractText(numEl) : (idx + 1) + '.0';
-        // First .div containing the activity title - find the first <strong> that isn't the number
-        let title = '';
-        const firstDiv = actEl.querySelector(':scope > div');
-        if (firstDiv) {
-          // Strip the .num text from the start
-          let fullText = extractText(firstDiv);
-          if (numEl) fullText = fullText.replace(number, '').trim();
-          title = fullText;
-        }
-        const roleEl = actEl.querySelector('.role');
-        let role = roleEl ? stripLabel(extractText(roleEl), 'Role') : '';
-        // Ignore the "Click to add accountable role" placeholder - treat as empty
-        // so we don't accidentally export the placeholder text as the role.
-        if (/^\[?\s*click to add accountable role\s*\]?$/i.test(role.trim())) {
-          role = '';
-        }
-
-        const tasks = [];
-        actEl.querySelectorAll('.task').forEach(taskEl => {
-          const fullText = extractText(taskEl);
-          // Letter prefix like "a." or "a"
-          const match = fullText.match(/^([a-z])\.?\s+(.+)$/i);
-          if (match) {
-            tasks.push({ letter: match[1].toLowerCase(), text: match[2] });
-          } else if (fullText) {
-            const next = String.fromCharCode(97 + tasks.length);
-            tasks.push({ letter: next, text: fullText });
-          }
-        });
-
-        const notes = [];
-        actEl.querySelectorAll('.note').forEach(noteEl => {
-          // NOTE block has <strong>NOTE:</strong> question <br> body
-          const html = noteEl.innerHTML.replace(/<strong>NOTE:<\/strong>/i, '').trim();
-          const parts = html.split(/<br\s*\/?>/i);
-          const titlePart = (parts[0] || '').replace(/<[^>]+>/g, '').trim();
-          const bodyPart = (parts.slice(1).join('\n') || '').replace(/<[^>]+>/g, '').trim();
-          if (titlePart) notes.push({ title: titlePart, body: bodyPart });
-        });
-
-        m.activities.push({
-          number,
-          title,
-          role,
-          tasks,
-          notes,
-          links: []
-        });
-      });
-    }
-    return m;
-  }
-
-  async function reRenderWorkflow() {
-    const wf = document.getElementById('workflowRender');
-    if (!wf || typeof currentBpmnXml === 'undefined' || !currentBpmnXml) return;
-    if (typeof BpmnJS === 'undefined') return;
-    try {
-      if (window.bpmnViewer) { try { window.bpmnViewer.destroy(); } catch(e) {} }
-      const newViewer = new BpmnJS({ container: wf });
-      window.bpmnViewer = newViewer;
-      await newViewer.importXML(currentBpmnXml);
-      try { newViewer.get('canvas').zoom('fit-viewport', 'auto'); } catch (e) {}
-      if (typeof applyBpmnTheme === 'function') applyBpmnTheme('nintex');
-      if (typeof injectBpmnAccessibility === 'function') injectBpmnAccessibility();
-    } catch (e) {
-      console.error('[save-edits] workflow re-render failed:', e);
-    }
-  }
-
-  // Did anything that appears in the visual workflow change? Only title,
-  // activity numbers, activity titles, and activity roles drive the diagram.
-  function workflowFieldsChanged(oldModel, newModel) {
-    if (!oldModel || !newModel) return true;
-    if ((oldModel.title || '') !== (newModel.title || '')) return true;
-    const oldActs = oldModel.activities || [];
-    const newActs = newModel.activities || [];
-    if (oldActs.length !== newActs.length) return true;
-    for (let i = 0; i < newActs.length; i++) {
-      const o = oldActs[i] || {};
-      const n = newActs[i];
-      if ((o.number || '') !== (n.number || '')) return true;
-      if ((o.title  || '') !== (n.title  || '')) return true;
-      if ((o.role   || '') !== (n.role   || '')) return true;
-    }
-    return false;
-  }
-
-  async function saveEditsAndRefresh() {
-    const newModel = extractModelFromDocPreview();
-    if (!newModel) {
-      if (typeof showToast === 'function') showToast('Nothing to save yet - analyse a draft first.', 'error');
-      return;
-    }
-    // Snapshot so we can detect whether workflow-relevant fields changed
-    const oldModelSnapshot = (typeof currentModel !== 'undefined' && currentModel)
-      ? JSON.parse(JSON.stringify(currentModel))
-      : null;
-    const workflowChanged = workflowFieldsChanged(oldModelSnapshot, newModel);
-
-    // Update globals
-    currentModel = newModel;
-    const _buildMermaid = window.buildMermaid || (typeof buildMermaid === 'function' ? buildMermaid : null);
-    const _buildBpmnXml = window.buildBpmnXml || (typeof buildBpmnXml === 'function' ? buildBpmnXml : null);
-    const _runRules    = window.runRulesEngine || (typeof runRulesEngine === 'function' ? runRulesEngine : null);
-    // Only regenerate diagram source if it actually changed - keeps zoom/pan
-    if (workflowChanged) {
-      if (_buildMermaid) currentMermaid = _buildMermaid(newModel);
-      if (_buildBpmnXml) currentBpmnXml = _buildBpmnXml(newModel);
-    }
-
-    console.log('[save-edits] extracted model:', {
-      title: newModel.title, owner: newModel.owner, expert: newModel.expert,
-      trigger: newModel.trigger, activities: newModel.activities.length
-    });
-    console.log('[save-edits] workflow fields changed?', workflowChanged);
-
-    // Re-run the rules engine + refresh the quality flags sidebar (every save)
-    let resolvedCount = 0;
-    if (_runRules) {
-      // v2 #23: track ACTIVE issues for the "N resolved" toast so dismissed
-      // flags don't count toward "resolved by editing".
-      const oldActiveCount = (typeof getActiveIssues === 'function'
-        ? getActiveIssues()
-        : (currentIssues || [])
-      ).filter(i => !i.informational).length;
-      const oldCount = oldActiveCount;
-      currentIssues = _runRules(newModel);
-      console.log('[save-edits] new issues:', currentIssues.length, currentIssues.map(i => i.id));
-      if (typeof window.refreshIssuesSidebar === 'function') window.refreshIssuesSidebar();
-      // Update the discreet count pill next to the sidebar QUALITY FLAGS header
-      if (typeof window.updateSidebarOppsCount === 'function') {
-        window.updateSidebarOppsCount();
-      }
-      // Pilot feedback item 19: pulse the count badge so the user's eye
-      // lands on the refreshed number. Re-trigger by removing the class
-      // first (so consecutive saves replay the animation).
-      const badge = document.getElementById('sidebarOppsCount');
-      if (badge) {
-        badge.classList.remove('is-pulsing');
-        // force a reflow so the animation restarts cleanly on rapid saves
-        // eslint-disable-next-line no-unused-expressions
-        badge.offsetWidth;
-        badge.classList.add('is-pulsing');
-        const clearPulse = () => {
-          badge.classList.remove('is-pulsing');
-          badge.removeEventListener('animationend', clearPulse);
-        };
-        badge.addEventListener('animationend', clearPulse);
-      }
-      // v2 #23: count ACTIVE issues so dismissed flags don't keep the user
-      // soft-gated after Save changes re-runs the rules.
-      const activeIssues = (typeof getActiveIssues === 'function') ? getActiveIssues() : currentIssues;
-      const newCount = activeIssues.filter(i => !i.informational).length;
-      resolvedCount = Math.max(0, oldCount - newCount);
-      const oppsCount = document.getElementById('summaryChipOppsCount');
-      if (oppsCount) oppsCount.textContent = String(newCount);
-      const oppsChip = document.getElementById('summaryChipOpps');
-      if (oppsChip) oppsChip.style.display = (newCount > 0) ? '' : 'none';
-
-      // Update the Export button's error badge - soft-gate is driven by error count
-      const errorCount = activeIssues.filter(i => i.severity === 'error').length;
-      const errBadge = document.getElementById('actionExportErrorBadge');
-      if (errBadge) {
-        if (errorCount > 0) {
-          errBadge.textContent = '\u26A0 ' + errorCount + ' error' + (errorCount === 1 ? '' : 's');
-          errBadge.classList.remove('hidden');
-        } else {
-          errBadge.classList.add('hidden');
-        }
-      }
-      // Update the export-modal warning too if it's currently open / will open
-      const exportWarning = document.getElementById('exportWarning');
-      const exportWarningCount = document.getElementById('exportWarningCount');
-      if (exportWarning && exportWarningCount) {
-        exportWarningCount.textContent = String(errorCount);
-        exportWarning.classList.toggle('hidden', errorCount === 0);
-      }
-    } else {
-      console.warn('[save-edits] runRulesEngine not available; quality flags sidebar not refreshed');
-    }
-
-    // Re-render the workflow only when relevant fields changed
-    if (workflowChanged) {
-      await reRenderWorkflow();
-      const titleEl = document.getElementById('workflowTitle');
-      if (titleEl) titleEl.textContent = currentModel.title || '';
-    }
-
-    if (typeof showToast === 'function') {
-      let msg;
-      if (workflowChanged && resolvedCount > 0) {
-        msg = 'Workflow + quality flags updated. ' + resolvedCount + ' quality flag' + (resolvedCount === 1 ? '' : 's') + ' resolved.';
-      } else if (workflowChanged) {
-        msg = 'Workflow updated with your edits.';
-      } else if (resolvedCount > 0) {
-        msg = 'Quality flags updated. ' + resolvedCount + ' quality flag' + (resolvedCount === 1 ? '' : 's') + ' resolved.';
-      } else {
-        msg = 'Changes saved. Quality flags refreshed.';
-      }
-      showToast(msg, 'success', 4500);
-    }
-  }
-
-  document.addEventListener('DOMContentLoaded', () => {
-    const btn = document.getElementById('saveEditsBtn');
-    if (btn) btn.addEventListener('click', saveEditsAndRefresh);
-  });
-
-  // Expose so other code paths can call it
-  window.saveEditsAndRefresh = saveEditsAndRefresh;
-})();
-</script>
-
-
-<script>
-// Top-of-doc 'Save changes' button - same behaviour as the bottom one
-(function wireTopSaveBtn() {
-  document.addEventListener('DOMContentLoaded', () => {
-    const top = document.getElementById('saveEditsTopBtn');
-    if (top) top.addEventListener('click', () => {
-      if (typeof window.saveEditsAndRefresh === 'function') {
-        window.saveEditsAndRefresh();
-      } else {
-        const bottom = document.getElementById('saveEditsBtn');
-        if (bottom) bottom.click();
-      }
-    });
-  });
-})();
-</script>
-
-<script>
-// ============================================================
-// SharePoint iframe plumbing
-// When the tool is embedded as an iframe (in SharePoint or anywhere else),
-// these two handlers make the embed feel native:
-//   1. Auto-resize: post our rendered height up to the parent so the iframe
-//      grows/shrinks to fit. No inner scroll bars.
-//   2. Viewport sync: when the host posts its visible viewport position, we
-//      use it to position modals where the user is actually looking, not at
-//      the geometric centre of a tall iframe.
-// Both no-op when the page is loaded directly (not in an iframe).
-// Pair this with the snippet in /sharepoint-embed-snippet.html on the host.
-// ============================================================
-(function setupIframeBridge() {
-  if (window.parent === window) return; // not in an iframe - nothing to do
-  document.body.classList.add('in-iframe');
-
-  // ---- Auto-resize ----
-  let lastHeight = 0;
-  function postHeight() {
-    const h = Math.max(
-      document.body.scrollHeight,
-      document.documentElement.scrollHeight,
-      document.body.offsetHeight,
-      document.documentElement.offsetHeight
-    );
-    if (Math.abs(h - lastHeight) > 8) {
-      lastHeight = h;
-      try { window.parent.postMessage({ type: 'cove-tool-resize', height: h }, '*'); } catch (e) {}
-    }
-  }
-  window.addEventListener('load', postHeight);
-  if (window.ResizeObserver) {
-    new ResizeObserver(postHeight).observe(document.body);
-  }
-  // Polling fallback for late-mounting content (chat messages, AI results)
-  setInterval(postHeight, 1000);
-
-  // ---- Viewport sync ----
-  // The host posts {visibleTop, visibleHeight} whenever it scrolls or resizes.
-  // We expose those as CSS custom properties so any modal CSS can centre to
-  // the user's actual viewport instead of the iframe's full height.
-  window.addEventListener('message', (event) => {
-    if (!event.data || event.data.type !== 'cove-host-viewport') return;
-    const visibleTop = Math.max(0, event.data.visibleTop || 0);
-    const visibleHeight = event.data.visibleHeight || window.innerHeight;
-    document.documentElement.style.setProperty('--host-modal-top', visibleTop + 'px');
-    document.documentElement.style.setProperty('--host-modal-height', visibleHeight + 'px');
-  });
-  // Ask the host to send viewport info now (in case the load order means we
-  // missed its initial post).
-  try { window.parent.postMessage({ type: 'cove-tool-request-viewport' }, '*'); } catch (e) {}
-})();
-</script>
-
-</body>
-</html>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       
+      const banner = do
