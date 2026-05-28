@@ -12256,6 +12256,13 @@ createChatSurface({
       'PRESERVE URLS: If a task in the source contains a URL (https://...), keep it in the same task ' +
       'in your output. Do not drop or rewrite URLs. URLs are typically training-module or system links ' +
       'the process owner has provided - removing them breaks the documented process.\n' +
+      'NEVER LEAVE A TASK EMPTY: If a source task has BOTH descriptive text AND a URL ' +
+      '(e.g. "[Web Link] Trades & Dental Weekly TT"), your output for that task MUST keep BOTH the ' +
+      'description AND the URL. The "[Web Link]" marker is a parser artefact - drop it but KEEP the ' +
+      'descriptive words that follow it. So "[Web Link] Trades & Dental Weekly TT" becomes a task ' +
+      'with the URL attached AND descriptive text "Trades & Dental Weekly TT". Never emit a task ' +
+      'letter ("a", "b", "c") with no descriptive text - if you find yourself doing that, restore the ' +
+      'source text for that task.\n' +
       'PRESERVE EMAIL ADDRESSES - NON-NEGOTIABLE: If a task contains an email address (anything matching ' +
       'x@y.tld), keep it verbatim in the SAME task in your output. Emails in process docs are almost ' +
       'always shared / functional inboxes (e.g. "ve.deliveryops@rmit.edu.au", "studentregistration@' +
@@ -12304,10 +12311,36 @@ createChatSurface({
       'applicable", "the relevant", "as required". These add no information. SPECIFIC NOUNS (column\n' +
       'names, section names, tab names, view names, document section references, role names, criteria\n' +
       'descriptions) are NOT filler - keep them in the task, or spin them off as NOTEs. Never delete\n' +
-      'them.\n' +
+      'them.\n\n' +
+      'EXAMPLES YOU MUST GET RIGHT (real cases the tool has caught):\n' +
+      '  PARENTHETICAL QUALIFIERS - never drop:\n' +
+      '    SOURCE: "Obtain delivery schedules for all planned groups (continuing and new) for the year"\n' +
+      '    WRONG : "Obtain delivery schedules for all planned groups for the year"   <- drops "(continuing and new)"\n' +
+      '    RIGHT : "Obtain delivery schedules for all planned groups (continuing and new) for the year"\n' +
+      '  STEP / DOCUMENT NUMBER REFERENCES - never drop:\n' +
+      '    SOURCE: "Follow steps 3.0 & 4.0 from class scheduling process"\n' +
+      '    WRONG : "Follow steps from the class scheduling process"   <- drops "3.0 & 4.0"\n' +
+      '    RIGHT : "Follow steps 3.0 and 4.0 from the class scheduling process"\n' +
+      '  SYSTEM / TABLE / VIEW NAMES - never generalise:\n' +
+      '    SOURCE: "Set up A&T schedule in SAMS to specify attendance dates for student groups"\n' +
+      '    WRONG : "Set attendance dates for the student groups"   <- drops "A&T schedule", "SAMS"\n' +
+      '    RIGHT : "Set up the A&T schedule in SAMS to specify attendance dates for student groups"\n' +
+      '  ADDITIONAL-ACTION CONJUNCTIONS - if a sentence chains TWO actions ("X and Y", "X as well as Y"),\n' +
+      '  do NOT silently drop the second action. Either keep both in one task (if it still fits 18 words),\n' +
+      '  or split into TWO tasks. NEVER delete one.\n' +
+      '    SOURCE: "Use guide to update room and staff information, as well as any future changes"\n' +
+      '    WRONG : "Use the guide to update room and staff information"   <- drops "as well as any future changes"\n' +
+      '    RIGHT : Task "Use the guide to update room and staff information" + Task "Update the guide with any future delivery changes"\n\n' +
       'MANDATORY SELF-CHECK: for every task you have shortened by more than 4 words from the source,\n' +
-      'ask "did I delete a specific noun (column / section / view / tool / document / role / criterion)\n' +
-      'the reader would need?" If yes, either restore it to the task or add a NOTE.\n\n' +
+      'ask in this order:\n' +
+      '  1. Did I drop a parenthetical "(...)" qualifier? If so, restore it.\n' +
+      '  2. Did I drop a specific number reference (step 3.0, section 4, appendix B)? If so, restore it.\n' +
+      '  3. Did I drop or generalise a system / table / view / tool name (SAMS, Workday, AHPRA,\n' +
+      '     "A&T schedule", "Staff Name column")? If so, restore it.\n' +
+      '  4. Did I drop an additional action joined by "and" / "as well as" / "plus"? If so, either\n' +
+      '     keep both actions or split into two tasks - do NOT delete one.\n' +
+      '  5. If yes to any of the above and the result would exceed 18 words, spin the dropped detail\n' +
+      '     off into a NOTE under the same activity rather than deleting it.\n\n' +
       'PRESERVE ROLES - THIS IS NON-NEGOTIABLE:\n' +
       'The role list (the [Role Name] segment in square brackets at the end of each activity heading line) ' +
       'is the process owner\'s explicit decision about who is accountable. Do NOT add roles, do NOT remove ' +
@@ -12423,8 +12456,18 @@ createChatSurface({
       // AI's three-block output format doesn't include URLs, so the rewrite
       // drops them. We match new tasks back to original tasks by activity
       // index + task letter and copy the attachment over.
+      // Item #32: ALSO restore the original task TEXT when the AI dropped
+      // it - sometimes the AI leaves an empty task letter with just a Link:
+      // row underneath. If the new task is empty but the source had text,
+      // bring the source text back. The "[Web Link]" marker (left by the
+      // mammoth-based docx parser when it strips a hyperlink) is also
+      // removed from the restored text since the URL renders on its own row.
+      const stripWebLinkMarker = (s) =>
+        String(s || '').replace(/\s*\[Web\s*Link\]\s*/gi, ' ').replace(/\s+/g, ' ').trim();
       try {
         const origActs = (originalSnapshot.model && originalSnapshot.model.activities) || [];
+        let restoredText = 0;
+        let restoredUrl = 0;
         newModel.activities.forEach((newAct, ai) => {
           const origAct = origActs[ai];
           if (!origAct || !origAct.tasks) return;
@@ -12433,13 +12476,99 @@ createChatSurface({
           origAct.tasks.forEach(t => { if (t.letter) origByLetter[t.letter] = t; });
           (newAct.tasks || []).forEach(newT => {
             const origT = newT.letter && origByLetter[newT.letter];
-            if (origT && origT.attachment && !newT.attachment) {
+            if (!origT) return;
+            // Attachment carry-over
+            if (origT.attachment && !newT.attachment) {
               newT.attachment = origT.attachment;
+              restoredUrl++;
+            }
+            // Text carry-over when the new task collapsed to empty / whitespace.
+            const newTextTrimmed = String(newT.text || '').trim();
+            const origTextClean = stripWebLinkMarker(origT.text || '');
+            if (!newTextTrimmed && origTextClean) {
+              newT.text = origTextClean;
+              restoredText++;
+            } else if (newTextTrimmed && /\[Web\s*Link\]/i.test(newT.text)) {
+              // The "[Web Link]" marker leaked through; clean it from the new
+              // task text since the URL renders as its own Link row anyway.
+              newT.text = stripWebLinkMarker(newT.text);
             }
           });
         });
+        if (restoredText > 0) {
+          console.log('[auto-apply] restored ' + restoredText + ' empty task text(s) the AI had dropped');
+        }
+        if (restoredUrl > 0) {
+          console.log('[auto-apply] restored ' + restoredUrl + ' task URL attachment(s)');
+        }
       } catch (e) {
-        console.warn('[auto-apply] could not restore task attachments:', e);
+        console.warn('[auto-apply] could not restore task attachments / text:', e);
+      }
+
+      // Item #33: detect dropped qualifiers (parentheticals, step-number
+      // references, specific system names) so the user gets a warning toast
+      // when content drift is significant - even with the strengthened prompt
+      // the AI sometimes still tightens a sentence by deleting details.
+      try {
+        const origActs = (originalSnapshot.model && originalSnapshot.model.activities) || [];
+        const droppedSnippets = [];
+        const PAREN_RE = /\(([^)]{2,40})\)/g;
+        const STEP_NUM_RE = /\b\d+\.\d+(?:\s*[&,]\s*\d+\.\d+)+\b/g;
+        // Known specific-noun tokens that should never be paraphrased away.
+        const SPECIFIC_NOUNS = [
+          'SAMS', 'SAFE', 'AHPRA', 'Workday', 'TeachVE', 'SharePoint', 'Promapp', 'Nintex',
+          'A&T schedule', 'Master File', 'Marketo', 'BARB', 'FLOSS', 'CANVAS', 'Canvas',
+          'CoVE Delivery', 'SHBS', 'STEM', 'USARG', 'DP&S', 'PBT', 'RAF', 'RPO'
+        ];
+        newModel.activities.forEach((newAct, ai) => {
+          const origAct = origActs[ai];
+          if (!origAct || !origAct.tasks) return;
+          const origByLetter = {};
+          origAct.tasks.forEach(t => { if (t.letter) origByLetter[t.letter] = t; });
+          (newAct.tasks || []).forEach(newT => {
+            const origT = newT.letter && origByLetter[newT.letter];
+            if (!origT) return;
+            const origText = String(origT.text || '');
+            const newText  = String(newT.text || '');
+            if (!origText.trim() || !newText.trim()) return;
+            // Parentheticals
+            const origParens = origText.match(PAREN_RE) || [];
+            origParens.forEach(p => {
+              if (!newText.includes(p)) droppedSnippets.push({
+                activity: newAct.number, task: newT.letter, kind: 'qualifier', text: p
+              });
+            });
+            // Step number references
+            const origSteps = origText.match(STEP_NUM_RE) || [];
+            origSteps.forEach(s => {
+              if (!newText.includes(s)) droppedSnippets.push({
+                activity: newAct.number, task: newT.letter, kind: 'step ref', text: s
+              });
+            });
+            // Specific noun tokens
+            SPECIFIC_NOUNS.forEach(n => {
+              const re = new RegExp('\\b' + n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
+              if (re.test(origText) && !re.test(newText)) {
+                droppedSnippets.push({
+                  activity: newAct.number, task: newT.letter, kind: 'specific noun', text: n
+                });
+              }
+            });
+          });
+        });
+        if (droppedSnippets.length && typeof showToast === 'function') {
+          const first = droppedSnippets[0];
+          const more = droppedSnippets.length > 1 ? ' (+' + (droppedSnippets.length - 1) + ' more)' : '';
+          showToast(
+            'Heads up: the AI may have dropped some detail when polishing - e.g. ' +
+            first.kind + ' "' + first.text + '" from task ' + first.activity + first.task + more +
+            '. Spot-check the updated tasks below.',
+            'warning', 9000
+          );
+          console.log('[auto-apply] dropped-context snippets:', droppedSnippets);
+        }
+      } catch (e) {
+        console.warn('[auto-apply] dropped-context detection failed:', e);
       }
 
       // Restore email addresses the AI dropped from task text. Same pattern
@@ -12752,193 +12881,4 @@ createChatSurface({
     const messagesEl = document.getElementById('inlineChatMessages');
     if (!openBtn || !overlay) return;
 
-    const open = () => { overlay.hidden = false; };
-    const close = () => { overlay.hidden = true; };
-
-    openBtn.addEventListener('click', open);
-    if (closeBtn) closeBtn.addEventListener('click', close);
-
-    // Esc closes the overlay
-    document.addEventListener('keydown', e => {
-      if (e.key === 'Escape' && !overlay.hidden) close();
-    });
-
-    // Click any FAQ item -> send into chat (uses the existing quick-prompt
-    // delegated handler on inlineChatMessages by injecting a synthetic chip).
-    overlay.addEventListener('click', e => {
-      const item = e.target.closest('.faq-item');
-      if (!item || !item.dataset.prompt) return;
-      const prompt = item.dataset.prompt;
-      close();
-      // Trigger the same click path the welcome chips use
-      const fakeChip = document.createElement('button');
-      fakeChip.className = 'ai-quick';
-      fakeChip.dataset.prompt = prompt;
-      fakeChip.style.display = 'none';
-      if (messagesEl) {
-        messagesEl.appendChild(fakeChip);
-        fakeChip.click();
-        // Clean up the synthetic chip after a tick
-        setTimeout(() => fakeChip.remove(), 50);
-      }
-    });
-  });
-})();
-</script>
-
-
-<script>
-// Auto-fix 'what changed?' modal - opens when the user clicks the inline button
-(function wireAutofixModal() {
-  document.addEventListener('DOMContentLoaded', () => {
-    const modal = document.getElementById('autofixModal');
-    const closeBtn = document.getElementById('autofixModalClose');
-    const closeFoot = document.getElementById('autofixModalCloseFooter');
-    if (!modal) return;
-    const open = () => modal.setAttribute('aria-hidden', 'false');
-    const close = () => modal.setAttribute('aria-hidden', 'true');
-    // Delegated click - the trigger button is created dynamically by renderResults
-    document.addEventListener('click', e => {
-      if (e.target && e.target.id === 'autofixModalOpen') open();
-    });
-    if (closeBtn) closeBtn.addEventListener('click', close);
-    if (closeFoot) closeFoot.addEventListener('click', close);
-    modal.addEventListener('click', e => { if (e.target === modal) close(); });
-    document.addEventListener('keydown', e => {
-      if (e.key === 'Escape' && modal.getAttribute('aria-hidden') === 'false') close();
-    });
-  });
-})();
-</script>
-
-
-<script>
-// Auto-apply acknowledgement modal - must tick both boxes before the AI runs
-(function wireAutoApplyConsent() {
-  document.addEventListener('DOMContentLoaded', () => {
-    const modal = document.getElementById('autoApplyConsentModal');
-    if (!modal) return;
-    const closeBtn = document.getElementById('autoApplyConsentClose');
-    const cancelBtn = document.getElementById('autoApplyConsentCancel');
-    const proceedBtn = document.getElementById('autoApplyConsentProceed');
-    const cb1 = document.getElementById('consentSensitive');
-
-    function close() { modal.setAttribute('aria-hidden', 'true'); }
-    function refreshProceed() {
-      if (proceedBtn) proceedBtn.disabled = !(cb1 && cb1.checked);
-    }
-    if (cb1) cb1.addEventListener('change', refreshProceed);
-    if (closeBtn) closeBtn.addEventListener('click', close);
-    if (cancelBtn) cancelBtn.addEventListener('click', close);
-    if (proceedBtn) proceedBtn.addEventListener('click', () => {
-      close();
-      // Only NOW hide the choice cards - the user has confirmed they want to
-      // auto-apply. Cancelling the consent earlier leaves the cards visible.
-      const choiceRow = document.getElementById('choiceRow');
-      if (choiceRow) choiceRow.classList.add('hidden');
-      if (typeof window.startAutoApply === 'function') {
-        // Tiny delay so the modal animates out cleanly before the loading state appears
-        setTimeout(() => window.startAutoApply(), 80);
-      }
-    });
-    modal.addEventListener('click', e => { if (e.target === modal) close(); });
-    document.addEventListener('keydown', e => {
-      if (e.key === 'Escape' && modal.getAttribute('aria-hidden') === 'false') close();
-    });
-  });
-})();
-</script>
-
-
-<script>
-// Inline flags view - sidebar is the only mode in home v3 (Move 3).
-// The Sidebar/Inline toggle was removed; we force mode='sidebar' regardless of any
-// previously saved preference, and skip the inline rendering path entirely.
-(function wireInlineFlagsView() {
-  const KEY = 'pat-flags-view-mode'; // localStorage key (kept for back-compat)
-  let mode = 'sidebar';
-  // Clear any previously saved 'inline' mode so it doesn't reappear after upgrade
-  try { localStorage.removeItem(KEY); } catch (e) {}
-
-  function getIssues() {
-    return (typeof currentIssues !== 'undefined' && Array.isArray(currentIssues)) ? currentIssues : [];
-  }
-
-  function severityClass(sev) { return 'severity-' + (sev || 'info'); }
-  function severityChar(sev) {
-    if (sev === 'error') return '!';
-    if (sev === 'warning') return '\u25B2';   // ▲
-    return 'i';
-  }
-
-  function clearInlineFlags() {
-    document.querySelectorAll('.inline-flag-marker, .inline-flag-callout').forEach(n => n.remove());
-    const banner = document.getElementById('inlineProcessFlags');
-    if (banner) banner.remove();
-  }
-
-  function applyInlineFlags() {
-    clearInlineFlags();
-    const docPreview = document.getElementById('docPreview');
-    if (!docPreview) return;
-    const issues = getIssues();
-    if (issues.length === 0) return;
-
-    // Process-wide flags get a banner above the procedure section
-    const procEl = document.getElementById('doc-procedure');
-    const processWide = [];
-
-    issues.forEach((issue, idx) => {
-      issue._idx = idx;
-      const resolver = window.resolveJumpTarget;
-      const targetId = (typeof resolver === 'function')
-        ? resolver(issue.location || '', issue.message || '', issue.id || '')
-        : null;
-      if (!targetId) {
-        processWide.push(issue);
-        return;
-      }
-      const target = document.getElementById(targetId);
-      if (!target) {
-        processWide.push(issue);
-        return;
-      }
-      // Inject a marker into the target element
-      const marker = document.createElement('span');
-      marker.className = 'inline-flag-marker ' + severityClass(issue.severity);
-      marker.setAttribute('role', 'button');
-      marker.setAttribute('tabindex', '0');
-      marker.setAttribute('aria-label', issue.severity + ': ' + issue.message);
-      marker.title = issue.message;
-      marker.textContent = severityChar(issue.severity);
-      marker.dataset.issueIdx = String(idx);
-      target.appendChild(marker);
-
-      const expand = () => {
-        // Toggle: if a callout already exists for this issue, remove it
-        const existing = document.querySelector('.inline-flag-callout[data-issue-idx="' + idx + '"]');
-        if (existing) { existing.remove(); return; }
-        const callout = document.createElement('div');
-        callout.className = 'inline-flag-callout ' + severityClass(issue.severity);
-        callout.dataset.issueIdx = String(idx);
-        const sevWord = issue.severity === 'error' ? 'Error'
-                        : issue.severity === 'warning' ? 'Warning'
-                        : 'Suggestion';
-        callout.innerHTML =
-          '<span class="ifc-badge">' + sevWord + '</span>' +
-          '<div class="ifc-body"><strong>' + issue.message + '</strong>' +
-          (issue.suggestion ? '<em>' + issue.suggestion + '</em>' : '') + '</div>' +
-          '<button class="ifc-dismiss" type="button" aria-label="Close">&times;</button>';
-        callout.querySelector('.ifc-dismiss').addEventListener('click', e => { e.stopPropagation(); callout.remove(); });
-        // Insert callout after the target's parent activity block, or after the target itself
-        target.insertAdjacentElement('afterend', callout);
-      };
-      marker.addEventListener('click', expand);
-      marker.addEventListener('keydown', e => {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); expand(); }
-      });
-    });
-
-    // Render process-wide banner
-    if (processWide.length > 0 && procEl) {
-      const banner = do
+    

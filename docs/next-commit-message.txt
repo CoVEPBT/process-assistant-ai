@@ -1,47 +1,43 @@
-Auto-structure hardening + v2 #27 add-task/note/activity buttons
+AI guardrails: fix items #32 (empty task before Link) + #33 (dropped qualifiers)
 
-Two fixes for the "Structure these for me" / auto-structure feature.
+Two regressions caught in yesterday's BARB/FLOSS + Class Scheduling tests.
 
-1. Skip the auto-structure offer for already-structured Nintex paste.
-   looksLikeRoughNotes() only checked for numbered headings ("1.0 Title",
-   "Activity 1"), so it classified Nintex's "Export Procedure Text"
-   format (activity heading like "Title [Role A;Role B]" + 6-space
-   indented tasks) as rough notes and offered to AI-structure it. The
-   AI then tried to restructure already-structured input and produced
-   garbled output - activity titles got an "a " prefix and tasks
-   disappeared.
+ITEM #32 - Auto-apply leaves empty task before a Link row
+  Symptom: source task like "[Web Link] Trades & Dental Weekly TT" with
+  an attached URL was being rewritten so that the task ended up as a
+  bare letter ("c.") followed by just a "Link:" row below. URL post-
+  process restoration re-attached the URL but the task text was empty.
 
-   Fix: looksLikeRoughNotes() now calls looksLikeProcedureTextExport()
-   first and returns false if the format is detected. parseStructuredText
-   already routes that shape to parseProcedureTextExport, which parses
-   it natively.
+  Fix - three layers:
+    a) Auto-apply prompt: NEVER LEAVE A TASK EMPTY rule. Tells the AI
+       that "[Web Link] Trades & Dental Weekly TT" becomes a task with
+       the URL attached AND descriptive text "Trades & Dental Weekly TT"
+       (drop the [Web Link] marker, keep the words). Never emit a bare
+       task letter with no descriptive text.
+    b) Server SYSTEM_PROMPT mirrors the rule for chat-driven rewrites.
+    c) Post-process restoration extended: when the new task text is
+       empty / whitespace but the original had text, restore the source
+       text (with the [Web Link] marker stripped). Also defensively
+       cleans the [Web Link] marker from any new task text where the
+       AI leaked it through.
 
-2. Harden the auto-structure prompt so the AI doesn't edit content.
-   Symptoms: occasional drift where the AI tidied wording, capitalised
-   role names, paraphrased, or inserted a step the user didn't write -
-   despite the existing HARD RULES.
+ITEM #33 - Auto-apply dropping in-task qualifiers / specifics
+  Symptom: despite the PROMOTE DROPPED CONTEXT TO NOTES rule, the AI
+  was still removing specific details when tightening sentences:
+    - "(continuing and new)" parenthetical qualifier
+    - "3.0 & 4.0" step number references
+    - "A&T schedule in SAMS" -> generic "set attendance dates"
+    - "as well as any future changes" additional action
 
-   Prompt changes:
-     - Reframed as "you are a SORTER + LABELLER, NOT a writer".
-     - Worked example showing CORRECT output vs WRONG output side by
-       side (highlighting paraphrase, capitalisation change, and an
-       invented step as wrong).
-     - HARD RULES tightened: "If the user wrote 4 steps, your output
-       has 4 task lines. Not 5. Not 3. Exactly 4." Plus an explicit
-       "1 source line = 1 output task line" rule.
-     - Mandatory self-check (3 steps: count lines, verify each task
-       matches a source line character-identically, confirm no
-       merging / splitting / dropping / rewording).
-
-   Post-process drift verification (safety net):
-     - After the AI replies, the JS splits both the original notes
-       and the AI's task lines, then checks each AI task is a near-
-       exact match for some source line.
-     - If drift is detected, surfaces a warning toast: "Heads up:
-       the AI may have edited some task wording (N tasks did not
-       match your original notes exactly, e.g. '...'). Spot-check
-       the result before analysing."
-     - The warning is soft - the structured result still applies so
-       the user can keep what's useful and edit anything that drifted.
-
-3. v2 #27 - "
+  Fix - two layers:
+    a) Prompt: new EXAMPLES YOU MUST GET RIGHT block showing SOURCE /
+       WRONG / RIGHT for each of the four patterns above. Mandatory
+       self-check now enumerates four explicit checks in order:
+         1. Did I drop a parenthetical "(...)" qualifier?
+         2. Did I drop a specific number reference (step 3.0, section 4)?
+         3. Did I drop or generalise a system / table / view / tool name?
+         4. Did I drop an additional action joined by "and" / "as well as"?
+       Server SYSTEM_PROMPT carries the same enumeration for chat-driven
+       rewrites.
+    b) Post-process drift detection: after parsing the AI's reply, the
+       client scans every task for dropped parent

@@ -228,9 +228,10 @@ When a user asks "what's rule X" or "explain rule Y", quote the rule from above 
 - **Avoid banned terms in titles or roles:** TBD, TBA, "etc." - these leave the reader without an answer. Either replace with concrete content or remove.
 - **Activity titles: 2-7 words, verb-first. Hard cap: 8 words.** If a user's title is longer or noun-first, propose a tighter verb-first alternative. Whenever you rewrite an activity, count the words in the heading and shorten any that drift past 8.
 - **Preserve every NOTE when rewriting.** NOTE blocks encode the 20% of variations / exceptions the process owner has explicitly chosen to document — they're load-bearing, not commentary. When you polish or restructure an activity, KEEP every NOTE under the same activity, in the same order. You may tighten a NOTE's wording (verb-first, ≤18 words) but you must never drop one, merge two NOTEs together, move a NOTE to a different activity, or swallow NOTE content into a task description.
-- **Promote dropped context to a NOTE — don't delete useful information.** When you shorten a task to hit the 18-word cap, do NOT silently remove specific nouns the reader would need (column names, section names, view/tab names, document section references, criteria lists, role names). Instead, keep the task tight and spin the dropped detail off as a NEW NOTE under the same activity. The NOTE's question is what the detail answers ("Where do I find X?", "Which view should I use?", "What counts as Y?"), the NOTE's body is the detail itself. True filler ("in order to", "as appropriate", "the relevant", "ensure that") can be dropped without a NOTE; specific nouns cannot. Worked example: source task "Allocate required staff to RPO grade rosters referring to the data noted Staff Name columns in the FRANC document" → tight task "Allocate required staff to RPO grade rosters using the FRANC document" PLUS new NOTE "Where do I find the staff data in the FRANC? / Look in the 'Staff Name' column."
+- **Promote dropped context to a NOTE — don't delete useful information.** When you shorten a task to hit the 18-word cap, do NOT silently remove specific nouns the reader would need (column names, section names, view/tab names, document section references, criteria lists, role names). Instead, keep the task tight and spin the dropped detail off as a NEW NOTE under the same activity. True filler ("in order to", "as appropriate", "the relevant", "ensure that") can be dropped without a NOTE; specific nouns cannot. Specifically, NEVER drop: (1) parenthetical qualifiers like "(continuing and new)" — they encode scope; (2) step / section / document number references like "3.0 & 4.0", "section 88", "Appendix D"; (3) system / table / view names like SAMS, AHPRA, Workday, "A&T schedule", "Staff Name column"; (4) the second action when a sentence chains two with "and" / "as well as" / "plus" — either keep both or split into two tasks. Worked example: source task "Allocate required staff to RPO grade rosters referring to the data noted Staff Name columns in the FRANC document" → tight task "Allocate required staff to RPO grade rosters using the FRANC document" PLUS new NOTE "Where do I find the staff data in the FRANC? / Look in the 'Staff Name' column."
 - **Preserve the role list verbatim.** The role assignments on each activity (in square brackets in Procedure Text exports, or "Role: X, Y" in pasted text) are the process owner's explicit decision about who is accountable. Do NOT add roles, remove roles, rename roles, split one role into two, merge two roles into one, or reword the role string when you rewrite. Copy each role character-for-character — punctuation, abbreviations, ampersands, capitalisation all unchanged. The only exception is when you genuinely consolidate two duplicate activities, in which case the merged role list is the union of both (deduplicated, in source order).
 - **Preserve email addresses verbatim.** Any email address in a task (anything matching x@y.tld) MUST stay in the rewritten task, exactly as written. Emails in process docs are almost always shared / functional inboxes (e.g. "ve.deliveryops@rmit.edu.au", "studentregistration@ahpra.gov.au") that define WHERE the work goes — dropping or paraphrasing them ("send to the operations team") strips the only addressing information the reader has. If shortening the sentence would lose the email, keep the email in the task and move surrounding context into a NOTE instead.
+- **Never leave a task empty.** Every task letter (a, b, c…) must have descriptive text. If a source task has both descriptive text and a URL (e.g. "[Web Link] Trades & Dental Weekly TT"), keep BOTH the description AND the URL in your output. The "[Web Link]" marker is a parser artefact — drop it but KEEP the words that follow. So "[Web Link] Trades & Dental Weekly TT" becomes a task with the URL attached and descriptive text "Trades & Dental Weekly TT". Never emit a bare task letter with no description — if you find yourself doing that, restore the source text for that task.
 - **Split multi-role activities by task ownership.** When an activity lists multiple roles AND its tasks identify specific roles doing them (e.g. "Hiring manager to complete RAF form", "Workforce Planning Officer to save file"), SPLIT the activity into separate activities — one per role — so each role owns its own tasks. Drop the redundant "Role to" prefix from each task (since the role is now on the activity's role line). Renumber subsequent activities sequentially. NOTEs go with the split activity whose tasks they belong to; activity-wide NOTEs go on the first split. Tasks with no clear role prefix stay with the most-recent role-attributed split. Do NOT split when there's only one role or when no tasks carry role attribution.
 - **Tasks under 18 words, ideally 8-12.** Each task is a single short imperative clause. If a task needs more than 18 words, split it into two tasks or move detail into a NOTE.
 - **Sentence length is non-negotiable (CoVE Rule 5).** Hard cap: no sentence may exceed 18 words. Target average: 12-15 words across the Objective, Background, and every task description. The tool flags any document whose average exceeds 22 words, so build in headroom. When you write or rewrite Objective text, Background text, or task wording, count the words in each sentence and split any that run over. Replace "and"/"so that"/"because"/"which"/"in order to"/participial phrases with a full stop and a new sentence. Prefer "Send the request to the manager. The manager reviews it within two days." over "Send the request to the manager who reviews it within two days and either approves or rejects it." Whenever you finish rewriting, do a self-check pass and shorten any sentence that's drifted over the cap.
@@ -490,27 +491,4 @@ app.post('/api/chat', async (req, res) => {
   // Stub mode if no key configured
   if (!openai) {
     return res.json({
-      reply: '⚠️ Stub mode - no OPENAI_API_KEY set in .env. To enable real AI responses, paste your key into the .env file and restart the server.\n\n(Last user message: ' + (messages[messages.length - 1]?.content || '').slice(0, 200) + ')'
-    });
-  }
-
-  try {
-    // Sensible per-request overrides, with safety clamps so a client can't
-    // accidentally bill us into oblivion.
-    const safeMaxTokens = Math.min(
-      Math.max(parseInt(max_tokens, 10) || 1500, 256),
-      4000
-    );
-    const safeTemperature = (typeof temperature === 'number'
-      && temperature >= 0 && temperature <= 2)
-      ? temperature
-      : 0.4;
-    const completion = await openai.chat.completions.create({
-      model: MODEL,
-      messages: fullMessages,
-      max_tokens: safeMaxTokens,
-      temperature: safeTemperature,
-    });
-    const reply = completion.choices[0]?.message?.content || '(no response)';
-    res.json({ reply, model: MODEL, usage: completion.usage });
-  
+      reply: '⚠️ Stub mode - no OPENAI_API_KEY set in .env. To enable real AI responses, paste your key into the .env file and re
