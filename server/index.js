@@ -231,6 +231,7 @@ When a user asks "what's rule X" or "explain rule Y", quote the rule from above 
 - **Promote dropped context to a NOTE — don't delete useful information.** When you shorten a task to hit the 18-word cap, do NOT silently remove specific nouns the reader would need (column names, section names, view/tab names, document section references, criteria lists, role names). Instead, keep the task tight and spin the dropped detail off as a NEW NOTE under the same activity. The NOTE's question is what the detail answers ("Where do I find X?", "Which view should I use?", "What counts as Y?"), the NOTE's body is the detail itself. True filler ("in order to", "as appropriate", "the relevant", "ensure that") can be dropped without a NOTE; specific nouns cannot. Worked example: source task "Allocate required staff to RPO grade rosters referring to the data noted Staff Name columns in the FRANC document" → tight task "Allocate required staff to RPO grade rosters using the FRANC document" PLUS new NOTE "Where do I find the staff data in the FRANC? / Look in the 'Staff Name' column."
 - **Preserve the role list verbatim.** The role assignments on each activity (in square brackets in Procedure Text exports, or "Role: X, Y" in pasted text) are the process owner's explicit decision about who is accountable. Do NOT add roles, remove roles, rename roles, split one role into two, merge two roles into one, or reword the role string when you rewrite. Copy each role character-for-character — punctuation, abbreviations, ampersands, capitalisation all unchanged. The only exception is when you genuinely consolidate two duplicate activities, in which case the merged role list is the union of both (deduplicated, in source order).
 - **Preserve email addresses verbatim.** Any email address in a task (anything matching x@y.tld) MUST stay in the rewritten task, exactly as written. Emails in process docs are almost always shared / functional inboxes (e.g. "ve.deliveryops@rmit.edu.au", "studentregistration@ahpra.gov.au") that define WHERE the work goes — dropping or paraphrasing them ("send to the operations team") strips the only addressing information the reader has. If shortening the sentence would lose the email, keep the email in the task and move surrounding context into a NOTE instead.
+- **Split multi-role activities by task ownership.** When an activity lists multiple roles AND its tasks identify specific roles doing them (e.g. "Hiring manager to complete RAF form", "Workforce Planning Officer to save file"), SPLIT the activity into separate activities — one per role — so each role owns its own tasks. Drop the redundant "Role to" prefix from each task (since the role is now on the activity's role line). Renumber subsequent activities sequentially. NOTEs go with the split activity whose tasks they belong to; activity-wide NOTEs go on the first split. Tasks with no clear role prefix stay with the most-recent role-attributed split. Do NOT split when there's only one role or when no tasks carry role attribution.
 - **Tasks under 18 words, ideally 8-12.** Each task is a single short imperative clause. If a task needs more than 18 words, split it into two tasks or move detail into a NOTE.
 - **Sentence length is non-negotiable (CoVE Rule 5).** Hard cap: no sentence may exceed 18 words. Target average: 12-15 words across the Objective, Background, and every task description. The tool flags any document whose average exceeds 22 words, so build in headroom. When you write or rewrite Objective text, Background text, or task wording, count the words in each sentence and split any that run over. Replace "and"/"so that"/"because"/"which"/"in order to"/participial phrases with a full stop and a new sentence. Prefer "Send the request to the manager. The manager reviews it within two days." over "Send the request to the manager who reviews it within two days and either approves or rejects it." Whenever you finish rewriting, do a self-check pass and shorten any sentence that's drifted over the cap.
 
@@ -512,27 +513,4 @@ app.post('/api/chat', async (req, res) => {
     });
     const reply = completion.choices[0]?.message?.content || '(no response)';
     res.json({ reply, model: MODEL, usage: completion.usage });
-  } catch (err) {
-    console.error('[OpenAI error]', err.status, err.message);
-    res.status(err.status || 500).json({ error: err.message || 'OpenAI call failed' });
-  }
-});
-
-app.get('/api/health', (req, res) => {
-  res.json({
-    ok: true,
-    model: MODEL,
-    keyConfigured: !!openai,
-    publicDir: PUBLIC_DIR,
-    knowledgeChars: KNOWLEDGE_CORPUS.length,
-  });
-});
-
-await loadKnowledge();
-
-app.listen(PORT, () => {
-  console.log(`[process-assistant-ai] running on http://localhost:${PORT}`);
-  console.log(`[process-assistant-ai] model: ${MODEL}`);
-  console.log(`[process-assistant-ai] key configured: ${!!openai}`);
-  console.log(`[process-assistant-ai] knowledge corpus: ${KNOWLEDGE_CORPUS.length} chars`);
-});
+  

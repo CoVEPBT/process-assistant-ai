@@ -266,13 +266,27 @@ PENDING (post-pilot backlog - new features, bigger work)
     Notes: bigger UX flow change. Worth running a small A/B with
     pilot users before committing.
 
-26. Group flags by type
+26. Group flags by type (+ collapsible groups)
     Source: file 2 #6
-    Status: [PENDING]
-    Notes: e.g. "Doesn't start with a verb" group, "Handover not
-    clear" group. Today the flags are listed flat in severity
-    order. Grouping by rule-id is straightforward but needs UX
-    decision on the visual treatment.
+    Status: [DONE]
+    Implementation: flagGroup() mapper turns each rule id into a
+    friendly group label (act-verb-* -> "Activity title doesn't
+    start with a verb", task-verb-* -> "Task verb not on approved
+    list", handover-* -> "Handover between activities", etc.).
+    Sidebar renders severity tier -> group (largest cluster first
+    within a tier) -> document-order flags. Groups with 2+ flags
+    get a small uppercase heading + count chip, severity-tinted
+    to match the tier. EVERY group renders a heading (including
+    single-flag groups) so flags like "Activity has multiple
+    roles" or "Handover between activities" are always labelled.
+    getOrderedIssuesForAi uses the same grouped ordering so
+    "Flag 5" in chat still matches card #5.
+
+    Bonus: each group heading is also a collapse / expand button
+    (chevron icon, click or Enter / Space to toggle). Collapsed
+    state is per-session (collapsedFlagGroups Set), resets on
+    Reset / Analyse / Analyse another. Cards stay numbered even
+    when hidden so chat references survive collapse.
 
 27. Easier to add new tasks / activities in the generated document
     Source: file 2 #7
@@ -396,10 +410,10 @@ File 2 (15 items):  #1 = 9, #2 = 10, #3 = 6, #4 = 14, #5 = 12,
 SUMMARY
 ============================================================
 
-  Done                   22
+  Done                   23
   Needs sample input      0
   Partial / follow-up     1 (skipped - procedure-vs-process language pass)
-  Pending backlog         8
+  Pending backlog         7
   ----
   Total                  31
 
@@ -413,20 +427,4 @@ SUMMARY
 or split during triage, hence 29 entries in the tracker).
 
 Four batches deployed:
-  Batch 1 - 27 May - verb list, hallucination guards, role split,
-            activity-number duplicate, enrolled bug
-  Batch 2 - 27 May - task-level warning click, note body, role
-            prefix, Review card prominence, sticky save bar,
-            note-question wording, handover concision
-  Batch 3 - 27 May - Nintex PDF title parser (item 17) + role-line
-            detection (item 18). Verified against the AHPRA PDF and
-            the TeachVE PDF.
-  Batch 4 - 27 May - count-badge pulse on Save changes (item 19)
-            + Nintex "Export Procedure Text" format support
-            (bonus, not from the original feedback list).
-
-Next session priorities:
-  1. Triage backlog items 21-29 (drag/drop, dismiss, chat-to-doc,
-     group-by-type, etc.) and pick what to ship in v2.
-  2. Update the pilot tester pack to mention the procedure-text
-     export option.
+  Batch 1 - 27 May - verb 

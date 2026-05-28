@@ -783,6 +783,64 @@
   .issue.issue-active .issue-pill {
     background: #2E7D32; color: #FFFFFF; border-color: #2E7D32;
   }
+  /* v2 #26 - group heading for clustered quality flags. Sits above the first
+     card of each multi-flag group, e.g. "Task verb not on approved list (3)".
+     Single-flag groups skip the heading to keep the sidebar light.
+     v2 #26b - rendered as a <button> so it's keyboard-focusable + clickable
+     to toggle collapse / expand of the cards underneath. */
+  .issue-group-heading {
+    appearance: none; -webkit-appearance: none;
+    background: transparent;
+    border: none; border-bottom: 1px solid #E2E8F0;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    font-family: inherit;
+    display: flex; align-items: center; gap: 8px;
+    margin: 18px 0 6px;
+    padding: 4px 0 6px;
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 0.5px; text-transform: uppercase;
+    color: #475569;
+    transition: background 0.12s ease;
+  }
+  .issue-group-heading:hover { background: rgba(0,0,0,0.025); }
+  .issue-group-heading:focus-visible {
+    outline: 2px solid var(--rmit-red); outline-offset: 2px;
+  }
+  /* Chevron rotates 0deg (expanded, points down) -> -90deg (collapsed, right). */
+  .issue-group-chevron {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 16px; height: 16px;
+    color: inherit;
+    transition: transform 0.15s ease;
+    flex-shrink: 0;
+  }
+  .issue-group-heading.is-collapsed .issue-group-chevron {
+    transform: rotate(-90deg);
+  }
+  /* When collapsed, soften the visual weight so the user sees it's hidden. */
+  .issue-group-heading.is-collapsed {
+    opacity: 0.7;
+    border-bottom-style: dashed;
+  }
+  /* No top margin for the very first group so it hugs the sidebar header. */
+  .issues-scroll > .issue-group-heading:first-child { margin-top: 0; }
+  .issue-group-heading .issue-group-label { flex: 1 1 auto; }
+  .issue-group-heading .issue-group-count {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 22px; padding: 1px 7px;
+    border-radius: 999px;
+    background: #F1F5F9; color: #475569;
+    font-size: 11px; font-weight: 700; letter-spacing: 0;
+  }
+  /* Severity-tinted accent so the eye can still tell the tier at a glance. */
+  .issue-group-heading.issue-group-error   { color: var(--severity-error);   border-bottom-color: var(--severity-error); }
+  .issue-group-heading.issue-group-warning { color: var(--severity-warning); border-bottom-color: var(--severity-warning); }
+  .issue-group-heading.issue-group-info    { color: var(--severity-info);    border-bottom-color: var(--severity-info); }
+  .issue-group-heading.issue-group-error   .issue-group-count { background: #FEE2E2; color: #991B1B; }
+  .issue-group-heading.issue-group-warning .issue-group-count { background: #FEF3C7; color: #92400E; }
+  .issue-group-heading.issue-group-info    .issue-group-count { background: #DBEAFE; color: #1E40AF; }
   /* v2 #23 - per-card dismiss "x" button. Sits at the top-right of each
      quality-flag card. Subtle by default, more obvious on hover, with a
      focusable outline for keyboard users. The button is small (28x28) so
@@ -4989,6 +5047,49 @@ function splitRoles(roleStr) {
     .filter(Boolean);
 }
 
+/**
+ * Normalise a role string for prefix-match detection. Strips common
+ * organisational prefixes (e.g. "CoVE - HR - Hiring Manager" -> "hiring
+ * manager") so tasks that mention a role informally still match.
+ */
+function _normaliseRoleForPrefix(role) {
+  return String(role || '')
+    // Strip an org prefix like "CoVE - " or "RMIT - HR - " (1-2 segments).
+    // Allow mixed-case (CoVE, P&D) by accepting upper / lower / digits / ampersand
+    // inside the segment, with the segment starting with an uppercase letter.
+    .replace(/^[A-Z][A-Za-z0-9&]+\s*[-–—]\s*(?:[A-Za-z0-9&\s]+\s*[-–—]\s*)?/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * If a task text starts with a role-attribution prefix that matches one of
+ * the given roles (e.g. "Hiring manager to complete..." matches
+ * "CoVE - HR - Hiring Manager"), return that canonical role. Otherwise null.
+ *
+ * Match shapes recognised at the start of the task:
+ *    "<role> to <verb> ..."
+ *    "<role> will <verb> ..."
+ *    "<role> should <verb> ..."
+ *    "<role> must <verb> ..."
+ *    "<role>: <verb> ..."
+ */
+function detectTaskRolePrefix(taskText, candidateRoles) {
+  const text = String(taskText || '').toLowerCase().trim();
+  if (!text) return null;
+  for (const role of (candidateRoles || [])) {
+    const informal = _normaliseRoleForPrefix(role);
+    if (!informal) continue;
+    // Require the informal role to be followed by an attribution verb (to / will /
+    // should / must) or a colon - so we don't match incidental mentions like
+    // "Reassign to the Workforce Planning Officer's delegate".
+    const re = new RegExp('^' + informal.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b\\s*(?:to|will|should|must|may|can)\\s+|^' + informal.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*:\\s*', 'i');
+    if (re.test(text)) return role;
+  }
+  return null;
+}
+
 /* Strip known prefixes from process titles before verb-first checking.
    Handles patterns like "CoVE - PBT -", "RMIT - HR -", etc.
    Only strips when the prefix is short tokens separated by " - ". */
@@ -5125,6 +5226,12 @@ window.getActiveIssues = getActiveIssues;
 
 // Buffer the most-recent dismissal so the toast's Undo action can restore it.
 let lastDismissed = null;
+
+// v2 #26b - per-session collapsed-group state. Keys are "<severity>:<groupKey>"
+// so the same group key in different severity tiers stays independent.
+// Resets on Reset / Analyse / Analyse-another (same lifecycle as dismissals).
+let collapsedFlagGroups = new Set();
+window.collapsedFlagGroups = collapsedFlagGroups;
 
 // Prevent BPMN canvas from trapping plain wheel events.
 // Without this, scrolling over the diagram zooms the canvas instead of scrolling
@@ -5345,8 +5452,10 @@ document.getElementById('headerResetBtn').addEventListener('click', () => {
   if (dp) dp.innerHTML = '';
   originalDocHtml = '';
   currentModel = null; currentIssues = []; currentRecommendation = null; currentMermaid = '';
-  // v2 #23: clear per-session dismissals on Reset so the next analysis starts fresh.
+  // v2 #23 + #26b: clear per-session dismissals + collapsed-group state on
+  // Reset so the next analysis starts fresh.
   if (dismissedFlagKeys) dismissedFlagKeys.clear();
+  if (collapsedFlagGroups) collapsedFlagGroups.clear();
   lastDismissed = null;
   // Send the user back to the home view: hide the work area and the Reset button
   if (inputWorkArea) inputWorkArea.hidden = true;
@@ -5594,8 +5703,10 @@ document.getElementById('analyseBtn').addEventListener('click', async () => {
 
     currentModel = model;
     currentIssues = runRulesEngine(model);
-    // v2 #23: a new analysis is a clean slate - past dismissals don't carry over.
+    // v2 #23 + #26b: a new analysis is a clean slate - past dismissals and
+    // collapsed-group state don't carry over.
     if (dismissedFlagKeys) dismissedFlagKeys.clear();
+    if (collapsedFlagGroups) collapsedFlagGroups.clear();
     lastDismissed = null;
     currentRecommendation = recommendArtefactType(model);
     currentMermaid = buildMermaid(model);
@@ -7426,10 +7537,24 @@ function runRulesEngine(model) {
       // implied, and the count was leading the eye instead of the role list.
       const roles = splitRoles(a.role);
       if (roles.length > 1) {
-        push({ id:`act-multirole-${idx}`, source:'CoVE', severity:'warning',
-          message:`Activity ${a.number} has multiple roles: ${roles.join('; ')}.`,
-          location: loc,
-          suggestion:'One accountable role per activity is the standard. Confirm which role is primary; the others may support.' });
+        // Stronger detection: when this activity's tasks ALSO carry role
+        // attribution ("Hiring manager to ...", "Workforce planning officer
+        // to ..."), the activity is really N activities masquerading as one.
+        // Auto-apply should split them. We surface this as a separate flag so
+        // the user knows what the AI will do.
+        const taskRoleMap = (a.tasks || []).map(t => detectTaskRolePrefix(t.text || '', model.roles || roles));
+        const uniqueRolesInTasks = Array.from(new Set(taskRoleMap.filter(Boolean)));
+        if (uniqueRolesInTasks.length >= 2) {
+          push({ id:`act-split-by-role-${idx}`, source:'CoVE', severity:'warning',
+            message:`Activity ${a.number} has tasks performed by different roles: ${uniqueRolesInTasks.join('; ')}.`,
+            location: loc,
+            suggestion:'Split this activity so each role owns its own activity. Auto-apply will do this for you: one activity per role, with the redundant "Role to" prefix removed from each task.' });
+        } else {
+          push({ id:`act-multirole-${idx}`, source:'CoVE', severity:'warning',
+            message:`Activity ${a.number} has multiple roles: ${roles.join('; ')}.`,
+            location: loc,
+            suggestion:'One accountable role per activity is the standard. Confirm which role is primary; the others may support.' });
+        }
       }
     }
 
@@ -8291,6 +8416,22 @@ window.attachDismissHandlers = function () {
       }
     });
   });
+  // v2 #26b - clickable group headings toggle collapse / expand.
+  document.querySelectorAll('.issue-group-heading[data-group-id]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const id = btn.dataset.groupId;
+      if (!id) return;
+      if (collapsedFlagGroups.has(id)) {
+        collapsedFlagGroups.delete(id);
+      } else {
+        collapsedFlagGroups.add(id);
+      }
+      if (typeof window.refreshIssuesSidebar === 'function') window.refreshIssuesSidebar();
+    });
+  });
+
   // "Restore all" link at the bottom of the sidebar when there's at least one
   // dismissed flag - lets the user bring everything back in one click.
   document.querySelectorAll('.dismissed-restore-link').forEach(link => {
@@ -8529,6 +8670,80 @@ async function renderResults() {
   if (recInline) recInline.classList.add('hidden');
   if (recInlineText) recInlineText.textContent = '';
 
+  // v2 #26 - "group flags by type" mapper. Each rule id maps to a friendly
+  // group label so similar flags cluster in the sidebar (e.g. all "Task verb
+  // not on approved list" cards under one heading). Groups are independent of
+  // severity tiering; severity ordering still drives the top-level layout.
+  function flagGroup(issue) {
+    const id = String((issue && issue.id) || '');
+    // Specific singletons first (these don't follow a -N pattern)
+    if (id === 'title-missing' || id === 'title-prefix' || id === 'title-verb' || id === 'title-length' || id === 'title-inferred') {
+      return { key: 'title', label: 'Process title' };
+    }
+    if (id === 'no-trigger' || id === 'no-inputs' || id === 'no-outputs') {
+      return { key: 'trig-io', label: 'Trigger, inputs, outputs' };
+    }
+    if (id === 'no-owner' || id === 'no-expert' || id === 'owner-equals-expert') {
+      return { key: 'owner-expert', label: 'Owner & expert' };
+    }
+    if (id === 'no-activities' || id === 'too-many-activities' || id === 'too-few-activities') {
+      return { key: 'act-count', label: 'Activity count' };
+    }
+    if (id === 'activity-number-duplicate' || id === 'activity-number-gap' || id === 'activity-number-start') {
+      return { key: 'act-numbering', label: 'Activity numbering' };
+    }
+    if (id === 'no-attachments') return { key: 'attachments', label: 'Supporting attachments' };
+    if (id === 'readability-long') return { key: 'readability', label: 'Average sentence length' };
+    // Per-activity / per-task rules (strip trailing -N or -N-N or -N-letter)
+    if (/^act-verb-/.test(id))          return { key: 'act-verb',          label: 'Activity title doesn’t start with a verb' };
+    if (/^act-length-/.test(id))        return { key: 'act-length',        label: 'Activity title too long' };
+    if (/^act-norole-/.test(id))        return { key: 'act-norole',        label: 'Activity has no role assigned' };
+    if (/^act-multirole-/.test(id))     return { key: 'act-multirole',     label: 'Activity has multiple roles' };
+    if (/^act-split-by-role-/.test(id)) return { key: 'act-split-by-role', label: 'Activity should be split by role' };
+    if (/^no-tasks-/.test(id))          return { key: 'no-tasks',          label: 'Activity has no tasks' };
+    if (/^too-many-tasks-/.test(id))    return { key: 'too-many-tasks',    label: 'Activity has too many tasks' };
+    if (/^task-verb-/.test(id))         return { key: 'task-verb',         label: 'Task verb not on approved list' };
+    if (/^task-long-/.test(id))         return { key: 'task-long',         label: 'Task sentence too long' };
+    if (/^note-question-/.test(id))     return { key: 'note-question',     label: 'Note reads like a statement' };
+    if (/^note-empty-/.test(id))        return { key: 'note-empty',        label: 'Note has no body' };
+    if (/^decision-paths-/.test(id))    return { key: 'decision-paths',    label: 'Decision needs both paths' };
+    if (/^handover-/.test(id))          return { key: 'handover',          label: 'Handover between activities' };
+    if (/^dup-title-/.test(id))         return { key: 'dup-title',         label: 'Duplicate activity titles' };
+    if (/^banned-.+-role-/.test(id))    return { key: 'banned-role',       label: 'Banned term in role' };
+    if (/^banned-/.test(id))            return { key: 'banned-term',       label: 'Banned term used' };
+    // Unknown rule id - fall back to a catch-all group so it still renders.
+    return { key: 'other', label: 'Other quality flags' };
+  }
+  // Take a list of issues and return them ordered for display:
+  // severity tier (error -> warning -> info), then by group (largest first
+  // so the user sees the biggest cluster first), then by document position
+  // within each group (so flags inside a group are still in reading order).
+  function orderIssuesForDisplay(list) {
+    const SEV = ['error', 'warning', 'info'];
+    const out = [];
+    SEV.forEach(sev => {
+      const tier = list.filter(i => i.severity === sev);
+      if (!tier.length) return;
+      const groupsMap = new Map();
+      tier.forEach(f => {
+        const g = flagGroup(f);
+        if (!groupsMap.has(g.key)) groupsMap.set(g.key, { key: g.key, label: g.label, flags: [] });
+        groupsMap.get(g.key).flags.push(f);
+      });
+      const groups = Array.from(groupsMap.values())
+        .sort((a, b) => b.flags.length - a.flags.length);
+      groups.forEach(grp => {
+        out.push({ kind: 'group-heading', severity: sev, key: grp.key, label: grp.label, count: grp.flags.length });
+        grp.flags.forEach(f => out.push({ kind: 'flag', issue: f }));
+      });
+    });
+    return out;
+  }
+  // Expose so getOrderedIssuesForAi can use the same ordering - the AI's
+  // "Flag 5" should line up with the 5th flag card the user sees.
+  window.orderIssuesForDisplay = orderIssuesForDisplay;
+  window.flagGroup = flagGroup;
+
   // Issues
   const grouped = { error: [], warning: [], info: [] };
   currentIssues.forEach((i, idx) => { i._idx = idx; grouped[i.severity]?.push(i); });
@@ -8599,12 +8814,17 @@ async function renderResults() {
   // shows, so the AI's "Flag 3" matches the card the user is looking at.
   // Errors first, then warnings, then info-level suggestions.
   function getOrderedIssuesForAi() {
-    // v2 #23: AI sees the same dismissal-filtered list the user sees, so
-    // "Flag 3" in chat lines up with card #3 in the sidebar, and the AI
-    // doesn't keep advising on flags the user has already set aside.
+    // v2 #23 + #26: AI sees the same dismissal-filtered + group-ordered list
+    // the user sees, so "Flag 3" in chat lines up with card #3 in the sidebar.
     const src = (typeof getActiveIssues === 'function')
       ? getActiveIssues()
       : ((typeof currentIssues !== 'undefined' && Array.isArray(currentIssues)) ? currentIssues : []);
+    if (typeof orderIssuesForDisplay === 'function') {
+      return orderIssuesForDisplay(src)
+        .filter(item => item.kind === 'flag')
+        .map(item => item.issue);
+    }
+    // Fallback when the ordering helper hasn't loaded yet.
     const g = { error: [], warning: [], info: [] };
     src.forEach(i => (g[i.severity] || g.info).push(i));
     return [].concat(g.error, g.warning, g.info);
@@ -8684,9 +8904,8 @@ async function renderResults() {
     // Filter dismissed flags out before rendering. The full currentIssues
     // list is kept untouched so Reset/Analyse-another can restore everything.
     const active = (typeof getActiveIssues === 'function') ? getActiveIssues() : currentIssues;
-    const g = { error: [], warning: [], info: [] };
-    active.forEach((i, idx) => { i._idx = idx; (g[i.severity] || g.info).push(i); });
-    const ordered = [].concat(g.error, g.warning, g.info);
+    // Tag each active issue with its original index so jump-to-section works.
+    active.forEach((i, idx) => { i._idx = idx; });
     const dismissedCount = currentIssues.length - active.length;
     const dismissedNote = dismissedCount > 0
       ? '<div class="dismissed-note">' + dismissedCount +
@@ -8699,7 +8918,37 @@ async function renderResults() {
     } else if (active.length === 0) {
       out.innerHTML = '<p>No quality flags - your draft already meets the standards.</p>';
     } else {
-      out.innerHTML = '<div class="issues-scroll">' + ordered.map((i, idx) => renderIssue(i, idx + 1)).join('') + '</div>' + dismissedNote;
+      // v2 #26 + #26b: render in severity-tier then rule-group order. EVERY
+      // group gets a clickable heading + chevron, regardless of count, so the
+      // user always sees which rule fired and can collapse any group.
+      // Display numbers (the 1, 2, 3... badges) increment continuously even
+      // when a group is collapsed, so chat references stay stable.
+      const ordered = orderIssuesForDisplay(active);
+      let displayNumber = 0;
+      let currentGroupCollapsed = false;
+      const html = ordered.map(item => {
+        if (item.kind === 'group-heading') {
+          // Remember collapse state for the cards that follow in this group.
+          const groupId = item.severity + ':' + item.key;
+          currentGroupCollapsed = collapsedFlagGroups.has(groupId);
+          return '<button type="button" class="issue-group-heading issue-group-' + item.severity +
+            (currentGroupCollapsed ? ' is-collapsed' : '') + '"' +
+            ' data-group-id="' + escapeHtml(groupId) + '"' +
+            ' aria-expanded="' + (currentGroupCollapsed ? 'false' : 'true') + '"' +
+            ' title="' + (currentGroupCollapsed ? 'Expand' : 'Collapse') + ' this group">' +
+            '<span class="issue-group-chevron" aria-hidden="true">' +
+              '<svg viewBox="0 0 12 12" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,4 6,8 10,4"/></svg>' +
+            '</span>' +
+            '<span class="issue-group-label">' + escapeHtml(item.label) + '</span>' +
+            '<span class="issue-group-count">' + item.count + '</span>' +
+          '</button>';
+        }
+        // Flag card: always advance the display number; skip rendering when collapsed.
+        displayNumber++;
+        if (currentGroupCollapsed) return '';
+        return renderIssue(item.issue, displayNumber);
+      }).join('');
+      out.innerHTML = '<div class="issues-scroll">' + html + '</div>' + dismissedNote;
     }
     attachIssueNav();
     if (typeof window.attachDismissHandlers === 'function') window.attachDismissHandlers();
@@ -11816,6 +12065,40 @@ createChatSurface({
       '* MANDATORY SELF-CHECK before emitting blocks: for each activity, compare the role string in your ' +
       'output to the role string in the source for the SAME activity. They must be character-identical. ' +
       'If they aren\'t, fix it before emitting.\n\n' +
+      'SPLIT MULTI-ROLE ACTIVITIES - THIS IS NON-NEGOTIABLE:\n' +
+      'When you see an activity that lists MULTIPLE roles in its role line AND its tasks identify ' +
+      'specific roles doing the work (e.g. "Hiring manager to complete RAF form", "Workforce Planning ' +
+      'Officer to save file", "Workforce Planning Officer to send email"), SPLIT the activity into ' +
+      'multiple separate activities - one activity per role - so each role owns its own tasks.\n' +
+      '* Within each split activity: drop the redundant "Role to" prefix from each task, since the role ' +
+      'is now on the activity\'s role line. Rewrite "Hiring manager to complete RAF form" as "Complete ' +
+      'RAF form".\n' +
+      '* Each split activity\'s role line contains ONLY the role that performs its tasks (still using ' +
+      'the exact wording from the source role list - see PRESERVE ROLES).\n' +
+      '* Group consecutive tasks with the same role together (preserve task order overall - don\'t ' +
+      'reorder across roles, just cluster runs by role).\n' +
+      '* RENUMBER all subsequent activities sequentially. If activity 3 splits into two activities, the ' +
+      'original activity 4 becomes 5, the original activity 5 becomes 6, and so on.\n' +
+      '* Carry NOTEs to the split activity whose tasks they belong to (look at where they sit in the ' +
+      'source - the NOTE under task "c" belongs with whatever role owns task "c"). If a NOTE is ' +
+      'activity-wide (sits at the bottom, applies to everything), put it on the FIRST split activity.\n' +
+      '* If some tasks have no clear role prefix (e.g. "When approved, email RAF to..."), leave them ' +
+      'with the most-recent role-attributed split activity - do not create a separate "shared" activity.\n' +
+      '* DO NOT split when there\'s only one role in the role list, or when the tasks don\'t identify ' +
+      'specific roles. Polish wording only in those cases.\n' +
+      'Worked example:\n' +
+      '  SOURCE:\n' +
+      '    3.0 RAF Approval [Hiring Manager; Workforce Planning Officer]\n' +
+      '      a. Hiring manager to complete RAF form and email to ve.deliveryops.\n' +
+      '      b. Workforce Planning Officer to save file in SharePoint.\n' +
+      '      c. Workforce Planning Officer to send email to HR Business Partner.\n' +
+      '  CORRECT SPLIT:\n' +
+      '    3.0 Complete RAF form [Hiring Manager]\n' +
+      '      a. Complete RAF form and email to ve.deliveryops.\n' +
+      '    4.0 Save and route RAF [Workforce Planning Officer]\n' +
+      '      a. Save file in SharePoint.\n' +
+      '      b. Send email to HR Business Partner.\n' +
+      '    (Subsequent activities renumber: source 4.0 -> 5.0, source 5.0 -> 6.0)\n\n' +
       'ACTIVITY HEADING LENGTH - THIS IS NON-NEGOTIABLE:\n' +
       'Each activity heading (the title on the line with [Role Name]) MUST be 2-7 words. Hard cap: 8 words. ' +
       'If a heading is longer, the activity is doing too much - tighten the wording. Examples:\n' +
@@ -12678,190 +12961,4 @@ createChatSurface({
     // Update globals
     currentModel = newModel;
     const _buildMermaid = window.buildMermaid || (typeof buildMermaid === 'function' ? buildMermaid : null);
-    const _buildBpmnXml = window.buildBpmnXml || (typeof buildBpmnXml === 'function' ? buildBpmnXml : null);
-    const _runRules    = window.runRulesEngine || (typeof runRulesEngine === 'function' ? runRulesEngine : null);
-    // Only regenerate diagram source if it actually changed - keeps zoom/pan
-    if (workflowChanged) {
-      if (_buildMermaid) currentMermaid = _buildMermaid(newModel);
-      if (_buildBpmnXml) currentBpmnXml = _buildBpmnXml(newModel);
-    }
-
-    console.log('[save-edits] extracted model:', {
-      title: newModel.title, owner: newModel.owner, expert: newModel.expert,
-      trigger: newModel.trigger, activities: newModel.activities.length
-    });
-    console.log('[save-edits] workflow fields changed?', workflowChanged);
-
-    // Re-run the rules engine + refresh the quality flags sidebar (every save)
-    let resolvedCount = 0;
-    if (_runRules) {
-      // v2 #23: track ACTIVE issues for the "N resolved" toast so dismissed
-      // flags don't count toward "resolved by editing".
-      const oldActiveCount = (typeof getActiveIssues === 'function'
-        ? getActiveIssues()
-        : (currentIssues || [])
-      ).filter(i => !i.informational).length;
-      const oldCount = oldActiveCount;
-      currentIssues = _runRules(newModel);
-      console.log('[save-edits] new issues:', currentIssues.length, currentIssues.map(i => i.id));
-      if (typeof window.refreshIssuesSidebar === 'function') window.refreshIssuesSidebar();
-      // Update the discreet count pill next to the sidebar QUALITY FLAGS header
-      if (typeof window.updateSidebarOppsCount === 'function') {
-        window.updateSidebarOppsCount();
-      }
-      // Pilot feedback item 19: pulse the count badge so the user's eye
-      // lands on the refreshed number. Re-trigger by removing the class
-      // first (so consecutive saves replay the animation).
-      const badge = document.getElementById('sidebarOppsCount');
-      if (badge) {
-        badge.classList.remove('is-pulsing');
-        // force a reflow so the animation restarts cleanly on rapid saves
-        // eslint-disable-next-line no-unused-expressions
-        badge.offsetWidth;
-        badge.classList.add('is-pulsing');
-        const clearPulse = () => {
-          badge.classList.remove('is-pulsing');
-          badge.removeEventListener('animationend', clearPulse);
-        };
-        badge.addEventListener('animationend', clearPulse);
-      }
-      // v2 #23: count ACTIVE issues so dismissed flags don't keep the user
-      // soft-gated after Save changes re-runs the rules.
-      const activeIssues = (typeof getActiveIssues === 'function') ? getActiveIssues() : currentIssues;
-      const newCount = activeIssues.filter(i => !i.informational).length;
-      resolvedCount = Math.max(0, oldCount - newCount);
-      const oppsCount = document.getElementById('summaryChipOppsCount');
-      if (oppsCount) oppsCount.textContent = String(newCount);
-      const oppsChip = document.getElementById('summaryChipOpps');
-      if (oppsChip) oppsChip.style.display = (newCount > 0) ? '' : 'none';
-
-      // Update the Export button's error badge - soft-gate is driven by error count
-      const errorCount = activeIssues.filter(i => i.severity === 'error').length;
-      const errBadge = document.getElementById('actionExportErrorBadge');
-      if (errBadge) {
-        if (errorCount > 0) {
-          errBadge.textContent = '\u26A0 ' + errorCount + ' error' + (errorCount === 1 ? '' : 's');
-          errBadge.classList.remove('hidden');
-        } else {
-          errBadge.classList.add('hidden');
-        }
-      }
-      // Update the export-modal warning too if it's currently open / will open
-      const exportWarning = document.getElementById('exportWarning');
-      const exportWarningCount = document.getElementById('exportWarningCount');
-      if (exportWarning && exportWarningCount) {
-        exportWarningCount.textContent = String(errorCount);
-        exportWarning.classList.toggle('hidden', errorCount === 0);
-      }
-    } else {
-      console.warn('[save-edits] runRulesEngine not available; quality flags sidebar not refreshed');
-    }
-
-    // Re-render the workflow only when relevant fields changed
-    if (workflowChanged) {
-      await reRenderWorkflow();
-      const titleEl = document.getElementById('workflowTitle');
-      if (titleEl) titleEl.textContent = currentModel.title || '';
-    }
-
-    if (typeof showToast === 'function') {
-      let msg;
-      if (workflowChanged && resolvedCount > 0) {
-        msg = 'Workflow + quality flags updated. ' + resolvedCount + ' quality flag' + (resolvedCount === 1 ? '' : 's') + ' resolved.';
-      } else if (workflowChanged) {
-        msg = 'Workflow updated with your edits.';
-      } else if (resolvedCount > 0) {
-        msg = 'Quality flags updated. ' + resolvedCount + ' quality flag' + (resolvedCount === 1 ? '' : 's') + ' resolved.';
-      } else {
-        msg = 'Changes saved. Quality flags refreshed.';
-      }
-      showToast(msg, 'success', 4500);
-    }
-  }
-
-  document.addEventListener('DOMContentLoaded', () => {
-    const btn = document.getElementById('saveEditsBtn');
-    if (btn) btn.addEventListener('click', saveEditsAndRefresh);
-  });
-
-  // Expose so other code paths can call it
-  window.saveEditsAndRefresh = saveEditsAndRefresh;
-})();
-</script>
-
-
-<script>
-// Top-of-doc 'Save changes' button - same behaviour as the bottom one
-(function wireTopSaveBtn() {
-  document.addEventListener('DOMContentLoaded', () => {
-    const top = document.getElementById('saveEditsTopBtn');
-    if (top) top.addEventListener('click', () => {
-      if (typeof window.saveEditsAndRefresh === 'function') {
-        window.saveEditsAndRefresh();
-      } else {
-        const bottom = document.getElementById('saveEditsBtn');
-        if (bottom) bottom.click();
-      }
-    });
-  });
-})();
-</script>
-
-<script>
-// ============================================================
-// SharePoint iframe plumbing
-// When the tool is embedded as an iframe (in SharePoint or anywhere else),
-// these two handlers make the embed feel native:
-//   1. Auto-resize: post our rendered height up to the parent so the iframe
-//      grows/shrinks to fit. No inner scroll bars.
-//   2. Viewport sync: when the host posts its visible viewport position, we
-//      use it to position modals where the user is actually looking, not at
-//      the geometric centre of a tall iframe.
-// Both no-op when the page is loaded directly (not in an iframe).
-// Pair this with the snippet in /sharepoint-embed-snippet.html on the host.
-// ============================================================
-(function setupIframeBridge() {
-  if (window.parent === window) return; // not in an iframe - nothing to do
-  document.body.classList.add('in-iframe');
-
-  // ---- Auto-resize ----
-  let lastHeight = 0;
-  function postHeight() {
-    const h = Math.max(
-      document.body.scrollHeight,
-      document.documentElement.scrollHeight,
-      document.body.offsetHeight,
-      document.documentElement.offsetHeight
-    );
-    if (Math.abs(h - lastHeight) > 8) {
-      lastHeight = h;
-      try { window.parent.postMessage({ type: 'cove-tool-resize', height: h }, '*'); } catch (e) {}
-    }
-  }
-  window.addEventListener('load', postHeight);
-  if (window.ResizeObserver) {
-    new ResizeObserver(postHeight).observe(document.body);
-  }
-  // Polling fallback for late-mounting content (chat messages, AI results)
-  setInterval(postHeight, 1000);
-
-  // ---- Viewport sync ----
-  // The host posts {visibleTop, visibleHeight} whenever it scrolls or resizes.
-  // We expose those as CSS custom properties so any modal CSS can centre to
-  // the user's actual viewport instead of the iframe's full height.
-  window.addEventListener('message', (event) => {
-    if (!event.data || event.data.type !== 'cove-host-viewport') return;
-    const visibleTop = Math.max(0, event.data.visibleTop || 0);
-    const visibleHeight = event.data.visibleHeight || window.innerHeight;
-    document.documentElement.style.setProperty('--host-modal-top', visibleTop + 'px');
-    document.documentElement.style.setProperty('--host-modal-height', visibleHeight + 'px');
-  });
-  // Ask the host to send viewport info now (in case the load order means we
-  // missed its initial post).
-  try { window.parent.postMessage({ type: 'cove-tool-request-viewport' }, '*'); } catch (e) {}
-})();
-</script>
-
-</body>
-</html>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       
+    const _buildBpmnXml = window.buildBpmnXml || (typeof buildBp
