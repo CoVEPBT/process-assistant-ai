@@ -3740,6 +3740,17 @@
     align-items: flex-start;
     padding: 10px 12px;
   }
+  /* v2 #30 - "Admin" badge on the review-pack button. Small navy chip that
+     distinguishes the admin export from the everyday Word / PDF / Nintex
+     options. The button shape stays the same so it doesn't shout. */
+  .export-format-btn .badge-admin {
+    display: inline-block;
+    background: #003478; color: #FFFFFF;
+    font-size: 9.5px; font-weight: 700;
+    letter-spacing: 0.4px; text-transform: uppercase;
+    padding: 2px 6px; border-radius: 3px;
+    margin-left: 6px; vertical-align: middle;
+  }
   .export-format-btn:has(.format-sub) > svg {
     margin-top: 1px;
   }
@@ -4495,6 +4506,23 @@ NOTE: What if access is delayed? Escalate to the IT lead and update the new star
           <p><strong>Updating an existing process:</strong> archive the old version first, then either update links that reference it, or paste new content into the existing process shell to keep links intact. Don't leave two live versions in Nintex.</p>
         </div>
       </details>
+    </div>
+
+    <!-- v2 #30: Admin "review pack" export. Combines the polished document
+         with each active quality flag as a Word review comment anchored to
+         the relevant activity / task. Designed for champions / reviewers to
+         hand off to process owners + experts so they can action the findings. -->
+    <div class="export-group">
+      <h3 class="export-group-title">Admin actions</h3>
+      <div class="export-format-grid">
+        <button class="export-format-btn export-format-btn-wide" type="button" id="downloadReviewPackBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <span class="label-stack">
+            <span class="format-label">Review pack (.docx)<span class="badge-admin">Admin</span></span>
+            <span class="format-sub">Polished document plus each quality flag as a Word review comment, ready to share with the process owner / expert.</span>
+          </span>
+        </button>
+      </div>
     </div>
 
     <div class="modal-footer">
@@ -9201,6 +9229,310 @@ function triggerDownload(blob, filename) {
 }
 
 /* ============================================================
+   v2 #30 - ADMIN REVIEW PACK EXPORT
+   ------------------------------------------------------------
+   A single .docx that combines:
+     - the polished procedure body (title, metadata, objective,
+       background, activities with roles + tasks + NOTEs)
+     - each active quality flag rendered as a Word REVIEW COMMENT
+       anchored to the relevant activity or task paragraph
+   Dismissed flags are excluded (per the v2 #23 design decision).
+   The process owner / expert receives the pack, opens it in Word,
+   sees comments in the right-margin balloons, and replies inline
+   to accept / change / decline each one.
+   ============================================================ */
+async function downloadReviewPack() {
+  if (!currentModel) {
+    showToast('Nothing to export yet - analyse a draft first.', 'error');
+    return;
+  }
+  const D = window.docx;
+  if (!D) { showToast('Word library not loaded. Try refreshing the page.', 'error'); return; }
+  const {
+    Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
+    Header, Footer, AlignmentType, LevelFormat, TabStopType,
+    HeadingLevel, BorderStyle, WidthType, ShadingType, PageNumber,
+    CommentRangeStart, CommentRangeEnd, CommentReference
+  } = D;
+
+  const m = currentModel;
+  // Active flags only (dismissed flags are excluded by default).
+  const flags = (typeof getActiveIssues === 'function')
+    ? getActiveIssues()
+    : (Array.isArray(currentIssues) ? currentIssues : []);
+
+  // ---------- Build the docx comment objects ----------
+  // Each flag becomes a Word review comment. We map flag -> docx comment id by
+  // its position in the active list (1-based for display, 0-based for the API).
+  const commentObjects = flags.map((f, idx) => {
+    const sev = (f.severity || 'info').toUpperCase();
+    const message = String(f.message || '').trim();
+    const suggestion = String(f.suggestion || '').trim();
+    const bodyChildren = [
+      new Paragraph({ children: [
+        new TextRun({ text: 'FLAG ' + (idx + 1) + ' (' + sev + ')  ', bold: true })
+      ] }),
+      new Paragraph({ children: [new TextRun({ text: message })] })
+    ];
+    if (suggestion) {
+      bodyChildren.push(new Paragraph({ children: [
+        new TextRun({ text: 'Suggested fix: ', bold: true }),
+        new TextRun({ text: suggestion })
+      ] }));
+    }
+    return { id: idx, author: 'Process Assessment Tool', date: new Date(), children: bodyChildren };
+  });
+
+  // ---------- Pre-compute which flags target which activity / task ----------
+  // The flag's `location` looks like "Activity 2.0", "Task 2.0a", "Process title", etc.
+  // We index by activity number and task letter so each paragraph builder can
+  // look up "any flags pointing here?" cheaply.
+  const flagsByActivity = {};   // "2.0" -> [{idx, ...}]
+  const flagsByTask     = {};   // "2.0a" -> [{idx, ...}]
+  const flagsForTitle   = [];
+  flags.forEach((f, idx) => {
+    const loc = String(f.location || '').trim();
+    const taskMatch = loc.match(/(\d+\.\d+)\s*([a-z])/i);
+    const actMatch  = loc.match(/(\d+\.\d+)/);
+    if (taskMatch) {
+      const key = taskMatch[1] + taskMatch[2].toLowerCase();
+      (flagsByTask[key] = flagsByTask[key] || []).push(idx);
+    } else if (actMatch) {
+      const key = actMatch[1];
+      (flagsByActivity[key] = flagsByActivity[key] || []).push(idx);
+    } else if (/title/i.test(loc) || /^title-/i.test(f.id || '')) {
+      flagsForTitle.push(idx);
+    } else {
+      // Process-wide flag with no specific location - attach to the activity heading
+      // of the first activity as a fallback so it isn't silently dropped.
+      if (m.activities.length) {
+        const key = m.activities[0].number;
+        (flagsByActivity[key] = flagsByActivity[key] || []).push(idx);
+      }
+    }
+  });
+
+  // Helper: wrap a list of TextRun children with comment range markers if any
+  // flag indexes target this paragraph. The comment markers are siblings of
+  // the runs they wrap, not nested inside a run. CommentReference is a direct
+  // paragraph child in docx-js 8.x - no TextRun wrapper needed.
+  const withComments = (commentIds, runs) => {
+    if (!commentIds || !commentIds.length) return runs;
+    const out = [];
+    commentIds.forEach(id => out.push(new CommentRangeStart(id)));
+    runs.forEach(r => out.push(r));
+    commentIds.forEach(id => {
+      out.push(new CommentRangeEnd(id));
+      out.push(new CommentReference(id));
+    });
+    return out;
+  };
+
+  // ---------- Visual constants (same palette as variant A mockup) ----------
+  const NAVY = '003478', AMBER = 'D97706', GREY = '475569';
+  const LIGHT_GREY = 'F1F5F9', BORDER_GREY = 'CBD5E1';
+  const cellBorder = { style: BorderStyle.SINGLE, size: 4, color: BORDER_GREY };
+  const cellBorders = { top: cellBorder, bottom: cellBorder, left: cellBorder, right: cellBorder };
+
+  // ---------- Build the section body ----------
+  const children = [];
+
+  // Title + version
+  children.push(new Paragraph({
+    heading: HeadingLevel.HEADING_1,
+    children: withComments(flagsForTitle, [new TextRun({ text: m.title || 'Untitled process' })])
+  }));
+  if (m.version) {
+    children.push(new Paragraph({
+      spacing: { after: 240 },
+      children: [new TextRun({ text: 'Version: ', bold: true }), new TextRun(m.version)]
+    }));
+  }
+
+  // For: panel (shaded intro box)
+  const ownerVal = (typeof PILOT_NAMES_EXCLUDED !== 'undefined' && PILOT_NAMES_EXCLUDED && !m.owner)
+    ? 'To be assigned in Nintex Process Manager' : (m.owner || '-');
+  const expertVal = (typeof PILOT_NAMES_EXCLUDED !== 'undefined' && PILOT_NAMES_EXCLUDED && !m.expert)
+    ? 'To be assigned in Nintex Process Manager' : (m.expert || '-');
+  const today = (function () {
+    const d = new Date(), dd = String(d.getDate()).padStart(2, '0');
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return dd + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
+  })();
+  children.push(new Table({
+    width: { size: 9026, type: WidthType.DXA }, columnWidths: [9026],
+    rows: [new TableRow({ children: [new TableCell({
+      borders: cellBorders, width: { size: 9026, type: WidthType.DXA },
+      shading: { fill: LIGHT_GREY, type: ShadingType.CLEAR },
+      margins: { top: 160, bottom: 160, left: 240, right: 240 },
+      children: [
+        new Paragraph({ children: [new TextRun({ text: 'For: Process owner / Subject matter expert', bold: true, color: NAVY })] }),
+        new Paragraph({ spacing: { before: 80 }, children: [new TextRun('This pack contains the polished process document. Quality flags from the Process Assessment Tool are shown as Word review comments anchored to the relevant activity or task. Please reply to each comment with your decision (accept / change / decline), update the procedure where required, then publish in Nintex.')] }),
+        new Paragraph({ spacing: { before: 120 }, children: [
+          new TextRun({ text: 'Reviewed by: ', bold: true }), new TextRun('[Reviewer name]'),
+          new TextRun({ text: '   •   ', color: GREY }),
+          new TextRun({ text: 'Date: ', bold: true }), new TextRun(today),
+          new TextRun({ text: '   •   ', color: GREY }),
+          new TextRun({ text: 'Flags to action: ', bold: true }), new TextRun(String(flags.length))
+        ] })
+      ]
+    })] })]
+  }));
+
+  // Metadata
+  children.push(new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun('Process metadata')] }));
+  children.push(new Paragraph({ children: [new TextRun({ text: 'Owner: ', bold: true }), new TextRun(ownerVal)] }));
+  children.push(new Paragraph({ children: [new TextRun({ text: 'Expert: ', bold: true }), new TextRun(expertVal)] }));
+
+  // Objective / Background
+  if (m.objective) {
+    children.push(new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun('Objective')] }));
+    children.push(new Paragraph({ children: [new TextRun(m.objective)] }));
+  }
+  if (m.background) {
+    children.push(new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun('Background')] }));
+    children.push(new Paragraph({ children: [new TextRun(m.background)] }));
+  }
+
+  // Procedure
+  children.push(new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun('Procedure')] }));
+
+  m.activities.forEach(a => {
+    const actFlagIds = flagsByActivity[a.number] || [];
+    // Activity heading (wraps title + number with any activity-level comments).
+    children.push(new Paragraph({
+      spacing: { before: 320, after: 80 },
+      children: withComments(actFlagIds, [
+        new TextRun({ text: a.number + '  ', bold: true, size: 26, color: NAVY }),
+        new TextRun({ text: a.title || '', bold: true, size: 26, color: NAVY })
+      ])
+    }));
+    // Role line
+    children.push(new Paragraph({
+      spacing: { after: 100 },
+      children: [
+        new TextRun({ text: 'Role: ', bold: true, color: GREY, size: 20 }),
+        new TextRun({ text: a.role || '[Click to add accountable role]', color: GREY, size: 20 })
+      ]
+    }));
+    // Tasks - each task gets numbered "letter." prefix per activity so the
+    // lettering restarts at "a" under each activity (fixes the mockup quirk).
+    (a.tasks || []).forEach(t => {
+      const taskKey = a.number + (t.letter || '');
+      const taskFlagIds = flagsByTask[taskKey] || [];
+      const baseRuns = [
+        new TextRun({ text: (t.letter || '') + '.  ', bold: true }),
+        new TextRun({ text: t.text || '' })
+      ];
+      children.push(new Paragraph({
+        indent: { left: 720 },
+        spacing: { after: 80 },
+        children: withComments(taskFlagIds, baseRuns)
+      }));
+      // Link row (preserved URLs)
+      if (t.attachment) {
+        children.push(new Paragraph({
+          indent: { left: 720 },
+          spacing: { after: 80 },
+          children: [
+            new TextRun({ text: 'Link: ', bold: true, size: 18, color: GREY }),
+            new TextRun({ text: String(t.attachment), size: 18, color: GREY })
+          ]
+        }));
+      }
+    });
+    // NOTE blocks (shaded amber-left boxes)
+    (a.notes || []).forEach(n => {
+      children.push(new Table({
+        width: { size: 8500, type: WidthType.DXA }, columnWidths: [8500],
+        rows: [new TableRow({ children: [new TableCell({
+          borders: Object.assign({}, cellBorders, { left: { style: BorderStyle.SINGLE, size: 18, color: AMBER } }),
+          width: { size: 8500, type: WidthType.DXA },
+          shading: { fill: 'FEF6E0', type: ShadingType.CLEAR },
+          margins: { top: 120, bottom: 120, left: 240, right: 240 },
+          children: [
+            new Paragraph({ children: [new TextRun({ text: 'NOTE: ' + (n.title || ''), bold: true, color: NAVY })] })
+          ].concat(n.body ? [new Paragraph({ spacing: { before: 60 }, children: [new TextRun(n.body)] })] : [])
+        })] })]
+      }));
+      children.push(new Paragraph({ spacing: { after: 80 }, children: [new TextRun('')] }));
+    });
+    // Process / form links
+    (a.links || []).forEach(l => {
+      const tag = '[' + (l.type || 'LINK').toUpperCase() + ']';
+      children.push(new Paragraph({
+        indent: { left: 720 },
+        children: [
+          new TextRun({ text: tag + ' ', bold: true, size: 18, color: GREY }),
+          new TextRun({ text: l.name || '', size: 18, color: GREY })
+        ]
+      }));
+    });
+  });
+
+  // Footer sign-off block
+  children.push(new Paragraph({ spacing: { before: 480 }, heading: HeadingLevel.HEADING_3, children: [new TextRun('Owner sign-off')] }));
+  children.push(new Paragraph({ children: [new TextRun('Once all flags have been actioned (or a decision documented inline as a comment reply), the process owner signs below to confirm the procedure is ready for publication in Nintex.')] }));
+  children.push(new Paragraph({ spacing: { before: 240 }, children: [
+    new TextRun({ text: 'Name: ', bold: true }),
+    new TextRun('______________________________________'),
+    new TextRun({ text: '\tDate: ', bold: true }),
+    new TextRun('________________')
+  ], tabStops: [{ type: TabStopType.LEFT, position: 5400 }] }));
+  children.push(new Paragraph({ spacing: { before: 240 }, children: [
+    new TextRun({ text: 'Signature: ', bold: true }),
+    new TextRun('_________________________________')
+  ] }));
+
+  // ---------- Assemble the Document ----------
+  const doc = new Document({
+    styles: {
+      default: { document: { run: { font: 'Segoe UI', size: 22 } } },
+      paragraphStyles: [
+        { id: 'Heading1', name: 'Heading 1', basedOn: 'Normal', next: 'Normal', quickFormat: true,
+          run: { size: 36, bold: true, font: 'Segoe UI', color: NAVY },
+          paragraph: { spacing: { before: 360, after: 200 }, outlineLevel: 0 } },
+        { id: 'Heading2', name: 'Heading 2', basedOn: 'Normal', next: 'Normal', quickFormat: true,
+          run: { size: 28, bold: true, font: 'Segoe UI', color: NAVY },
+          paragraph: { spacing: { before: 320, after: 160 }, outlineLevel: 1 } },
+        { id: 'Heading3', name: 'Heading 3', basedOn: 'Normal', next: 'Normal', quickFormat: true,
+          run: { size: 24, bold: true, font: 'Segoe UI', color: NAVY },
+          paragraph: { spacing: { before: 240, after: 120 }, outlineLevel: 2 } }
+      ]
+    },
+    comments: { children: commentObjects },
+    sections: [{
+      properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 } } },
+      headers: { default: new Header({ children: [new Paragraph({ children: [new TextRun({ text: 'Process review pack — Admin export', color: GREY, size: 18 })] })] }) },
+      footers: { default: new Footer({ children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [
+        new TextRun({ text: 'Page ', color: GREY, size: 18 }),
+        new TextRun({ children: [PageNumber.CURRENT], color: GREY, size: 18 }),
+        new TextRun({ text: ' of ', color: GREY, size: 18 }),
+        new TextRun({ children: [PageNumber.TOTAL_PAGES], color: GREY, size: 18 })
+      ] })] }) },
+      children
+    }]
+  });
+
+  try {
+    const blob = await Packer.toBlob(doc);
+    const filename = ((m.title || 'process').replace(/[^\w\-]+/g, '_')) + '_review-pack.docx';
+    triggerDownload(blob, filename);
+    if (typeof showToast === 'function') {
+      const n = flags.length;
+      const msg = n === 0
+        ? 'Review pack downloaded. No quality flags to action - your procedure is ready.'
+        : 'Review pack downloaded with ' + n + ' quality flag' + (n === 1 ? '' : 's') + ' as Word comments.';
+      showToast(msg, 'success', 4500);
+    }
+  } catch (err) {
+    console.error('[review-pack] failed to build .docx:', err);
+    showToast('Could not build the review pack: ' + (err.message || err), 'error', 8000);
+  }
+}
+window.downloadReviewPack = downloadReviewPack;
+
+/* ============================================================
    HTML -> docx Paragraph walker
    Walks the contenteditable doc preview and converts to docx
    Paragraph/TextRun objects so the user's edits are captured.
@@ -9929,6 +10261,8 @@ function wireExportBtn(id, handler) {
 wireExportBtn('downloadDocxBtn', downloadAsDocx);
 wireExportBtn('downloadPdfBtn', downloadAsPdf);
 wireExportBtn('downloadNintexBtn', downloadNintexImport);
+// v2 #30: Admin review pack - polished doc + flags as Word review comments.
+wireExportBtn('downloadReviewPackBtn', downloadReviewPack);
 // SVG and PNG image exports are not currently wired in the modal but the
 // functions still exist in case they're reinstated later.
 wireExportBtn('downloadSvgBtn', downloadSvg);
@@ -10672,7 +11006,7 @@ if (restoreBtn) {
     openFlagsSidebar();
   });
   // Close export modal after picking a format
-  ['downloadDocxBtn','downloadPdfBtn','downloadNintexBtn','downloadPngBtn'].forEach(id => {
+  ['downloadDocxBtn','downloadPdfBtn','downloadNintexBtn','downloadPngBtn','downloadReviewPackBtn'].forEach(id => {
     const b = document.getElementById(id);
     if (b) b.addEventListener('click', () => setTimeout(closeExportModal, 80));
   });
@@ -11737,9 +12071,11 @@ createChatSurface({
       console.error('[auto-apply] failed:', err);
       if (typeof showToast === 'function') {
         // Surface a longer error toast that includes a snippet so the user can
-        // tell us what went wrong if they want.
+        // forward it to the PBT team if needed. Pilot users no longer get the
+        // "try the manual option" prompt - the recovery path is refresh + retry
+        // or contact PBT for support.
         const msg = (err.message || String(err)).slice(0, 320);
-        showToast('Auto-apply failed: ' + msg + ' - Try the manual review, or paste this error to the team.', 'error', 12000);
+        showToast('Auto-apply failed: ' + msg + ' - Please refresh the page and try again. If it keeps happening, contact the PBT team for support.', 'error', 12000);
       }
       // Re-show the cards so the user can retry or choose the manual path
       if (cards) cards.classList.remove('hidden');
