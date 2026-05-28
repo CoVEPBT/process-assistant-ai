@@ -491,4 +491,50 @@ app.post('/api/chat', async (req, res) => {
   // Stub mode if no key configured
   if (!openai) {
     return res.json({
-      reply: '⚠️ Stub mode - no OPENAI_API_KEY set in .env. To enable real AI responses, paste your key into the .env file and re
+      reply: '⚠️ Stub mode - no OPENAI_API_KEY set in .env. To enable real AI responses, paste your key into the .env file and restart the server.\n\n(Last user message: ' + (messages[messages.length - 1]?.content || '').slice(0, 200) + ')'
+    });
+  }
+
+  try {
+    // Sensible per-request overrides, with safety clamps so a client can't
+    // accidentally bill us into oblivion.
+    const safeMaxTokens = Math.min(
+      Math.max(parseInt(max_tokens, 10) || 1500, 256),
+      4000
+    );
+    const safeTemperature = (typeof temperature === 'number'
+      && temperature >= 0 && temperature <= 2)
+      ? temperature
+      : 0.4;
+    const completion = await openai.chat.completions.create({
+      model: MODEL,
+      messages: fullMessages,
+      max_tokens: safeMaxTokens,
+      temperature: safeTemperature,
+    });
+    const reply = completion.choices[0]?.message?.content || '(no response)';
+    res.json({ reply, model: MODEL, usage: completion.usage });
+  } catch (err) {
+    console.error('[OpenAI error]', err.status, err.message);
+    res.status(err.status || 500).json({ error: err.message || 'OpenAI call failed' });
+  }
+});
+
+app.get('/api/health', (req, res) => {
+  res.json({
+    ok: true,
+    model: MODEL,
+    keyConfigured: !!openai,
+    publicDir: PUBLIC_DIR,
+    knowledgeChars: KNOWLEDGE_CORPUS.length,
+  });
+});
+
+await loadKnowledge();
+
+app.listen(PORT, () => {
+  console.log(`[process-assistant-ai] running on http://localhost:${PORT}`);
+  console.log(`[process-assistant-ai] model: ${MODEL}`);
+  console.log(`[process-assistant-ai] key configured: ${!!openai}`);
+  console.log(`[process-assistant-ai] knowledge corpus: ${KNOWLEDGE_CORPUS.length} chars`);
+});
