@@ -7421,13 +7421,15 @@ function runRulesEngine(model) {
         suggestion:'Click the highlighted "[Click to add accountable role]" line under the activity title to type the role in. One accountable role per activity - others may support.' });
     } else {
       // The export pattern often shows multiple comma-separated roles for activities done jointly.
-      // Flag two or more as info - sometimes intentional, but worth a check.
+      // Promoted from info to warning per Natalie: the "one accountable role per
+      // activity" rule is a stronger CoVE convention than the info severity
+      // implied, and the count was leading the eye instead of the role list.
       const roles = splitRoles(a.role);
       if (roles.length > 1) {
-        push({ id:`act-multirole-${idx}`, source:'CoVE', severity:'info',
-          message:`Activity ${a.number} lists ${roles.length} roles: ${roles.join('; ')}.`,
+        push({ id:`act-multirole-${idx}`, source:'CoVE', severity:'warning',
+          message:`Activity ${a.number} has multiple roles: ${roles.join('; ')}.`,
           location: loc,
-          suggestion:'One accountable role per activity is the standard. Confirm one is primary.' });
+          suggestion:'One accountable role per activity is the standard. Confirm which role is primary; the others may support.' });
       }
     }
 
@@ -11748,6 +11750,13 @@ createChatSurface({
       'PRESERVE URLS: If a task in the source contains a URL (https://...), keep it in the same task ' +
       'in your output. Do not drop or rewrite URLs. URLs are typically training-module or system links ' +
       'the process owner has provided - removing them breaks the documented process.\n' +
+      'PRESERVE EMAIL ADDRESSES - NON-NEGOTIABLE: If a task contains an email address (anything matching ' +
+      'x@y.tld), keep it verbatim in the SAME task in your output. Emails in process docs are almost ' +
+      'always shared / functional inboxes (e.g. "ve.deliveryops@rmit.edu.au", "studentregistration@' +
+      'ahpra.gov.au", "ahpra@rmit.edu.au") that define WHERE the work goes - removing them means the ' +
+      'reader has no idea who to contact. Do NOT drop, paraphrase ("send to the operations team"), or ' +
+      'replace emails with placeholders. If you find yourself rewriting a sentence in a way that would ' +
+      'drop an email, keep the email in the task and spin off any extra context as a NOTE.\n' +
       'KEEP TASK ORDER STABLE: do not reorder tasks within an activity unless one is a genuine duplicate. ' +
       'The tool matches URL attachments back to tasks by their position (a, b, c, ...) so reordering ' +
       'will misalign the link rendering.\n\n' +
@@ -11891,6 +11900,46 @@ createChatSurface({
         });
       } catch (e) {
         console.warn('[auto-apply] could not restore task attachments:', e);
+      }
+
+      // Restore email addresses the AI dropped from task text. Same pattern
+      // as the URL preservation: scan the original task for x@y.tld matches
+      // and, if any are missing from the new task, append them in parens so
+      // the reader still sees who to contact. Match new tasks to original
+      // tasks by activity index + task letter.
+      try {
+        const EMAIL_RE = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g;
+        const origActs = (originalSnapshot.model && originalSnapshot.model.activities) || [];
+        let restored = 0;
+        newModel.activities.forEach((newAct, ai) => {
+          const origAct = origActs[ai];
+          if (!origAct || !origAct.tasks) return;
+          const origByLetter = {};
+          origAct.tasks.forEach(t => { if (t.letter) origByLetter[t.letter] = t; });
+          (newAct.tasks || []).forEach(newT => {
+            const origT = newT.letter && origByLetter[newT.letter];
+            if (!origT) return;
+            const origText = String(origT.text || '');
+            const newText  = String(newT.text || '');
+            const origEmails = origText.match(EMAIL_RE) || [];
+            if (!origEmails.length) return;
+            const missing = origEmails.filter(e => !newText.toLowerCase().includes(e.toLowerCase()));
+            if (missing.length) {
+              // Append "(Email: a@b, c@d)" to the new task so the reader still
+              // sees the recipient. Trailing period preserved.
+              const trailingDot = /\.\s*$/.test(newT.text);
+              const cleaned = trailingDot ? newT.text.replace(/\.\s*$/, '') : newT.text;
+              const label = missing.length === 1 ? 'Email' : 'Emails';
+              newT.text = cleaned + ' (' + label + ': ' + missing.join(', ') + ')' + (trailingDot ? '.' : '');
+              restored += missing.length;
+            }
+          });
+        });
+        if (restored > 0) {
+          console.log('[auto-apply] restored ' + restored + ' email address(es) the AI had dropped');
+        }
+      } catch (e) {
+        console.warn('[auto-apply] could not restore email addresses:', e);
       }
 
       // Restore the role list verbatim from the original model. The role

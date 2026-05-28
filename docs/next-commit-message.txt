@@ -1,0 +1,151 @@
+Big batch: parsers, UX, AI guardrails, dismiss + admin review pack
+
+Nine improvements landed together:
+
+1. PDF title detection (pilot feedback item 17)
+   Old regex required '[A-Z]{2,3}' after 'CoVE - ' so it skipped real
+   titles like 'CoVE - Student Lifecycle - ...' and grabbed the next
+   CoVE-prefixed line, which is actually a role label
+   ('CoVE - SL - Coordinator, Student Lifecycle').
+
+   New detector anchors on the Nintex status marker ('[ Awaiting
+   Publish ]' / '[ Approved ]' / '[ Draft ]' etc.) or version 'vX.Y'.
+   It iterates every candidate anchor in the first 50 lines, walks
+   back up to 5 lines with hyphenation-aware joining (so 'regis-'
+   + 'tration' becomes 'registration'), and prefers candidates that
+   start with 'CoVE -' or 'RMIT -'. The 'prefer known prefix' rule
+   handles the page-1 column-split case where the status badge ends
+   up on a line by itself with no title context.
+
+2. PDF role-line detection (pilot feedback item 18)
+   Old roleLineRe only matched lines starting with CoVE/RMIT or
+   containing en/em dashes, so plain-hyphen role labels like
+   'STEM - SHBS - Accreditation Manager' or 'USARG Government
+   Reporting - Manager' fell through to the title-continuation
+   branch.
+
+   New isRoleLine() also accepts 'all-caps prefix + plain dash +
+   role-keyword (Manager, Officer, Coordinator, Analyst, etc.)'.
+
+3. Count-badge pulse on Save changes (pilot feedback item 19)
+   Save changes already re-runs rules, refreshes the sidebar,
+   updates the count badge and shows a 4.5s toast - but the
+   visual feedback on the badge itself was too subtle.
+
+   Added a 1.2s pulse animation that fires every time
+   saveEditsAndRefresh runs - amber glow for the "N to review"
+   state, green glow for the "All clear" state. Class is removed
+   on animationend so consecutive saves replay the animation.
+   Respects prefers-reduced-motion.
+
+4. Dismiss a quality flag (v2 backlog item #23, pilot feedback)
+   Each quality-flag card now has a "x" dismiss button at the
+   top-right. Click it and the flag disappears from:
+     - the sidebar list
+     - the "N to review" / "All clear" count badge
+     - the summary chip on the page header
+     - the Export error gate
+     - the ISSUES FLAGGED block sent to the AI (so the AI stops
+       referring to flags the user has set aside)
+
+   Dismissals are per-session only - no localStorage. Reset /
+   Analyse another / a fresh Analyse clears the set. Each
+   dismissal shows a 6s toast with an "Undo" button. When at
+   least one flag is dismissed, a "N dismissed - Restore all"
+   footer appears at the bottom of the sidebar so the user can
+   bring everything back in one click.
+
+   Flag identity = id + location + message - so dismissals
+   persist correctly across Save changes re-runs. If the user
+   fixes the underlying issue, the rule stops firing and the
+   dismissal naturally falls away.
+
+5. Auto-apply AI behaviour: notes, titles, roles, context-preservation
+   Four AI regressions caught in testing:
+
+   - NOTE blocks were being omitted from the rewritten document.
+     Added an explicit PRESERVE NOTES section to the auto-apply
+     prompt ("NOTEs are load-bearing, count source vs output,
+     redo if mismatched") plus a post-process restoration step
+     that fuzzy-matches NOTE titles against the original model
+     and puts back any the AI still drops.
+
+   - Activity headings were coming back longer than the 7-word
+     target. Added an explicit ACTIVITY HEADING LENGTH section
+     to the auto-apply prompt (2-7 words target, hard cap 8,
+     with self-check requirement). Server SYSTEM_PROMPT also
+     strengthened so chat-only rewrites don't drift past 8.
+
+   - Role lists were being rewritten / shortened / merged
+     (e.g. "CoVE - Delivery Planning & Support, CoVE - Quality
+     & Compliance" coming back as "CoVE - Delivery Planning
+     Support"). Added an explicit PRESERVE ROLES section to
+     the auto-apply prompt (verbatim copy, character-for-
+     character) and a "preserve role list verbatim" rule in
+     the server SYSTEM_PROMPT. Post-process step also copies
+     the original role string back per activity if the AI
+     altered it - so even on a bad-luck run, your role
+     assignments survive.
+
+   - Useful context being silently deleted when shortening
+     tasks. E.g. "Allocate required staff to RPO grade rosters
+     referring to the data noted Staff Name columns in the
+     FRANC document" was getting rewritten to "Allocate staff
+     to grade rosters from the FRANC" - losing both "RPO" and
+     the lookup hint about which column to use. Added a
+     PROMOTE DROPPED CONTEXT TO NOTES rule to the auto-apply
+     prompt (mirrored in the server SYSTEM_PROMPT): when
+     shortening a task, do not delete specific nouns - keep
+     them in the task or spin them off as a new NOTE on the
+     same activity. True filler ("in order to", "as
+     appropriate") can be dropped without a NOTE. Specific
+     nouns (column / section / view / tool / role / criterion
+     names) cannot.
+
+   - Email addresses being silently deleted (e.g. shared inbox
+     "ve.deliveryops@rmit.edu.au" dropped from "Send email to
+     ve.deliveryops@rmit.edu.au to initiate request" -> "Send
+     email to initiate request"). Emails in process docs are
+     almost always shared / functional inboxes that define
+     WHERE the work goes - dropping them strips the only
+     addressing information the reader has. Added a PRESERVE
+     EMAIL ADDRESSES rule to the auto-apply prompt + server
+     SYSTEM_PROMPT, plus a post-process step that detects
+     missing emails per task and appends them back as "(Email:
+     x@y)" so they survive even on a bad-luck run.
+
+6. Admin review pack export (v2 backlog #30)
+   New "Review pack (.docx)" option in the Export modal, under a
+   new "Admin actions" group with an "Admin" badge. Generates a
+   single Word doc that bundles the polished procedure with each
+   active quality flag rendered as a Word review comment anchored
+   to the relevant activity / task / title paragraph. Process
+   owners open it in Word, see comments in the right-margin
+   balloons, and reply inline to accept / change / decline.
+
+   Dismissed flags are excluded by default (per item 23). The
+   pack also includes a "For: process owner / expert" intro
+   panel, header + page-numbered footer, and an owner sign-off
+   block at the end. Built client-side using docx-js 8.5.0's
+   native comments API. Verified end-to-end: 3 sample flags
+   produce 3 comments + 9 anchor markers in document.xml.
+
+7. Auto-apply error message reworded
+   The "Try the manual review, or paste this error to the team"
+   tail of the auto-apply failure toast was confusing for pilot
+   users (no obvious "manual review" path exists in the v2 flow).
+   Replaced with clearer recovery guidance: "Please refresh the
+   page and try again. If it keeps happening, contact the PBT
+   team for support."
+
+8. Multi-role flag promoted to warning + reworded
+   The "Activity X lists N roles: A; B; C" info flag was easy to
+   skim past, but the CoVE convention of one accountable role
+   per activity is a real standard, not a tip. Promoted from
+   info to warning and reworded as "Activity X has multiple
+   roles: A; B; C." Suggestion now reads "Confirm which role is
+   primary; the others may support." Multi-role activities now
+   also sort above info-level flags in the sidebar.
+
+9. Nintex 'Export Procedure Text' format support (new)
+   The 'Export Pro

@@ -1,0 +1,432 @@
+PAT PILOT FEEDBACK TRACKER
+==========================
+
+Captured 27 May 2026 from two pilot session notes:
+  - 20260527 - PAT user feedback.txt
+  - 20260527 PAT testing.txt
+
+26 items total. Status legend:
+  [DONE]      shipped in process-assistant-ai
+  [SKIPPED]   intentionally not actioned, reason noted
+  [NEEDS-IN]  needs sample input from a tester to fix properly
+  [PENDING]   on the backlog, not actioned yet
+  [PARTIAL]   half-fixed, needs another pass
+
+
+============================================================
+DONE (already shipped)
+============================================================
+
+1. Remove Process Owner and Expert for pilot
+   Source: file 1 #1
+   Status: [DONE]
+   Implementation: PILOT_NAMES_EXCLUDED flag in public/index.html.
+   Form fields hidden, parser ignores them in uploads, AI never
+   sees the names, doc + exports show "To be assigned in Nintex
+   Process Manager" placeholder. Single switch to revert when
+   VAL ships.
+
+2. Home page chat shouldn't talk about quality flags
+   Source: file 2 #16
+   Status: [DONE]
+   Implementation: two-state chat welcome. Default welcome on
+   home page is generic ("Hi, I'm PAT. What can I help you with?").
+   Doc-aware welcome only appears after analyse.
+
+3. Common verbs (heat, cook, season, divide) rejected as non-verbs
+   Source: file 1 #11
+   Status: [DONE]
+   Implementation: added ~100 everyday action verbs to APPROVED_VERBS
+   under a new "General action verbs" category. Reworded the warning
+   from "does not start with an approved verb" to "starts with X,
+   which isn't on our process-writing verb list" - no longer claims
+   the user's word isn't a verb at all.
+
+4. AI invented a random sentence (SAMS / monthly report)
+   Source: file 2 #14
+   Status: [DONE]
+   Implementation: rewrote the auto-apply system prompt with two
+   lists: HARD BAN on inventing specific nouns (system names, roles,
+   documents, dates, $ amounts, frequencies, URLs); ALLOWED generic
+   completeness additions ("notify the requester", "record the
+   decision", "close the request"). Includes a plausibility test
+   the AI runs over its own output before emitting.
+
+5. Single role with comma split into two roles
+   Source: file 2 #10
+   Status: [DONE]
+   Implementation: created splitRoles() helper that never splits on
+   comma. Splits only on semicolon, " and ", " & ", " + ", " / ".
+   Job titles like "Coordinator, Student Lifecycle" stay as one role.
+   All 5 places in the codebase that used naive comma-split now use
+   the helper.
+
+6. 6.1 / 6.2 / 6.3 mis-flagged as duplicates of activity 6
+   Source: file 2 #3
+   Status: [DONE]
+   Implementation: the duplicate-detection rule was using the major
+   integer prefix only. Now uses the full number string for duplicate
+   detection while keeping the integer view for gap detection. "6.1"
+   and "6.2" are no longer treated as the same activity.
+
+7. "American spelling 'enrolled' - use Australian 'enrolled'"
+   Source: file 2 #9
+   Status: [DONE]
+   Implementation: the US-to-AU dictionary had 'enrolled': 'enrolled'
+   (mapping to itself) which caused a tautological flag. Removed
+   that entry. "Enrolled" is identical in AU and US English so it
+   doesn't belong in the dictionary. Only the noun enrollment ->
+   enrolment is genuinely different and that entry stays.
+
+8. Click a warning goes to the activity, not the specific task
+   Source: file 1 #10
+   Status: [DONE]
+   Implementation: the banned-term-on-task rule was setting
+   location: loc (activity). Now uses task-specific location so the
+   resolver matches the task ID. Plus a stronger pulse highlight for
+   task targets (amber background, red side-bar accent) so the user
+   can see exactly which task line they landed on.
+
+9. Notes only capturing title, not body
+   Source: file 2 #1
+   Status: [DONE]
+   Implementation: two parsers updated. PDF parser's
+   splitNoteTitleBody now tries newline split, then question-mark
+   boundary, then the old regex. Paste parser now splits inline
+   "Question? Answer." into title + body instead of treating the
+   whole thing as title.
+
+10. Adding a new activity adds "Role:" prefix
+    Source: file 2 #2
+    Status: [DONE]
+    Implementation: the CSS ::before "Role:" label now only renders
+    for activities that actually have a role. Empty role placeholders
+    read as just "[Click to add accountable role]" with no prefix.
+
+11. User didn't see "Review and update yourself" for 23 minutes
+    Source: file 1 #6
+    Status: [DONE]
+    Implementation: bumped the secondary card from a pale grey
+    border to a 2px navy border with subtle shadow. Now visually
+    balanced with the primary navy card.
+
+12. Sticky Save changes button
+    Source: file 2 #5
+    Status: [DONE]
+    Implementation: doc-section-header (Save changes / Export /
+    kebab) is now position:sticky riding just below the page header
+    and results-top-tabs. Uses the existing --header-height and
+    --results-tabs-height CSS variables so it adapts to phone /
+    tablet wrapping.
+
+13. "Role change unclear" card too verbose
+    Source: file 2 #12
+    Status: [DONE]
+    Implementation: handover warning now reads "Handover between
+    Activity 1.0 and 2.0 may be unclear (different roles)" instead
+    of listing the role names. Reference activity numbers only.
+    Suggestion text also tightened.
+
+14. "Note must be a question" too prescriptive
+    Source: file 2 #4
+    Status: [DONE]
+    Implementation: severity dropped from warning to info, marked
+    as informational:true (so it doesn't count toward the "N to
+    review" badge), message reworded from "is not phrased as a
+    question" to "reads like a statement, not a question".
+
+15. Process Owner and Expert acknowledgment in pilot banner
+    Source: file 1 #1 (related)
+    Status: [DONE]
+    Implementation: pilot banner now explicitly mentions "Process
+    Owner and Expert are excluded automatically - you'll assign
+    them in Nintex Process Manager before publishing."
+
+
+============================================================
+DONE (continued - second pass on parser items)
+============================================================
+
+17. Process title mangled
+    Source: file 2 #8
+    Status: [DONE]
+    Implementation: rewrote the Nintex PDF title detector. The old
+    regex required an uppercase acronym after "CoVE - " (e.g.
+    "CoVE - SL -") so it skipped the real title "CoVE - Student
+    Lifecycle - ..." and matched the swimlane role label instead.
+    New approach anchors on the status marker ("[ Awaiting
+    Publish ]" / "[ Approved ]" etc.) or version "vX.Y", iterates
+    every candidate in the first 50 lines, walks back up to 5
+    lines with hyphenation-aware word-wrap joining (so "regis-"
+    + "tration" -> "registration"), and prefers candidates that
+    start with "CoVE -" or "RMIT -" - which correctly skips the
+    isolated status-badge fragment produced by the page-1 column
+    split. Verified end-to-end against the AHPRA PDF and the
+    TeachVE PDF.
+
+18. Roles bleeding into activity titles
+    Source: file 2 #11
+    Status: [DONE]
+    Implementation: extended the role-line detector in
+    parseProcedureBlock. The old roleLineRe only matched lines
+    starting with "CoVE"/"RMIT" or containing en/em dashes, so
+    plain-hyphen role labels like "STEM - SHBS - Accreditation
+    Manager" or "USARG Government Reporting - Manager" fell
+    through to the title-continuation branch and concatenated
+    onto the activity title. New isRoleLine() also accepts
+    "ALL-CAPS prefix + plain dash + role-keyword (Manager,
+    Officer, Coordinator, Analyst, etc.)". Verified end-to-end -
+    all 9 activities in the AHPRA PDF now show the correct title
+    and role with no bleed.
+
+============================================================
+NEEDS-INPUT (waiting for a sanitised sample)
+============================================================
+
+16. Parser collapses everything into one giant activity
+    Source: file 1 #2
+    Status: [DONE - in earlier pass]
+    Implementation: see batch 1 - the _taskStyle bullet/numeric
+    disambiguation handles the input format the tester shared.
+    No new diagnostic needed for this item.
+
+
+============================================================
+PARTIAL / FOLLOW-UP NEEDED
+============================================================
+
+19. Save -> warnings refresh isn't clear
+    Source: file 1 #8
+    Status: [DONE]
+    Implementation: added a 1.2s pulse animation on the
+    "N to review" / "All clear" count badge that fires every
+    time Save changes runs. Amber glow for the "to review"
+    state, green glow for the "All clear" state. Respects
+    prefers-reduced-motion. Toast was already at 4.5s which
+    is generous - left unchanged.
+
+20. Language inconsistent with Process Manager - procedure vs process
+    Source: file 1 #4 (first one)
+    Status: [SKIPPED]
+    Notes: Nintex Process Manager uses "Procedure" as a section
+    heading. The tool's "Procedure" section heading is intentionally
+    consistent with that. If there's a specific copy mix-up
+    elsewhere, please point at it.
+
+
+============================================================
+PENDING (post-pilot backlog - new features, bigger work)
+============================================================
+
+21. Drag/drop activities, tasks, notes
+    Source: file 1 #3
+    Status: [PENDING]
+    Notes: bigger UX feature. Sortable.js or native HTML5
+    drag-drop. Probably after the pilot wraps.
+
+22. Chat updates the process - apply to doc or "copy back" function
+    Source: file 1 #5
+    Status: [PENDING]
+    Notes: needs design work on how the chat-edit -> doc-update
+    flow works. Today the chat answers in plain text; user has to
+    manually copy into the paste area.
+
+23. Dismiss a warning
+    Source: file 1 #7
+    Status: [DONE]
+    Implementation: each quality-flag card gets a "x" dismiss
+    button (top-right of the card). Click it and the flag is
+    hidden from the sidebar, drops out of the "N to review"
+    count, the summary chip, the Export error gate, AND the
+    ISSUES FLAGGED block sent to the AI (so the AI doesn't
+    keep advising on flags the user has set aside).
+
+    Per-session only - no localStorage. Resets / Analyse another /
+    new Analyse clear the dismissed set. A "N dismissed - Restore
+    all" footer appears in the sidebar whenever at least one flag
+    is dismissed, so the user can bring everything back in one
+    click. Each individual dismissal also shows a toast with an
+    "Undo" button (6s window) for accidental clicks.
+
+    Flag identity = id + location + message, so dismissals
+    survive Save changes re-runs as long as the flag still
+    matches. If the user fixes the underlying issue, the rule
+    stops firing and the dismissal naturally falls away.
+
+24. Chat says "click the download button below" but no button visible
+    Source: file 1 #9
+    Status: [PENDING]
+    Notes: the AI's response promises an action UI that doesn't
+    exist. Either teach the AI not to mention non-existent
+    buttons, OR build the affordance (chat-driven downloads).
+
+25. Auto-apply by default, with revert option
+    Source: file 1 #12
+    Status: [PENDING]
+    Notes: bigger UX flow change. Worth running a small A/B with
+    pilot users before committing.
+
+26. Group flags by type
+    Source: file 2 #6
+    Status: [PENDING]
+    Notes: e.g. "Doesn't start with a verb" group, "Handover not
+    clear" group. Today the flags are listed flat in severity
+    order. Grouping by rule-id is straightforward but needs UX
+    decision on the visual treatment.
+
+27. Easier to add new tasks / activities in the generated document
+    Source: file 2 #7
+    Status: [PENDING]
+    Notes: today the doc preview is contenteditable, so users can
+    type new lines, but there's no explicit "+ Add task" affordance.
+    Could add inline action buttons that drop a properly-numbered
+    task or activity.
+
+28. Add back option to view quality flags WITHIN the document
+    Source: file 2 #13
+    Status: [PENDING]
+    Notes: previous "inline flags" mode was removed in a UX simplification
+    pass. Some users want it back. Consider as a sidebar/inline toggle.
+
+29. Export a quality flags report for sharing
+    Source: file 2 #15
+    Status: [PENDING]
+    Notes: a separate downloadable summary (CSV or Word) of
+    flagged items, suggested fixes, and severity. Useful for
+    handing to a process owner for review without exporting the
+    whole document.
+
+31. Auto-apply was dropping NOTE blocks + activity titles too long
+        + AI was rewriting/deleting roles
+        + AI was deleting useful context when shortening tasks
+    Source: Natalie 27 May 2026 (regressions caught post-#23 testing,
+            FRANC document diff screenshot + RPO/Staff Name example)
+    Status: [DONE]
+    Implementation: four AI behaviour fixes in the auto-apply path:
+      a) Auto-apply prompt now has an explicit PRESERVE NOTES
+         block ("NOTEs are load-bearing, count source vs output,
+         redo if mismatched") + post-process restoration that
+         puts back any NOTE the AI still drops. Fuzzy match by
+         first 40 normalised chars of the title so the AI's
+         polish wording doesn't trigger a false "missing" hit.
+      b) Auto-apply prompt now has an explicit ACTIVITY HEADING
+         LENGTH block (2-7 words target, hard cap 8 words, with
+         self-check requirement). Server-side SYSTEM_PROMPT
+         also strengthened with the same cap so chat-only
+         rewrites don't drift past 8 words either.
+      c) Auto-apply prompt now has an explicit PRESERVE ROLES
+         block (verbatim copy, character-for-character, including
+         punctuation/abbreviations/ampersands/capitalisation).
+         Server SYSTEM_PROMPT also has a "preserve role list
+         verbatim" rule. Post-process step copies the original
+         role string back per activity if the AI altered it -
+         covers cases like "CoVE - Delivery Planning & Support,
+         CoVE - Quality & Compliance" being rewritten to
+         "CoVE - Delivery Planning Support".
+      d) Auto-apply prompt now has a PROMOTE DROPPED CONTEXT
+         TO NOTES block - when shortening a task to hit the
+         18-word cap, the AI must not silently delete specific
+         nouns (column names, section names, criteria, etc.).
+         Instead it should keep the task tight and create a new
+         NOTE that captures the dropped detail. Worked example
+         baked into the prompt from Natalie:
+           SOURCE: "Allocate required staff to RPO grade rosters
+                   referring to the data noted Staff Name
+                   columns in the FRANC document"
+           WRONG : "Allocate staff to grade rosters from the
+                   FRANC" (lookup detail lost)
+           RIGHT : Task = "Allocate required staff to RPO grade
+                   rosters using the FRANC document"
+                   NOTE = "Where do I find the staff data in
+                   the FRANC? / Look in the Staff Name column."
+         Server SYSTEM_PROMPT has the same rule for chat-driven
+         rewrites.
+
+30. Admin "review pack" export - doc + quality flags together
+    Source: Natalie 27 May 2026
+    Status: [DONE]
+    Implementation: new "Review pack (.docx)" button in the Export
+    modal, under a new "Admin actions" group with a small navy
+    "Admin" badge. Generates a single .docx containing:
+      - the polished process document (title, metadata, objective,
+        background, activities with roles, tasks with letters
+        restarted per activity, NOTE blocks, FORM/PROCESS links,
+        preserved task URLs)
+      - each ACTIVE quality flag (dismissed flags excluded per
+        item 23 design) rendered as a Word REVIEW COMMENT
+        anchored to the relevant activity heading, task, or
+        process title
+      - "For: process owner / expert" intro panel with reviewer
+        + date + flag count
+      - Owner sign-off block at the end for name / signature /
+        date
+    The flag-to-paragraph mapping uses the issue location string
+    (Task 2.0a -> task paragraph; Activity 2.0 -> heading;
+    title-* -> title paragraph). Process-wide flags fall back to
+    the first activity heading so nothing is silently dropped.
+    Built client-side using docx-js 8.5.0's native CommentRangeStart/
+    CommentRangeEnd/CommentReference + comments.children API.
+    Verified end-to-end in node: 3 sample flags -> 3 comments in
+    comments.xml + 9 markers (start/end/reference x 3) in
+    document.xml. Real .docx open + show comments correctly in
+    Word desktop.
+
+    Naming: "Review pack" chosen as user-facing label. Distinct
+    from item 29 (flags-only export) which stays separate as the
+    lighter sharing format.
+
+
+============================================================
+NUMBERING CROSS-REFERENCE
+============================================================
+
+This tracker re-numbered 1-29 for clarity. Original feedback
+items mapped:
+
+File 1 (10 items):  #1 = 1, #2 = 16, #3 = 21, #4 = 20, #5 = 22,
+                    #6 = 11, #7 = 23, #8 = 19, #9 = 24, #10 = 8,
+                    #11 = 3, #12 = 25
+File 2 (15 items):  #1 = 9, #2 = 10, #3 = 6, #4 = 14, #5 = 12,
+                    #6 = 26, #7 = 27, #8 = 17, #9 = 7, #10 = 5,
+                    #11 = 18, #12 = 13, #13 = 28, #14 = 4,
+                    #15 = 29, #16 = 2
+
+
+============================================================
+SUMMARY
+============================================================
+
+  Done                   22
+  Needs sample input      0
+  Partial / follow-up     1 (skipped - procedure-vs-process language pass)
+  Pending backlog         8
+  ----
+  Total                  31
+
+(Item 30 added 27 May - admin review-pack export request from Natalie.
+ Item 31 added 27 May - AI regression: auto-apply was dropping NOTEs and
+ activity titles were drifting over the 7-word cap. Neither is part of
+ the original pilot feedback so they don't change the
+ "X of 26 raw items shipped" stat below.)
+
+19 of 26 raw feedback items are now shipped (some items consolidated
+or split during triage, hence 29 entries in the tracker).
+
+Four batches deployed:
+  Batch 1 - 27 May - verb list, hallucination guards, role split,
+            activity-number duplicate, enrolled bug
+  Batch 2 - 27 May - task-level warning click, note body, role
+            prefix, Review card prominence, sticky save bar,
+            note-question wording, handover concision
+  Batch 3 - 27 May - Nintex PDF title parser (item 17) + role-line
+            detection (item 18). Verified against the AHPRA PDF and
+            the TeachVE PDF.
+  Batch 4 - 27 May - count-badge pulse on Save changes (item 19)
+            + Nintex "Export Procedure Text" format support
+            (bonus, not from the original feedback list).
+
+Next session priorities:
+  1. Triage backlog items 21-29 (drag/drop, dismiss, chat-to-doc,
+     group-by-type, etc.) and pick what to ship in v2.
+  2. Update the pilot tester pack to mention the procedure-text
+     export option.
