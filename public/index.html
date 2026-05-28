@@ -12961,4 +12961,190 @@ createChatSurface({
     // Update globals
     currentModel = newModel;
     const _buildMermaid = window.buildMermaid || (typeof buildMermaid === 'function' ? buildMermaid : null);
-    const _buildBpmnXml = window.buildBpmnXml || (typeof buildBp
+    const _buildBpmnXml = window.buildBpmnXml || (typeof buildBpmnXml === 'function' ? buildBpmnXml : null);
+    const _runRules    = window.runRulesEngine || (typeof runRulesEngine === 'function' ? runRulesEngine : null);
+    // Only regenerate diagram source if it actually changed - keeps zoom/pan
+    if (workflowChanged) {
+      if (_buildMermaid) currentMermaid = _buildMermaid(newModel);
+      if (_buildBpmnXml) currentBpmnXml = _buildBpmnXml(newModel);
+    }
+
+    console.log('[save-edits] extracted model:', {
+      title: newModel.title, owner: newModel.owner, expert: newModel.expert,
+      trigger: newModel.trigger, activities: newModel.activities.length
+    });
+    console.log('[save-edits] workflow fields changed?', workflowChanged);
+
+    // Re-run the rules engine + refresh the quality flags sidebar (every save)
+    let resolvedCount = 0;
+    if (_runRules) {
+      // v2 #23: track ACTIVE issues for the "N resolved" toast so dismissed
+      // flags don't count toward "resolved by editing".
+      const oldActiveCount = (typeof getActiveIssues === 'function'
+        ? getActiveIssues()
+        : (currentIssues || [])
+      ).filter(i => !i.informational).length;
+      const oldCount = oldActiveCount;
+      currentIssues = _runRules(newModel);
+      console.log('[save-edits] new issues:', currentIssues.length, currentIssues.map(i => i.id));
+      if (typeof window.refreshIssuesSidebar === 'function') window.refreshIssuesSidebar();
+      // Update the discreet count pill next to the sidebar QUALITY FLAGS header
+      if (typeof window.updateSidebarOppsCount === 'function') {
+        window.updateSidebarOppsCount();
+      }
+      // Pilot feedback item 19: pulse the count badge so the user's eye
+      // lands on the refreshed number. Re-trigger by removing the class
+      // first (so consecutive saves replay the animation).
+      const badge = document.getElementById('sidebarOppsCount');
+      if (badge) {
+        badge.classList.remove('is-pulsing');
+        // force a reflow so the animation restarts cleanly on rapid saves
+        // eslint-disable-next-line no-unused-expressions
+        badge.offsetWidth;
+        badge.classList.add('is-pulsing');
+        const clearPulse = () => {
+          badge.classList.remove('is-pulsing');
+          badge.removeEventListener('animationend', clearPulse);
+        };
+        badge.addEventListener('animationend', clearPulse);
+      }
+      // v2 #23: count ACTIVE issues so dismissed flags don't keep the user
+      // soft-gated after Save changes re-runs the rules.
+      const activeIssues = (typeof getActiveIssues === 'function') ? getActiveIssues() : currentIssues;
+      const newCount = activeIssues.filter(i => !i.informational).length;
+      resolvedCount = Math.max(0, oldCount - newCount);
+      const oppsCount = document.getElementById('summaryChipOppsCount');
+      if (oppsCount) oppsCount.textContent = String(newCount);
+      const oppsChip = document.getElementById('summaryChipOpps');
+      if (oppsChip) oppsChip.style.display = (newCount > 0) ? '' : 'none';
+
+      // Update the Export button's error badge - soft-gate is driven by error count
+      const errorCount = activeIssues.filter(i => i.severity === 'error').length;
+      const errBadge = document.getElementById('actionExportErrorBadge');
+      if (errBadge) {
+        if (errorCount > 0) {
+          errBadge.textContent = '\u26A0 ' + errorCount + ' error' + (errorCount === 1 ? '' : 's');
+          errBadge.classList.remove('hidden');
+        } else {
+          errBadge.classList.add('hidden');
+        }
+      }
+      // Update the export-modal warning too if it's currently open / will open
+      const exportWarning = document.getElementById('exportWarning');
+      const exportWarningCount = document.getElementById('exportWarningCount');
+      if (exportWarning && exportWarningCount) {
+        exportWarningCount.textContent = String(errorCount);
+        exportWarning.classList.toggle('hidden', errorCount === 0);
+      }
+    } else {
+      console.warn('[save-edits] runRulesEngine not available; quality flags sidebar not refreshed');
+    }
+
+    // Re-render the workflow only when relevant fields changed
+    if (workflowChanged) {
+      await reRenderWorkflow();
+      const titleEl = document.getElementById('workflowTitle');
+      if (titleEl) titleEl.textContent = currentModel.title || '';
+    }
+
+    if (typeof showToast === 'function') {
+      let msg;
+      if (workflowChanged && resolvedCount > 0) {
+        msg = 'Workflow + quality flags updated. ' + resolvedCount + ' quality flag' + (resolvedCount === 1 ? '' : 's') + ' resolved.';
+      } else if (workflowChanged) {
+        msg = 'Workflow updated with your edits.';
+      } else if (resolvedCount > 0) {
+        msg = 'Quality flags updated. ' + resolvedCount + ' quality flag' + (resolvedCount === 1 ? '' : 's') + ' resolved.';
+      } else {
+        msg = 'Changes saved. Quality flags refreshed.';
+      }
+      showToast(msg, 'success', 4500);
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('saveEditsBtn');
+    if (btn) btn.addEventListener('click', saveEditsAndRefresh);
+  });
+
+  // Expose so other code paths can call it
+  window.saveEditsAndRefresh = saveEditsAndRefresh;
+})();
+</script>
+
+
+<script>
+// Top-of-doc 'Save changes' button - same behaviour as the bottom one
+(function wireTopSaveBtn() {
+  document.addEventListener('DOMContentLoaded', () => {
+    const top = document.getElementById('saveEditsTopBtn');
+    if (top) top.addEventListener('click', () => {
+      if (typeof window.saveEditsAndRefresh === 'function') {
+        window.saveEditsAndRefresh();
+      } else {
+        const bottom = document.getElementById('saveEditsBtn');
+        if (bottom) bottom.click();
+      }
+    });
+  });
+})();
+</script>
+
+<script>
+// ============================================================
+// SharePoint iframe plumbing
+// When the tool is embedded as an iframe (in SharePoint or anywhere else),
+// these two handlers make the embed feel native:
+//   1. Auto-resize: post our rendered height up to the parent so the iframe
+//      grows/shrinks to fit. No inner scroll bars.
+//   2. Viewport sync: when the host posts its visible viewport position, we
+//      use it to position modals where the user is actually looking, not at
+//      the geometric centre of a tall iframe.
+// Both no-op when the page is loaded directly (not in an iframe).
+// Pair this with the snippet in /sharepoint-embed-snippet.html on the host.
+// ============================================================
+(function setupIframeBridge() {
+  if (window.parent === window) return; // not in an iframe - nothing to do
+  document.body.classList.add('in-iframe');
+
+  // ---- Auto-resize ----
+  let lastHeight = 0;
+  function postHeight() {
+    const h = Math.max(
+      document.body.scrollHeight,
+      document.documentElement.scrollHeight,
+      document.body.offsetHeight,
+      document.documentElement.offsetHeight
+    );
+    if (Math.abs(h - lastHeight) > 8) {
+      lastHeight = h;
+      try { window.parent.postMessage({ type: 'cove-tool-resize', height: h }, '*'); } catch (e) {}
+    }
+  }
+  window.addEventListener('load', postHeight);
+  if (window.ResizeObserver) {
+    new ResizeObserver(postHeight).observe(document.body);
+  }
+  // Polling fallback for late-mounting content (chat messages, AI results)
+  setInterval(postHeight, 1000);
+
+  // ---- Viewport sync ----
+  // The host posts {visibleTop, visibleHeight} whenever it scrolls or resizes.
+  // We expose those as CSS custom properties so any modal CSS can centre to
+  // the user's actual viewport instead of the iframe's full height.
+  window.addEventListener('message', (event) => {
+    if (!event.data || event.data.type !== 'cove-host-viewport') return;
+    const visibleTop = Math.max(0, event.data.visibleTop || 0);
+    const visibleHeight = event.data.visibleHeight || window.innerHeight;
+    document.documentElement.style.setProperty('--host-modal-top', visibleTop + 'px');
+    document.documentElement.style.setProperty('--host-modal-height', visibleHeight + 'px');
+  });
+  // Ask the host to send viewport info now (in case the load order means we
+  // missed its initial post).
+  try { window.parent.postMessage({ type: 'cove-tool-request-viewport' }, '*'); } catch (e) {}
+})();
+</script>
+
+</body>
+</html>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       

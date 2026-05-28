@@ -513,4 +513,27 @@ app.post('/api/chat', async (req, res) => {
     });
     const reply = completion.choices[0]?.message?.content || '(no response)';
     res.json({ reply, model: MODEL, usage: completion.usage });
-  
+  } catch (err) {
+    console.error('[OpenAI error]', err.status, err.message);
+    res.status(err.status || 500).json({ error: err.message || 'OpenAI call failed' });
+  }
+});
+
+app.get('/api/health', (req, res) => {
+  res.json({
+    ok: true,
+    model: MODEL,
+    keyConfigured: !!openai,
+    publicDir: PUBLIC_DIR,
+    knowledgeChars: KNOWLEDGE_CORPUS.length,
+  });
+});
+
+await loadKnowledge();
+
+app.listen(PORT, () => {
+  console.log(`[process-assistant-ai] running on http://localhost:${PORT}`);
+  console.log(`[process-assistant-ai] model: ${MODEL}`);
+  console.log(`[process-assistant-ai] key configured: ${!!openai}`);
+  console.log(`[process-assistant-ai] knowledge corpus: ${KNOWLEDGE_CORPUS.length} chars`);
+});

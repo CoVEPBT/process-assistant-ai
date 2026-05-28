@@ -427,4 +427,20 @@ SUMMARY
 or split during triage, hence 29 entries in the tracker).
 
 Four batches deployed:
-  Batch 1 - 27 May - verb 
+  Batch 1 - 27 May - verb list, hallucination guards, role split,
+            activity-number duplicate, enrolled bug
+  Batch 2 - 27 May - task-level warning click, note body, role
+            prefix, Review card prominence, sticky save bar,
+            note-question wording, handover concision
+  Batch 3 - 27 May - Nintex PDF title parser (item 17) + role-line
+            detection (item 18). Verified against the AHPRA PDF and
+            the TeachVE PDF.
+  Batch 4 - 27 May - count-badge pulse on Save changes (item 19)
+            + Nintex "Export Procedure Text" format support
+            (bonus, not from the original feedback list).
+
+Next session priorities:
+  1. Triage backlog items 21-29 (drag/drop, dismiss, chat-to-doc,
+     group-by-type, etc.) and pick what to ship in v2.
+  2. Update the pilot tester pack to mention the procedure-text
+     export option.
