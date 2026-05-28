@@ -1,43 +1,50 @@
-AI guardrails: fix items #32 (empty task before Link) + #33 (dropped qualifiers)
+Protected system / tool / app names list for #33 follow-up
 
-Two regressions caught in yesterday's BARB/FLOSS + Class Scheduling tests.
+Natalie pasted the Nintex Process Manager systems/tools/apps export
+(287 entries). Combined with the existing hardcoded list in the
+post-process drift check (23 entries) and the space-separated form
+variants ("Adobe_Acrobat_DC" -> "Adobe Acrobat DC") to give a
+de-duped canonical list of 460 protected names.
 
-ITEM #32 - Auto-apply leaves empty task before a Link row
-  Symptom: source task like "[Web Link] Trades & Dental Weekly TT" with
-  an attached URL was being rewritten so that the task ended up as a
-  bare letter ("c.") followed by just a "Link:" row below. URL post-
-  process restoration re-attached the URL but the task text was empty.
+New file: public/protected-system-names.txt
+  - Single source of truth, one name per line, "#" comments allowed.
+  - Sorted alphabetically (case-insensitive) for easy scanning + edit.
+  - Lives in public/ so it's served as a static asset (the client
+    fetches it once on first auto-apply and caches in memory).
+  - Easy to edit / extend — add a new system, save the file, push.
 
-  Fix - three layers:
-    a) Auto-apply prompt: NEVER LEAVE A TASK EMPTY rule. Tells the AI
-       that "[Web Link] Trades & Dental Weekly TT" becomes a task with
-       the URL attached AND descriptive text "Trades & Dental Weekly TT"
-       (drop the [Web Link] marker, keep the words). Never emit a bare
-       task letter with no descriptive text.
-    b) Server SYSTEM_PROMPT mirrors the rule for chat-driven rewrites.
-    c) Post-process restoration extended: when the new task text is
-       empty / whitespace but the original had text, restore the source
-       text (with the [Web Link] marker stripped). Also defensively
-       cleans the [Web Link] marker from any new task text where the
-       AI leaked it through.
+Two consumers of the same list:
 
-ITEM #33 - Auto-apply dropping in-task qualifiers / specifics
-  Symptom: despite the PROMOTE DROPPED CONTEXT TO NOTES rule, the AI
-  was still removing specific details when tightening sentences:
-    - "(continuing and new)" parenthetical qualifier
-    - "3.0 & 4.0" step number references
-    - "A&T schedule in SAMS" -> generic "set attendance dates"
-    - "as well as any future changes" additional action
+1. Auto-apply prompt — filter to source.
+   On every auto-apply, the client scans the source documentText for
+   names that actually appear in it. ONLY those names go into the
+   prompt as a "PROTECTED SYSTEM / TOOL / APP NAMES" block:
+     "The source process mentions the following named systems, tools,
+      apps, documents, forms, or acronyms from the RMIT / CoVE / Nintex
+      Process Manager registry. They are CANONICAL nouns — the reader
+      knows them by these exact names. Keep them EXACTLY as written in
+      the source. Do not abbreviate them, do not expand them, do not
+      generalise them ('SAMS' must not become 'the system'; 'A&T
+      schedule' must not become 'the schedule'), and do not drop them
+      when tightening a sentence.
+        - SAMS
+        - A&T schedule
+        - ..."
+   Filter-by-source means the prompt stays small (typically 5-15 names
+   for a normal process) instead of carrying all 460.
 
-  Fix - two layers:
-    a) Prompt: new EXAMPLES YOU MUST GET RIGHT block showing SOURCE /
-       WRONG / RIGHT for each of the four patterns above. Mandatory
-       self-check now enumerates four explicit checks in order:
-         1. Did I drop a parenthetical "(...)" qualifier?
-         2. Did I drop a specific number reference (step 3.0, section 4)?
-         3. Did I drop or generalise a system / table / view / tool name?
-         4. Did I drop an additional action joined by "and" / "as well as"?
-       Server SYSTEM_PROMPT carries the same enumeration for chat-driven
-       rewrites.
-    b) Post-process drift detection: after parsing the AI's reply, the
-       client scans every task for dropped parent
+2. Post-process drift check — use the filtered list.
+   The drift detector that warns "Heads up: the AI may have dropped
+   detail" now uses the SAME filtered-to-source list as its
+   SPECIFIC_NOUNS array. So if the source contains "SAMS" and the
+   rewrite drops it, the warning toast names it explicitly.
+
+How matching works:
+  - Case-insensitive
+  - Underscore = space (so "Adobe_Acrobat_DC" matches "Adobe Acrobat DC")
+  - De-duped on the normalised form (we don't warn twice for variants)
+
+Updating the list:
+  - Edit public/protected-system-names.txt
+  - One name per line; blank lines / # comments are ignored
+  - Pus

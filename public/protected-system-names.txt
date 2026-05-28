@@ -1,0 +1,466 @@
+# Protected system / tool / app / document names.
+# Source: Nintex Process Manager systems export (May 2026) + tester-provided list.
+# Auto-apply prompt + post-process drift check load this file.
+# Edit / add names here - one per line. Lines starting with # are comments.
+# Both the underscored Nintex form and the space-separated form are included.
+
+A&T schedule
+Abintegro Career Centre
+Abintegro_Career_Centre
+Academic Progress app
+Academic_Progress_app
+AcceleratorApp
+Accellion
+Acclaim
+Aconex
+Acunetix
+AD RAP
+AD_RAP
+Adaptive-Planning
+ADAudit
+Adobe Acrobat DC
+Adobe Advertising Cloud
+Adobe After Effects
+Adobe Analytics
+Adobe Animate
+Adobe Audience Manager
+Adobe Audition
+Adobe Bridge
+Adobe Campaign
+Adobe Character Animator
+Adobe Dimension
+Adobe Document Cloud
+Adobe Experience Manager
+Adobe Fresco
+Adobe Fuse
+Adobe Illustrator
+Adobe InCopy
+Adobe InDesign
+Adobe Lightroom
+Adobe Magento Commerce
+Adobe Marketo Engage
+Adobe Media Encoder
+Adobe Photoshop
+Adobe Prelude
+Adobe Premier
+Adobe Sign
+Adobe Spark
+Adobe Stock
+Adobe Substance
+Adobe Target
+Adobe XD
+Adobe_Acrobat_DC
+Adobe_Advertising_Cloud
+Adobe_After_Effects
+Adobe_Analytics
+Adobe_Animate
+Adobe_Audience_Manager
+Adobe_Audition
+Adobe_Bridge
+Adobe_Campaign
+Adobe_Character_Animator
+Adobe_Dimension
+Adobe_Document_Cloud
+Adobe_Experience_Manager
+Adobe_Fresco
+Adobe_Fuse
+Adobe_Illustrator
+Adobe_InCopy
+Adobe_InDesign
+Adobe_Lightroom
+Adobe_Magento_Commerce
+Adobe_Marketo_Engage
+Adobe_Media_Encoder
+Adobe_Photoshop
+Adobe_Prelude
+Adobe_Premier
+Adobe_Sign
+Adobe_Spark
+Adobe_Stock
+Adobe_Substance
+Adobe_Target
+Adobe_XD
+ADP
+Agent Commission
+Agent Database
+Agent_Commission
+Agent_Database
+AHPRA
+AIDA
+AIR
+Algosec
+Allocate plus
+Allocate_plus
+ALMA
+Altarama Refchatter
+Altarama_Refchatter
+Amazon Analytics
+Amazon Application Integration
+Amazon AWS Cost Management
+Amazon Blockchain
+Amazon Business Applications
+Amazon Compute
+Amazon Containers
+Amazon Customer Engagement
+Amazon Database
+Amazon Developer Tools
+Amazon End User Computing
+Amazon FrontEnd Web and Mobile
+Amazon Game Tech
+Amazon Internet of Things
+Amazon Machine Learning
+Amazon Management and Governance
+Amazon Media Services
+Amazon Migration and Transfer
+Amazon Networking and Content Delivery
+Amazon Quantum Technologies
+Amazon Robotics
+Amazon Satellite
+Amazon Security Identity and Compliance
+Amazon Serverless
+Amazon Storage
+Amazon VR and AR
+Amazon_Analytics
+Amazon_Application_Integration
+Amazon_AWS_Cost_Management
+Amazon_Blockchain
+Amazon_Business_Applications
+Amazon_Compute
+Amazon_Containers
+Amazon_Customer_Engagement
+Amazon_Database
+Amazon_Developer_Tools
+Amazon_End_User_Computing
+Amazon_FrontEnd_Web_and_Mobile
+Amazon_Game_Tech
+Amazon_Internet_of_Things
+Amazon_Machine_Learning
+Amazon_Management_and_Governance
+Amazon_Media_Services
+Amazon_Migration_and_Transfer
+Amazon_Networking_and_Content_Delivery
+Amazon_Quantum_Technologies
+Amazon_Robotics
+Amazon_Satellite
+Amazon_Security_Identity_and_Compliance
+Amazon_Serverless
+Amazon_Storage
+Amazon_VR_and_AR
+AMPLIFY
+Announcements Admin
+Announcements_Admin
+Anypoint Platform
+Anypoint_Platform
+Apparel 21
+Apparel_21
+Appeals database
+Appeals_database
+Apply Direct
+Apply International
+Apply_Direct
+Apply_International
+AppSpace
+Archibus
+Aruba Airwave
+Aruba_Airwave
+ATAR Calculator
+ATAR_Calculator
+ATLAS
+Australia Council Application Management...
+Australia_Council_Application_Management...
+Automated
+Automated AV Management RMS
+Automated Results Transfer Service
+Automated_AV_Management_RMS
+Automated_Results_Transfer_Service
+Automation Anywhere Enterprise
+Automation_Anywhere_Enterprise
+Autopass
+Avaya Telephony
+Avaya_Telephony
+AVETMISS Reporting db
+AVETMISS_Reporting_db
+Avigilon
+AWS Educate
+AWS_Educate
+B223 Data Store
+B223_Data_Store
+Backup for Salesforce
+Backup_for_Salesforce
+Badgr
+Balder
+Bambora
+Banner Generator Tool
+Banner_Generator_Tool
+BARB
+BarTender
+Beating Heart
+Beating_Heart
+Beeline
+Behavioural Capability Database
+Behavioural_Capability_Database
+BEIMS
+BigPulse Election Tool
+BigPulse_Election_Tool
+Bitbucket
+bksbLIVE
+BL4
+Blackboard Ally
+Blackboard Connect
+Blackboard Learn
+Blackboard_Ally
+Blackboard_Connect
+Blackboard_Learn
+BlackLine
+Block Credit
+Block_Credit
+Blue Surveys
+Blue_Surveys
+Bogart Ethics
+Bogart_Ethics
+BookIT MyPC
+BookIT_MyPC
+BookNet
+BOSS
+Bpay
+BPoint
+Bridge
+Briefcase
+Brocade
+Burning Glass
+Burning_Glass
+Business gov au portal
+Business Intelligence
+Business_gov_au_portal
+Business_Intelligence
+Buzz Store
+Buzz_Store
+Cabcharge
+Cacti
+Campaign Monitor
+Campaign_Monitor
+Campus Navigator
+Campus Solutions
+Campus_Navigator
+Campus_Solutions
+CampusM
+CampusPress
+Canvas
+CANVAS
+Canvas Catalog
+Canvas Commons
+Canvas Learning Management Platform
+Canvas LMS
+Canvas Open
+Canvas Studio
+Canvas_Catalog
+Canvas_Commons
+Canvas_Learning_Management_Platform
+Canvas_LMS
+Canvas_Open
+Canvas_Studio
+CAPS
+CAPSIM
+CaptureMe
+CarbonTrak
+CareerHub
+CaseWare Working Papers
+CaseWare_Working_Papers
+Casper
+CAT - Canvas Admin Tool
+CAT_-_Canvas_Admin_Tool
+Catia ENOVIA
+Catia_ENOVIA
+CAVAL Borrow
+CAVAL_Borrow
+CBS-Course Booking System
+CBS-Course_Booking_System
+Centrelink CART
+Centrelink_CART
+Chemical Management System
+Chemical_Management_System
+Chronus
+CIO Pulse
+CIO_Pulse
+Circus OZ
+Circus_OZ
+CISO Attackmap
+CISO Dashboard
+CISO_Attackmap
+CISO_Dashboard
+ClassCom
+ClearPass
+CloudCampus
+Completions app
+Completions_app
+Confluence
+Course Booking System
+Course_Booking_System
+CoVE Delivery
+Dataverse
+DocuSign
+DP&S
+Duplicate Id app
+Duplicate_Id_app
+Enrolment Online
+Enrolment_Online
+Enter ID Conditional Access
+Enter_ID_Conditional_Access
+ESS
+EventBrite
+eWay
+Exams app
+Exams_app
+FCM Travel Management System
+FCM_Travel_Management_System
+Fee Configuration app
+Fee_Configuration_app
+FLOSS
+Formstack
+Gmail
+Google
+Google Spreadsheet
+Google_Spreadsheet
+Grants Connect
+Grants_Connect
+GV
+HEAL
+HP Input Robot
+HP_Input_Robot
+HR RPA Bots
+HR_RPA_Bots
+iApply
+Icertis
+IDM
+iExplore
+InApps-EMS
+InApps-Inventory and Loan Mgmt
+InApps-Inventory_and_Loan_Mgmt
+InApps-Licence Management
+InApps-Licence_Management
+InApps-Mail Tracking
+InApps-Mail_Tracking
+InApps-Redirect Service
+InApps-Redirect_Service
+InApps-Scriptor
+InPlace
+JIRA
+LaCaixaBank-ESP
+Learning Hub
+Learning_Hub
+Marketo
+Master File
+Mobi
+Mobile Device Management System
+Mobile_Device_Management_System
+myRMIT
+myTimetable
+Network RMIT
+Network_RMIT
+Nintex
+Non Final Results app
+Non_Final_Results_app
+OES
+Offer Worklist
+Offer_Worklist
+OneStop
+OneTrust
+Outlook
+PageUp
+PaperCut
+PBT
+PGS
+Phire
+Power App
+Power Automate
+Power BI
+Power_App
+Power_Automate
+Power_BI
+Precedent-Database
+PRIME
+PRISMS
+Procurement Integrated Enterprise Enviro...
+Procurement_Integrated_Enterprise_Enviro...
+Program List Equity Database
+Program_List_Equity_Database
+Project Online
+Project_Online
+Promapp
+ProMaster
+Property Central
+Property_Central
+Qualtrics
+RAF
+RaisersEdge
+RAS
+Research Grant Management System
+Research Management System
+Research Master
+Research_Grant_Management_System
+Research_Management_System
+Research_Master
+RMIT Admissions System app
+RMIT_Admissions_System_app
+RPA
+RPO
+RPT
+SAFE
+Salesforce
+SAMS
+SAMS-DEV
+SAMS-REL
+SAMS-SIT
+SAMS-SUP
+SAMS-UAT
+SAP
+Sapphire
+SATS
+ServiceNow
+SharePoint
+SHBS
+Smartsheet
+Smartygrants
+SMP
+SMSGlobal
+Special Consideration app
+Special_Consideration_app
+Spinifex
+SRMS
+SRS
+StarRez
+STEM
+STS
+Student Completions
+Student Conduct Database
+Student_Completions
+Student_Conduct_Database
+StudyLink
+SurveyMonkey
+Syllabus Plus
+Syllabus_Plus
+System for Award Management
+System_for_Award_Management
+TeachVE
+TestRail
+THINK
+TRIM
+Trobexis
+TS24
+TSGDB
+Tweek Policy Repository
+Tweek_Policy_Repository
+UniSuite
+USARG
+VTAC
+VTAC Load Management app
+VTAC_Load_Management_app
+Wide Area Work Flow
+Wide_Area_Work_Flow
+Workday
+Workday-EEL
+Workday-Finance
+Workday-HCM
+Workday-Student
+Xetta
+Zoho

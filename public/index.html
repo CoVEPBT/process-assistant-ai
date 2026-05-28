@@ -5265,6 +5265,60 @@ window.getActiveIssues = getActiveIssues;
 // Buffer the most-recent dismissal so the toast's Undo action can restore it.
 let lastDismissed = null;
 
+// ---------------------------------------------------------------------------
+// PROTECTED SYSTEM NAMES (item #33 follow-up)
+// ---------------------------------------------------------------------------
+// Single source of truth: public/protected-system-names.txt. Sourced from the
+// Nintex Process Manager systems/tools/apps export plus tester-provided names.
+// Loaded lazily on first auto-apply so the page boot stays light. The same
+// list drives two things:
+//   - Auto-apply prompt: names that appear in the SOURCE text are injected
+//     as a "PROTECTED NAMES" block telling the AI to copy them verbatim.
+//   - Post-process drift check: any protected name present in the source but
+//     missing from the rewritten task surfaces a warning toast.
+//
+// Why filter-by-source? The full list is ~460 entries (~7KB). Injecting only
+// the names that actually appear in the source keeps the prompt small AND
+// focuses the AI on what's relevant for THIS rewrite.
+let _protectedNamesCache = null;
+async function loadProtectedSystemNames() {
+  if (_protectedNamesCache) return _protectedNamesCache;
+  try {
+    const resp = await fetch('/protected-system-names.txt', { cache: 'force-cache' });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const text = await resp.text();
+    const names = text.split(/\r?\n/)
+      .map(l => l.trim())
+      .filter(l => l && !l.startsWith('#'));
+    _protectedNamesCache = names;
+    console.log('[protected-names] loaded', names.length, 'entries');
+    return names;
+  } catch (e) {
+    console.warn('[protected-names] could not load list:', e);
+    _protectedNamesCache = [];
+    return [];
+  }
+}
+// Return the subset of protected names that actually appear in the given text
+// (case- and underscore-insensitive). De-dupes equivalent forms ("Adobe_Acrobat_DC"
+// vs "Adobe Acrobat DC") so the prompt only carries one canonical mention.
+function filterProtectedNamesInText(allNames, sourceText) {
+  if (!sourceText || !allNames || !allNames.length) return [];
+  const normSource = String(sourceText).toLowerCase().replace(/_/g, ' ');
+  const seen = new Set();
+  const hits = [];
+  allNames.forEach(name => {
+    const normName = String(name).toLowerCase().replace(/_/g, ' ');
+    if (!seen.has(normName) && normSource.includes(normName)) {
+      seen.add(normName);
+      hits.push(name);
+    }
+  });
+  return hits;
+}
+window.loadProtectedSystemNames = loadProtectedSystemNames;
+window.filterProtectedNamesInText = filterProtectedNamesInText;
+
 // v2 #26b - per-session collapsed-group state. Keys are "<severity>:<groupKey>"
 // so the same group key in different severity tiers stays independent.
 // Resets on Reset / Analyse / Analyse-another (same lifecycle as dismissals).
@@ -12203,8 +12257,31 @@ createChatSurface({
       severity: i.severity, message: i.message, suggestion: i.suggestion, location: i.location, id: i.id
     }));
 
+    // Item #33 follow-up: load the protected system / tool / app name list and
+    // filter to those that appear in the SOURCE text. Only those go into the
+    // prompt (keeps token cost low + focuses the AI on what's relevant for
+    // this rewrite). The full list is used by the post-process drift check.
+    let protectedNamesAll = [];
+    let protectedNamesInSource = [];
+    try {
+      protectedNamesAll = await loadProtectedSystemNames();
+      protectedNamesInSource = filterProtectedNamesInText(protectedNamesAll, documentText);
+    } catch (e) { /* best-effort */ }
+    const protectedNamesBlock = protectedNamesInSource.length
+      ? ('PROTECTED SYSTEM / TOOL / APP NAMES - NEVER DROP OR PARAPHRASE THESE:\n' +
+         'The source process mentions the following named systems, tools, apps, documents, ' +
+         'forms, or acronyms from the RMIT / CoVE / Nintex Process Manager registry. They are ' +
+         'CANONICAL nouns - the reader knows them by these exact names. Keep them EXACTLY as ' +
+         'written in the source. Do not abbreviate them, do not expand them, do not generalise ' +
+         'them ("SAMS" must not become "the system"; "A&T schedule" must not become "the ' +
+         'schedule"), and do not drop them when tightening a sentence.\n' +
+         protectedNamesInSource.map(n => '  - ' + n).join('\n') +
+         '\n\n')
+      : '';
+
     const prompt =
       'SYSTEM OVERRIDE - Auto-apply tool action.\n\n' +
+      protectedNamesBlock +
       'This request comes from the tool\'s in-place "Auto-apply quality enhancements" button, ' +
       'NOT a conversational chat. Bypass the NINTEX EXPORT confirmation flow entirely. ' +
       'Do NOT ask whether the user wants the result exported - they have already chosen ' +
@@ -12514,12 +12591,18 @@ createChatSurface({
         const droppedSnippets = [];
         const PAREN_RE = /\(([^)]{2,40})\)/g;
         const STEP_NUM_RE = /\b\d+\.\d+(?:\s*[&,]\s*\d+\.\d+)+\b/g;
-        // Known specific-noun tokens that should never be paraphrased away.
-        const SPECIFIC_NOUNS = [
-          'SAMS', 'SAFE', 'AHPRA', 'Workday', 'TeachVE', 'SharePoint', 'Promapp', 'Nintex',
-          'A&T schedule', 'Master File', 'Marketo', 'BARB', 'FLOSS', 'CANVAS', 'Canvas',
-          'CoVE Delivery', 'SHBS', 'STEM', 'USARG', 'DP&S', 'PBT', 'RAF', 'RPO'
-        ];
+        // Specific-noun tokens that should never be paraphrased away. Reuse the
+        // protected-names list filtered to names actually appearing in the
+        // source - that's the candidates that COULD be dropped. Fewer names =
+        // fewer regex tests, and we won't false-positive on names that aren't
+        // in the source to begin with.
+        const SPECIFIC_NOUNS = (Array.isArray(protectedNamesInSource) && protectedNamesInSource.length)
+          ? protectedNamesInSource
+          : [
+              'SAMS', 'SAFE', 'AHPRA', 'Workday', 'TeachVE', 'SharePoint', 'Promapp', 'Nintex',
+              'A&T schedule', 'Master File', 'Marketo', 'BARB', 'FLOSS', 'CANVAS', 'Canvas',
+              'SHBS', 'STEM', 'USARG', 'DP&S', 'PBT', 'RAF', 'RPO'
+            ];
         newModel.activities.forEach((newAct, ai) => {
           const origAct = origActs[ai];
           if (!origAct || !origAct.tasks) return;
@@ -12778,107 +12861,4 @@ createChatSurface({
         updatedSnapshot.diffHtml = '';
       }
       // Re-capture the clean updated HTML now that renderResults has run
-      updatedSnapshot.docHtml = (document.getElementById('docPreview') || {}).innerHTML || '';
-
-      // Open the flag sidebar so users can see what still needs their input
-      if (Array.isArray(currentIssues) && currentIssues.length > 0
-          && typeof window.openFlagsSidebar === 'function') {
-        window.openFlagsSidebar();
-      }
-    } catch (err) {
-      console.error('[auto-apply] failed:', err);
-      if (typeof showToast === 'function') {
-        // Surface a longer error toast that includes a snippet so the user can
-        // forward it to the PBT team if needed. Pilot users no longer get the
-        // "try the manual option" prompt - the recovery path is refresh + retry
-        // or contact PBT for support.
-        const msg = (err.message || String(err)).slice(0, 320);
-        showToast('Auto-apply failed: ' + msg + ' - Please refresh the page and try again. If it keeps happening, contact the PBT team for support.', 'error', 12000);
-      }
-      // Re-show the cards so the user can retry or choose the manual path
-      if (cards) cards.classList.remove('hidden');
-    } finally {
-      if (loading) loading.classList.add('hidden');
-    }
-  }
-
-  function setActiveToggle(which) {
-    // Home v3 (Move 3): the three-button segmented control was replaced with a
-    // single "Compare with original" switch. We keep this function for back-compat
-    // with anywhere else that might call it - it now just syncs the checkbox state.
-    const cb = document.getElementById('compareToggle');
-    if (!cb) return;
-    cb.checked = (which === 'changes');
-  }
-
-  async function applySnapshot(snap) {
-    if (!snap || !snap.model) return;
-    currentModel = JSON.parse(JSON.stringify(snap.model));
-    currentIssues = snap.issues.slice();
-    currentRecommendation = snap.recommendation;
-    currentMermaid = snap.mermaid;
-    currentBpmnXml = snap.bpmnXml;
-    await renderResults();
-    const dp = document.getElementById('docPreview');
-    if (dp && snap.docHtml) dp.innerHTML = snap.docHtml;
-    // Keep the banner + cards-hidden state intact across the toggle
-    const detail = document.getElementById('postAnalyseDetail');
-    if (detail) detail.hidden = false;
-    const cards = document.getElementById('resultsActionCards');
-    if (cards) cards.classList.add('hidden');
-    const updatedBanner = document.getElementById('updatedBanner');
-    if (updatedBanner) updatedBanner.classList.remove('hidden');
-  }
-
-  // Wire the single "Compare with original" switch (home v3 - Move 3).
-  // OFF (default): show the clean updated document.
-  // ON: show the inline diff (strikethroughs + highlights).
-  // The "Original-only" view was removed - the diff is the useful comparison.
-  document.addEventListener('DOMContentLoaded', () => {
-    const cb = document.getElementById('compareToggle');
-    if (!cb) return;
-    cb.addEventListener('change', () => {
-      if (!updatedSnapshot) { cb.checked = false; return; }
-      const dp = document.getElementById('docPreview');
-      if (!dp) return;
-      if (cb.checked) {
-        // Compare ON - show inline diff if we have one, otherwise revert + toast
-        if (!updatedSnapshot.diffHtml) {
-          cb.checked = false;
-          if (typeof showToast === 'function') {
-            showToast('No change-tracking available for this update.', 'info', 4500);
-          }
-          return;
-        }
-        viewMode = 'changes';
-        dp.innerHTML = updatedSnapshot.diffHtml;
-      } else {
-        // Compare OFF - show the clean updated doc
-        viewMode = 'updated';
-        if (updatedSnapshot.docHtml) dp.innerHTML = updatedSnapshot.docHtml;
-      }
-    });
-  });
-
-  // Expose for the card click handler
-  window.startAutoApply = startAutoApply;
-})();
-</script>
-
-
-<script>
-// PAT home - both panels visible at once now; no two-path chooser to wire.
-</script>
-
-
-<script>
-// FAQ overlay - show curated questions, click to send into the inline chat
-(function wireFaqOverlay() {
-  document.addEventListener('DOMContentLoaded', () => {
-    const openBtn = document.getElementById('browseFaqsBtn');
-    const closeBtn = document.getElementById('faqOverlayCloseBtn');
-    const overlay = document.getElementById('faqOverlay');
-    const messagesEl = document.getElementById('inlineChatMessages');
-    if (!openBtn || !overlay) return;
-
-    
+      updatedSn
