@@ -491,6 +491,143 @@ PENDING (post-pilot backlog - new features, bigger work)
     RIGHT for each.
 
 
+
+
+35. Reference RMIT Indigenous cultures content in responses + outputs
+    Source: Natalie 29 May 2026 (late-evening backlog)
+    Status: [PENDING - for tomorrow]
+    Request: tool should refer to / consider content from:
+      https://www.rmit.edu.au/about/our-values/respect-for-australian-indigenous-cultures
+    Options to discuss tomorrow:
+      a) Copy key statements into the SYSTEM_PROMPT (frontend
+         auto-apply + server) so the AI factors them into
+         responses + rewrites without runtime fetching.
+      b) Add a tone/respectful-language guard to the prompts so
+         processes touching student / community content are
+         reviewed for inclusive language.
+    Likely: just copy the page's key principles into the
+    prompts (option a) - simple, fast, no runtime cost.
+
+36. Link CoVE Process Review Checklist in exports
+    Source: Natalie 29 May 2026
+    Status: [PENDING - for tomorrow]
+    Request: users should have access to the CoVE Process Review
+    Checklist when they export a file. Either:
+      a) Link to it in the exported document footer/header.
+      b) Surface a link/CTA in the export modal so users see it
+         before downloading.
+    SharePoint link:
+      https://rmiteduau.sharepoint.com/:w:/r/sites/VEPMO/Shared
+      %20Documents/General/Process%20%26%20Knowledge%20Management
+      /Process%20Toolkit/CoVE%20Process%20Review%20Checklist.docx
+    Checklist file uploaded for offline reference. Checklist
+    headings: Before-you-start (new vs existing process),
+    Process Context & Structure, Roles & Responsibilities,
+    Supporting Information, Security & Compliance.
+    Why: helps users review the parts of the process the tool
+    doesn't have full context for (e.g. sensitive content,
+    access controls, owner/expert correctness).
+    Suggested implementation:
+      - PDF + Word exports: add a "Next step" callout near the
+        end of the doc linking the checklist URL with a short
+        explanation ("Review this checklist before publishing
+        in Nintex Process Manager").
+      - Export modal: also surface the link near the download
+        button.
+
+37. Parse Triggers & Inputs / Outputs section from Nintex PDFs
+    Source: Natalie 29 May 2026
+    Status: [PENDING - for tomorrow]
+    Current state: parser captures the Procedure block well but
+    skips the Triggers & Inputs section. The section is always
+    under the heading "Triggers & Inputs" in Nintex exports.
+    Specifically:
+      - Triggers: use ONLY the "Starts" column; ignore other
+        columns in the same table.
+      - Outputs: use ONLY the "Output" column; ignore the other
+        two columns in that table.
+    Examples to lift from: the AHPRA PDF and the 4-page
+    Training Plans PDF both have these sections.
+    Implementation: extend extractSectionRanges() to identify
+    the "Triggers & Inputs" heading, then run column-aware text
+    extraction to grab just the Starts / Output columns. Map
+    into model.trigger / model.outputs respectively.
+
+38. Linked process titles getting cut off
+    Source: Natalie 29 May 2026
+    Status: [PENDING - for tomorrow]
+    Example: "CoVE - SL - A&T Admissions & Enrolment" - the
+    PROCESS link title gets truncated in either parsing or
+    rendering. Need to identify whether the truncation happens
+    at parse time (parseProcedureBlock collecting only the
+    first wrapped line of "PROCESS X" content) or render time
+    (CSS/export width cap). Likely parse-time given how PDF
+    text wrapping works.
+
+39. Make 'Add activity' button more prominent
+    Source: Natalie 29 May 2026
+    Status: [PENDING - for tomorrow]
+    Current: discreet button after the last activity. Users
+    aren't finding it. Bump prominence - probably a primary-
+    button treatment instead of the muted ghost-button style,
+    or anchor it visually to the end of the activity list.
+
+40. Rename Ask PAT to Chat with PAT
+    Source: Natalie 29 May 2026
+    Status: [PENDING - for tomorrow]
+    Simple copy change wherever "Ask PAT" appears (chat tab
+    label, chat panel header, any onboarding copy).
+
+41. Drop the 'AI may have dropped detail' notification
+    Source: Natalie 29 May 2026
+    Status: [PENDING - for tomorrow]
+    Rationale: with commits 26c65e9, 70271ee, 0aebe8c shipping
+    the activity-structure restore, NOTE dedupe, trigger /
+    trailing-requirement detection, the soft warning toast is
+    now mostly noise - the safeguards catch the real issues
+    before they reach the user. Drop the toast. Keep the
+    console.log so engineering can still spot regressions.
+
+[item 8 from Natalie's list was not present - skipped]
+
+42. Discreet [x] to remove manually added task / note / activity
+    Source: Natalie 29 May 2026
+    Status: [PENDING - for tomorrow]
+    The v2 #27 work (commit 923d2b5) added "+ Add task" /
+    "+ Add note" / "+ Add activity" buttons inside the doc
+    preview. Missing: a small discreet [x] to REMOVE a
+    manually added item. Should appear only on items the user
+    added (not source items) to avoid accidental destructive
+    edits to imported content. Confirm-on-click probably not
+    needed for user-added items.
+
+43. Reset should reset current view only, not navigate to home
+    Source: Natalie 29 May 2026
+    Status: [PENDING - for tomorrow]
+    Current: clicking Reset takes the user back to the home /
+    upload screen. If they're on the post-analyse page, they
+    expect Reset to clear their edits on the analysed page and
+    stay on it. Two behaviours:
+      - On home: Reset = clear any in-progress upload state.
+      - On analysed page: Reset = revert doc preview to last
+        saved analysed state without navigating away.
+    Confirm exact desired behaviour with Natalie before
+    rewiring.
+
+44. Last task of last activity absorbed Triggers & Inputs content
+    Source: Natalie 29 May 2026
+    Status: [PENDING - for tomorrow]
+    On one specific PDF, the last task in the last activity
+    pulled in text from the "Triggers & Inputs" section. Almost
+    certainly a parseProcedureBlock issue - the Procedure
+    section end-boundary isn't being detected so the parser
+    keeps appending Triggers-section content as task
+    continuations. Need the specific PDF to reproduce. Fix is
+    likely: when the parser sees a "Triggers & Inputs" / other
+    section heading mid-stream, close out the current task /
+    activity / NOTE rather than treating the heading as task
+    continuation text.
+
 ============================================================
 NUMBERING CROSS-REFERENCE
 ============================================================
@@ -514,9 +651,9 @@ SUMMARY
   Done                   26
   Needs sample input      0
   Partial / follow-up     1 (skipped - procedure-vs-process language pass)
-  Pending backlog         7
+  Pending backlog        17
   ----
-  Total                  34
+  Total                  44
 
 26 of 26 raw feedback items now shipped + 7 v2/adjacent items
 shipped. Item 30 (Admin review pack) and items 32+33 (29 May
