@@ -1,44 +1,45 @@
-PDF parser feedback item #1 follow-up: NOTE-truncation guardrails
+Fix banner filter dropping NOTE bodies + bare task letters
 
-Item #1 from the Training Plans (Apprentices & Trainees) test:
-the AI shortened the AHPRA monthly-submission task and moved the
-trigger condition into a NOTE - but truncated the NOTE body to
-just "Each month after the student reporting is complete",
-dropping the "...AND a formal acknowledgement of the submission
-is received from AHPRA" half. The dropped clause is the actual
-trigger condition, so losing it changes when the task runs.
+The banner filter I added in 291b3bd (PDF parser items #2 + #4
++ banner filter) was counting how many TIMES a candidate line
+appeared across the whole document, and flagging anything that
+appeared 2+ times as a "page banner" to drop.
 
-Three changes to keep the AI from doing that again, and to stop
-the drift-detection toast from false-positiving when the AI
-DOES promote content into a NOTE correctly.
+That over-matched badly on two-column PDFs:
+  - PDF.js sometimes emits single-letter "lines" (a, A, S, T,
+    V, etc.) from letter-spaced text. With bare letters from
+    task markers added in, "a" appeared many times. Counted as
+    a banner. Dropped. So bare task letters never made it to
+    the parser, and the bare-letter-merge step had nothing to
+    merge.
+  - Wrapped NOTE-body fragments and Y-bucket collisions
+    (e.g. "Enrolment Domingo" - a left-column word colliding
+    in Y-bucket with a right-column word) also got flagged.
+    Some real NOTE-body lines got dropped, so the body never
+    reached the NOTE during parseProcedureBlock continuation.
 
-1. server/index.js SYSTEM_PROMPT
-   Extended the "Promote dropped context to a NOTE" rule with an
-   explicit "The NOTE body MUST keep the ENTIRE dropped detail -
-   verbatim where possible" requirement, and a worked example
-   built around the AHPRA "and a formal acknowledgement..."
-   conjunction-chain pattern. Now matches the longer guidance
-   already in the frontend prompt.
+User-visible symptom: when uploading a multi-page two-column
+Nintex PDF, NOTEs showed only their titles - bodies came back
+empty even though they were clearly in the source.
 
-2. public/index.html PROMOTE DROPPED CONTEXT block
-   (Already in place from earlier work - this commit keeps it
-   in sync with the server prompt.) Adds the same AHPRA worked
-   example and the "NOTE is not a place to keep dropping content"
-   rule into the frontend auto-apply prompt.
+Fix: instead of counting occurrences, track which PAGES each
+candidate line appears on. Only treat a line as a banner if it
+appears on 2+ DISTINCT pages. A column-collision artefact or a
+wrapped sentence fragment on a single page no longer gets
+filtered. The original target (title repeating between pages)
+still gets caught - it appears on every page by design.
 
-3. public/index.html drift-detection haystack
-   The post-auto-apply "Heads up: the AI may have dropped some
-   detail" toast was scanning only the new TASK text for
-   parentheticals / step refs / specific nouns. That false-
-   positived whenever the AI did the right thing and moved
-   detail into a NOTE under the same activity.
+Verified against three PDFs:
+  - 4-page Training Plans (two-column, has NOTE bodies):
+      6 banners caught (real ones - title wrap + "None Noted"
+      placeholder). NO bare letters or task fragments dropped.
+      All NOTE bodies now parse correctly.
+  - 3-page Training Plans (older single-column, title-only
+    NOTEs): 2 banners caught - the original target
+    "Student Training Plans (Apprentices & Trainees)" still
+    drops as intended.
+  - AHPRA PDF: 2 banners caught (title wrap parts), NOTE
+    bodies still parse cleanly.
 
-   Now builds a per-activity combined haystack:
-     new task texts + new NOTE titles + new NOTE bodies
-   and checks each dropped-detail candidate against that
-   combined string. So "I moved 'Staff Name column' from
-   the task into a NOTE" no longer trips the warning, but
-   "I deleted 'Staff Name column' entirely" still does.
-
-Tracker: #171 marked done. #172 (activity 5 task b two-column
-PDF split) still pending - deeper column-extraction work needed.
+Same root cause as #176 (closed as not-a-regression earlier -
+turns out it WAS a regression, just only

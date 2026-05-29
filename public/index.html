@@ -6078,6 +6078,13 @@ function parseNintexPdf(lines) {
       if (wc <= 6 && _PROC_ROLE_KEYWORDS_RE.test(t)) return true;
       return false;
     };
+    // Track which PAGES each candidate line appears on. A true page banner
+    // (header/footer/title-repeat) shows up on multiple pages. A line that
+    // just happens to appear twice on the SAME page is almost certainly a
+    // column-collision artefact (PDF.js sometimes emits the same letter
+    // twice in adjacent Y-buckets) or a wrapped sentence fragment - we
+    // must NOT drop those, or NOTE bodies and bare task letters disappear.
+    const pageSets = new Map();
     lines.forEach(l => {
       const t = (l.text || '').trim();
       if (!t || t.length > 80) return;
@@ -6086,10 +6093,11 @@ function parseNintexPdf(lines) {
       if (/^NOTE\b/.test(t)) return;
       if (/^PROCESS\b/.test(t)) return;
       if (looksLikeRole(t)) return;
-      counts.set(t, (counts.get(t) || 0) + 1);
+      if (!pageSets.has(t)) pageSets.set(t, new Set());
+      pageSets.get(t).add(l.page);
     });
     const banners = new Set();
-    counts.forEach((n, t) => { if (n >= 2) banners.add(t); });
+    pageSets.forEach((pages, t) => { if (pages.size >= 2) banners.add(t); });
     return banners;
   })();
 
