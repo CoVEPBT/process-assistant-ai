@@ -2160,6 +2160,27 @@
     outline: 2px solid var(--rmit-red);
     outline-offset: 2px;
   }
+  /* Tracker #39 (29 May 2026): bump the "+ Add activity" button to a
+     primary-style treatment so users notice it. The "+ Add task" /
+     "+ Add note" buttons inside each activity stay discreet (they sit
+     inside an activity card and don't need to dominate); only the
+     end-of-list "+ Add activity" button gets the prominent treatment. */
+  .doc-add-btn.doc-add-activity {
+    background: var(--rmit-red);
+    border: 1px solid var(--rmit-red);
+    border-style: solid;
+    color: #FFFFFF;
+    padding: 8px 16px;
+    font-size: 13.5px;
+  }
+  .doc-add-btn.doc-add-activity:hover {
+    background: #C40A1E;
+    border-color: #C40A1E;
+    color: #FFFFFF;
+  }
+  .doc-add-actions-end {
+    justify-content: center;
+  }
 
   /* ============================================================
      COMPARE-WITH-ORIGINAL SWITCH (home v3 - Move 3)
@@ -4665,7 +4686,7 @@ NOTE: What if access is delayed? Escalate to the IT lead and update the new star
       <path d="M9 9h6M9 13h4"/>
     </svg>
   </span>
-  <span class="coach-bubble-text">Ask PAT</span>
+  <span class="coach-bubble-text">Chat with PAT</span>
   <span class="coach-bubble-badge" aria-hidden="true">AI</span>
 </button>
 
@@ -9775,7 +9796,8 @@ async function downloadReviewPack() {
     Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
     Header, Footer, AlignmentType, LevelFormat, TabStopType,
     HeadingLevel, BorderStyle, WidthType, ShadingType, PageNumber,
-    CommentRangeStart, CommentRangeEnd, CommentReference
+    CommentRangeStart, CommentRangeEnd, CommentReference,
+    ExternalHyperlink
   } = D;
 
   const m = currentModel;
@@ -9992,6 +10014,22 @@ async function downloadReviewPack() {
       }));
     });
   });
+
+  // Tracker #36 (29 May 2026): link the CoVE Process Review Checklist near
+  // the end of the document. The checklist covers things this tool can't
+  // assess (sensitive content, owner/expert correctness, access controls)
+  // so the reviewer should run through it before publishing in Nintex.
+  const CHECKLIST_URL = 'https://rmiteduau.sharepoint.com/:w:/r/sites/VEPMO/Shared%20Documents/General/Process%20%26%20Knowledge%20Management/Process%20Toolkit/CoVE%20Process%20Review%20Checklist.docx?d=wf120f4bfac0b4b9fab47a034e87110f0&csf=1&web=1&e=oh8h5Y';
+  children.push(new Paragraph({ spacing: { before: 480 }, heading: HeadingLevel.HEADING_3, children: [new TextRun('Before you publish')] }));
+  children.push(new Paragraph({ spacing: { after: 80 }, children: [
+    new TextRun('Run through the CoVE Process Review Checklist before publishing in Nintex Process Manager. It covers the parts of the process this tool cannot check for you - sensitive content, owner/expert correctness, system access, and supporting-document links.')
+  ] }));
+  children.push(new Paragraph({ spacing: { after: 80 }, children: [
+    new ExternalHyperlink({
+      link: CHECKLIST_URL,
+      children: [new TextRun({ text: 'Open the CoVE Process Review Checklist', style: 'Hyperlink', color: '1A56DB', underline: {} })]
+    })
+  ] }));
 
   // Footer sign-off block
   children.push(new Paragraph({ spacing: { before: 480 }, heading: HeadingLevel.HEADING_3, children: [new TextRun('Owner sign-off')] }));
@@ -10365,6 +10403,30 @@ async function downloadAsPdf() {
     // Space between activities
     if (idx < m.activities.length - 1) y += 5;
   });
+
+  // ---------- Checklist callout (Tracker #36, 29 May 2026) ----------
+  // Same intent as the Word export: link the CoVE Process Review Checklist
+  // so the reviewer covers the parts this tool can't assess before
+  // publishing in Nintex.
+  const PDF_CHECKLIST_URL = 'https://rmiteduau.sharepoint.com/:w:/r/sites/VEPMO/Shared%20Documents/General/Process%20%26%20Knowledge%20Management/Process%20Toolkit/CoVE%20Process%20Review%20Checklist.docx?d=wf120f4bfac0b4b9fab47a034e87110f0&csf=1&web=1&e=oh8h5Y';
+  ensureSpace(20);
+  y += 6;
+  setText({ bold: true, size: 11, color: NAVY });
+  doc.text('Before you publish', MARGIN_L, y); y += 5.5;
+  setText({ size: 10, color: BLACK });
+  const blurb = doc.splitTextToSize(
+    'Run through the CoVE Process Review Checklist before publishing in Nintex Process Manager. It covers the parts of the process this tool cannot check for you - sensitive content, owner/expert correctness, system access, and supporting-document links.',
+    CONTENT_W
+  );
+  blurb.forEach(line => { ensureSpace(4.4); doc.text(line, MARGIN_L, y); y += 4.4; });
+  y += 2;
+  setText({ size: 10, color: [0x1A, 0x56, 0xDB] });
+  ensureSpace(4.4);
+  const linkText = 'Open the CoVE Process Review Checklist';
+  doc.textWithLink(linkText, MARGIN_L, y, { url: PDF_CHECKLIST_URL });
+  const linkW = doc.getTextWidth(linkText);
+  doc.setDrawColor(0x1A, 0x56, 0xDB); doc.setLineWidth(0.2);
+  doc.line(MARGIN_L, y + 1.2, MARGIN_L + linkW, y + 1.2);
 
   // ---------- Footer: generated date ----------
   setText({ italic: true, size: 8.5, color: GREY });
@@ -12850,15 +12912,14 @@ createChatSurface({
             }
           });
         });
-        if (droppedSnippets.length && typeof showToast === 'function') {
-          const first = droppedSnippets[0];
-          const more = droppedSnippets.length > 1 ? ' (+' + (droppedSnippets.length - 1) + ' more)' : '';
-          showToast(
-            'Heads up: the AI may have dropped some detail when polishing - e.g. ' +
-            first.kind + ' "' + first.text + '" from task ' + first.activity + first.task + more +
-            '. Spot-check the updated tasks below.',
-            'warning', 9000
-          );
+        if (droppedSnippets.length) {
+          // Tracker #41 (29 May 2026): the user-facing soft-warning toast
+          // was retired now that the activity-structure restore (70271ee),
+          // duplicate-NOTE dedupe (26c65e9), and trigger / trailing-
+          // requirement detection (0aebe8c) catch the real issues before
+          // they reach the user. Keep the console.log so engineering can
+          // still spot regressions in DevTools without surfacing noise to
+          // the user.
           console.log('[auto-apply] dropped-context snippets:', droppedSnippets);
         }
       } catch (e) {
