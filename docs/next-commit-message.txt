@@ -1,42 +1,35 @@
-Stop AI emitting both original + polished version of same NOTE
+Auto-apply: restore activity numbers + linked processes
 
-Item #5 from the post-a3940de export test: the AI polished a
-source single-directive NOTE under activity 2.0 ("Signature
-can only be entered in SAMS after the delivery schedule has
-been confirmed by CoVE Program Manager") into a Q+A NOTE
-("When can the signature be entered in SAMS? / Signature can
-only be entered..."), but ALSO kept the original directive
-NOTE as a second title-only NOTE alongside. Source had 1
-NOTE in that activity; output had 2.
+Two post-process restores added to the auto-apply pipeline.
 
-Existing PRESERVE NOTES count-check should have caught this
-in the AI's self-check but didn't. Two changes:
+#183 — Activity numbers (6.1 / 6.2 / 6.3)
+The PRESERVE ACTIVITY STRUCTURE prompt rule from a3940de tells
+the AI to keep sub-decimal numbers verbatim ("6.1" not "7.0"),
+but the model still flattens them on some runs. Prompt alone
+clearly isn't enough.
 
-1. PROMPT - strengthened PRESERVE NOTES rule:
-   - Explicit "ONE-TO-ONE MAPPING" subsection: each source
-     NOTE maps to EXACTLY one output NOTE. The polished
-     version REPLACES the original; it does NOT sit alongside.
-     If two output NOTEs would have overlapping body text,
-     delete the duplicate before emitting.
-   - "DIRECTIVE NOTES ARE OK AS-IS" subsection: A NOTE does
-     not have to be Q+A. Source NOTEs that are single
-     directive statements can stay as a single statement on
-     the title line - do not invent a question to wrap them.
-     This stops the AI feeling pressure to create Q+A
-     versions that then duplicate the source content.
-   - Sharpened the count self-check wording with a concrete
-     example: "Source has 3 NOTEs under activity 4? Output
-     has exactly 3, NOT 4, NOT 2."
+New restore pass mirrors the existing role-restore pattern:
+walk new activities in order, overwrite each one's number
+with the original's number by position. Capped at
+min(newCount, origCount) so a legitimate multi-role split
+that adds activities doesn't trip the loop. Now 6.1 / 6.2 /
+6.3 survive the rewrite by force.
 
-2. POST-PROCESS - within-activity duplicate-NOTE dedupe.
-   After NOTE restoration, scan each activity's NOTEs and
-   detect duplicates: two NOTEs where one's title is
-   substantially the same content as the other's body, or
-   where bodies overlap. The substantial-overlap test
-   requires the shorter string to be 25+ chars and fully
-   contained in the longer one - that catches the classic
-   "directive kept alongside its Q+A polish" pattern without
-   false-positiving on incidental short word collisions.
-   Drops the duplicate, keeps the more informative NOTE.
+#184 — Linked processes (act.links / "PROCESS X" lines)
+The parser captures "PROCESS X" lines under each activity
+into act.links. The three-block AI output format doesn't
+include them, so any linked-process reference disappears
+after auto-apply. The export then shows nothing under the
+activity it should belong to.
 
-Tracker: #182 done.
+New restore pass: match new activities to original activities
+by activity NUMBER first (now reliable because of #183
+above), fall back to index. If the new activity has no links
+but the original did, copy the original list over. Doesn't
+ADD links the source didn't have - only carries forward what
+was already there.
+
+Both passes log to console so we can spot how often the AI is
+still messing this up.
+
+Tracker: #183, #184 done.

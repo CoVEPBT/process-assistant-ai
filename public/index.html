@@ -12869,6 +12869,62 @@ createChatSurface({
         console.warn('[auto-apply] could not restore role strings:', e);
       }
 
+      // Restore activity NUMBERS from the original model. The PRESERVE
+      // ACTIVITY STRUCTURE rule tells the AI to keep "6.1 / 6.2 / 6.3"
+      // verbatim, but the model still flattens them to "7.0 / 8.0 / 9.0"
+      // on some runs. Defence-in-depth: overwrite the new activity's
+      // number with the original by position. If counts don't match
+      // (e.g. multi-role split legitimately added activities), only
+      // overwrite up to min(newCount, origCount).
+      try {
+        const origActs = (originalSnapshot.model && originalSnapshot.model.activities) || [];
+        let touchedN = 0;
+        const lim = Math.min(newModel.activities.length, origActs.length);
+        for (let i = 0; i < lim; i++) {
+          const newAct = newModel.activities[i];
+          const origAct = origActs[i];
+          if (!newAct || !origAct || !origAct.number) continue;
+          if (String(newAct.number || '') !== String(origAct.number)) {
+            newAct.number = origAct.number;
+            touchedN++;
+          }
+        }
+        if (touchedN > 0) {
+          console.log('[auto-apply] restored ' + touchedN + ' activity number(s) the AI had renumbered');
+        }
+      } catch (e) {
+        console.warn('[auto-apply] could not restore activity numbers:', e);
+      }
+
+      // Restore linked processes (act.links) the AI dropped. The three-block
+      // output format doesn't include "PROCESS X" lines, so any linked
+      // process the parser captured under an activity will be missing after
+      // the AI rewrite. Copy them back from the original activity at the
+      // same index. Don't ADD links the original didn't have - just put
+      // the original's link list onto the new activity if the new one is
+      // empty or missing.
+      try {
+        const origActs = (originalSnapshot.model && originalSnapshot.model.activities) || [];
+        let restoredL = 0;
+        // Match by activity NUMBER first (now that numbers are restored),
+        // fall back to index for legacy / unstructured cases.
+        const origByNumber = {};
+        origActs.forEach(oa => { if (oa && oa.number) origByNumber[String(oa.number)] = oa; });
+        newModel.activities.forEach((newAct, ai) => {
+          let origAct = (newAct && newAct.number && origByNumber[String(newAct.number)]) || origActs[ai];
+          if (!origAct || !Array.isArray(origAct.links) || !origAct.links.length) return;
+          if (!Array.isArray(newAct.links) || !newAct.links.length) {
+            newAct.links = origAct.links.map(l => ({ type: l.type, name: l.name }));
+            restoredL += newAct.links.length;
+          }
+        });
+        if (restoredL > 0) {
+          console.log('[auto-apply] restored ' + restoredL + ' linked process(es) the AI had dropped');
+        }
+      } catch (e) {
+        console.warn('[auto-apply] could not restore linked processes:', e);
+      }
+
       // Restore NOTE blocks the AI may have dropped. Mirror of the URL-restore
       // pass: match new activities to original activities by index, and for
       // every NOTE in the original that has NO equivalent in the new activity
