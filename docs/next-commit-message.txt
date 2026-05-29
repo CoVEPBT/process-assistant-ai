@@ -1,50 +1,45 @@
-Protected system / tool / app names list for #33 follow-up
+PDF parser fixes from Training Plans test: items #2 + #4 + banner filter
 
-Natalie pasted the Nintex Process Manager systems/tools/apps export
-(287 entries). Combined with the existing hardcoded list in the
-post-process drift check (23 entries) and the space-separated form
-variants ("Adobe_Acrobat_DC" -> "Adobe Acrobat DC") to give a
-de-duped canonical list of 460 protected names.
+Three Nintex-PDF parser improvements from the Training Plans
+(Apprentices & Trainees) test. Items #1 (NOTE truncation) and #3
+(activity 5 task b merging) still pending - deeper investigation
+needed.
 
-New file: public/protected-system-names.txt
-  - Single source of truth, one name per line, "#" comments allowed.
-  - Sorted alphabetically (case-insensitive) for easy scanning + edit.
-  - Lives in public/ so it's served as a static asset (the client
-    fetches it once on first auto-apply and caches in memory).
-  - Easy to edit / extend — add a new system, save the file, push.
+#2 - "Employer of Apprentice/Trainee" not recognised as role
+   isRoleLine() only matched CoVE/RMIT prefixes, en/em dashes, or
+   all-caps + role keyword. Now also recognises:
+     - "Employer of <X>" / "Student of <X>" (org noun + "of"),
+       with a guard against trailing "(X)" so document titles
+       like "Student Training Plans (Apprentices & Trainees)"
+       don't accidentally match.
+     - Short noun phrase containing a role keyword ("Hiring
+       Manager", "Accreditation Manager") - <= 6 words.
+   Critically we do NOT match "starts with org noun" alone -
+   that overshoots into document titles. 9/9 unit tests pass.
 
-Two consumers of the same list:
+#4 - bare task letter on its own line
+   PDF column extraction sometimes splits a task letter ("a") onto
+   its own line, separate from its text. Pre-process pass at the
+   top of parseProcedureBlock now merges any bare-letter line with
+   the following line when the next line doesn't already look like
+   a structural marker.
 
-1. Auto-apply prompt — filter to source.
-   On every auto-apply, the client scans the source documentText for
-   names that actually appear in it. ONLY those names go into the
-   prompt as a "PROTECTED SYSTEM / TOOL / APP NAMES" block:
-     "The source process mentions the following named systems, tools,
-      apps, documents, forms, or acronyms from the RMIT / CoVE / Nintex
-      Process Manager registry. They are CANONICAL nouns — the reader
-      knows them by these exact names. Keep them EXACTLY as written in
-      the source. Do not abbreviate them, do not expand them, do not
-      generalise them ('SAMS' must not become 'the system'; 'A&T
-      schedule' must not become 'the schedule'), and do not drop them
-      when tightening a sentence.
-        - SAMS
-        - A&T schedule
-        - ..."
-   Filter-by-source means the prompt stays small (typically 5-15 names
-   for a normal process) instead of carrying all 460.
+BANNER FILTER - title repeats between pages polluting task text
+   Some Nintex exports repeat a short "title banner" line between
+   pages (in this PDF: "Student Training Plans (Apprentices &
+   Trainees)"). It was getting appended to whichever task / NOTE
+   was open when it appeared in the line stream.
 
-2. Post-process drift check — use the filtered list.
-   The drift detector that warns "Heads up: the AI may have dropped
-   detail" now uses the SAME filtered-to-source list as its
-   SPECIFIC_NOUNS array. So if the source contains "SAMS" and the
-   rewrite drops it, the warning toast names it explicitly.
+   New repeatedBannerLines detector in parseNintexPdf:
+     - Counts how many times each short line (<=80 chars) appears,
+       excluding structural markers AND roles (the same role
+       appears in both the swimlane labels AND every activity that
+       uses it - we don't want to filter roles).
+     - Any non-structural, non-role line appearing 2+ times is
+       treated as a page banner and dropped from the filtered
+       line list before parseProcedureBlock sees it.
 
-How matching works:
-  - Case-insensitive
-  - Underscore = space (so "Adobe_Acrobat_DC" matches "Adobe Acrobat DC")
-  - De-duped on the normalised form (we don't warn twice for variants)
-
-Updating the list:
-  - Edit public/protected-system-names.txt
-  - One name per line; blank lines / # comments are ignored
-  - Pus
+Still pending - logged in the tracker:
+  - #1 NOTE body truncated (AHPRA process)
+  - #3 task b on activity 5.0 merged into task a (deeper column-
+       extraction investigation needed)
