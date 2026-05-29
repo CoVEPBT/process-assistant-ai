@@ -1,50 +1,42 @@
-PAT export test feedback: items #1 #2 #3 #4
+Stop AI emitting both original + polished version of same NOTE
 
-Four issues Natalie hit running the Training Plans PDF through
-auto-apply then exporting to PDF.
+Item #5 from the post-a3940de export test: the AI polished a
+source single-directive NOTE under activity 2.0 ("Signature
+can only be entered in SAMS after the delivery schedule has
+been confirmed by CoVE Program Manager") into a Q+A NOTE
+("When can the signature be entered in SAMS? / Signature can
+only be entered..."), but ALSO kept the original directive
+NOTE as a second title-only NOTE alongside. Source had 1
+NOTE in that activity; output had 2.
 
-#1  AI invented an activity 5.0 "Follow Up with Employer" out
-    of NOTE content under source activity 4.0 (the
-    "no response" / "still no response" follow-up emails). The
-    invented activity also duplicated one of the source NOTEs.
+Existing PRESERVE NOTES count-check should have caught this
+in the AI's self-check but didn't. Two changes:
 
-#4  AI flattened source activities 6.1 / 6.2 / 6.3 (parallel
-    activities under 6.0) into whole-number 7.0 / 8.0 / 9.0,
-    losing the parallel-activity semantics. The x.y numbering
-    in Nintex specifically means "these are alternatives, not
-    sequential steps".
+1. PROMPT - strengthened PRESERVE NOTES rule:
+   - Explicit "ONE-TO-ONE MAPPING" subsection: each source
+     NOTE maps to EXACTLY one output NOTE. The polished
+     version REPLACES the original; it does NOT sit alongside.
+     If two output NOTEs would have overlapping body text,
+     delete the duplicate before emitting.
+   - "DIRECTIVE NOTES ARE OK AS-IS" subsection: A NOTE does
+     not have to be Q+A. Source NOTEs that are single
+     directive statements can stay as a single statement on
+     the title line - do not invent a question to wrap them.
+     This stops the AI feeling pressure to create Q+A
+     versions that then duplicate the source content.
+   - Sharpened the count self-check wording with a concrete
+     example: "Source has 3 NOTEs under activity 4? Output
+     has exactly 3, NOT 4, NOT 2."
 
-#3  SharePoint URL attached to source activity 6.1 ("SAMS -
-    Enter Employer Sign-off Is Not Required For A Course")
-    disappeared in the export. Root cause was the off-by-one
-    from #1: the attachment-restore pass matched new tasks
-    back to original tasks by ACTIVITY INDEX, and the invented
-    activity shifted everything by one.
+2. POST-PROCESS - within-activity duplicate-NOTE dedupe.
+   After NOTE restoration, scan each activity's NOTEs and
+   detect duplicates: two NOTEs where one's title is
+   substantially the same content as the other's body, or
+   where bodies overlap. The substantial-overlap test
+   requires the shorter string to be 25+ chars and fully
+   contained in the longer one - that catches the classic
+   "directive kept alongside its Q+A polish" pattern without
+   false-positiving on incidental short word collisions.
+   Drops the duplicate, keeps the more informative NOTE.
 
-#2  Yellow-bordered NOTE blocks in the PDF and Word exports
-    had too little top padding - the first line of the NOTE
-    title sat tight against the border.
-
-Fixes:
-
-1. New PRESERVE ACTIVITY STRUCTURE rule in BOTH the frontend
-   auto-apply prompt and the server SYSTEM_PROMPT.
-     - Never invent new activities.
-     - Never promote NOTE content into a separate activity.
-     - Preserve activity numbers verbatim, INCLUDING sub-
-       decimals like 6.1 / 6.2 / 6.3.
-     - Never duplicate a NOTE across multiple activities.
-     - Mandatory self-check: count source activities, count
-       output activities, verify each output number matches a
-       source number exactly.
-
-2. Strengthened PRESERVE URLS rule in the frontend prompt to
-   tell the AI explicitly about the "Link: https://..." row
-   the source view renders below tasks with attachments -
-   that row IS the attachment and must be kept under the same
-   task in the output.
-
-3. Defence-in-depth in the attachment-restore pass: also
-   match original activities by activity NUMBER, not just by
-   index. If the AI ever does shift activities, URLs still
-   land on the r
+Tracker: #182 done.

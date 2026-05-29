@@ -12466,8 +12466,20 @@ createChatSurface({
       '    Reassign the ticket to their delegate and proceed.\n' +
       '* You MAY tighten a NOTE\'s wording for clarity (verb-first, ≤18 words) - but the question and the ' +
       'answer must stay recognisable as the same content. You can polish; you cannot omit.\n' +
+      '* ONE-TO-ONE MAPPING. Each source NOTE maps to EXACTLY ONE output NOTE. If you polish a directive ' +
+      'NOTE like "NOTE: Signature can only be entered after the schedule is confirmed" into Q+A form like ' +
+      '"NOTE: When can the signature be entered? / After the schedule is confirmed", that is ONE NOTE in ' +
+      'your output - the polished version REPLACES the directive, it does NOT sit alongside it. Do NOT ' +
+      'emit both an original-form NOTE and a polished-form NOTE for the same source content. Do NOT split ' +
+      'a single source NOTE into two output NOTEs. If you would otherwise produce two NOTEs whose body ' +
+      'text overlaps with another NOTE\'s body or title, delete the duplicate before emitting.\n' +
+      '* DIRECTIVE NOTES ARE OK AS-IS. A NOTE does not have to be Q+A. Source NOTEs that are single ' +
+      'directive statements ("NOTE: Refer to X", "NOTE: The school must agree via email") can stay as ' +
+      'a single statement on the title line - do not invent a question to wrap them in. Only convert ' +
+      'to Q+A if it genuinely clarifies the content.\n' +
       '* MANDATORY SELF-CHECK before emitting blocks: count the NOTEs in the source and count the NOTEs in ' +
-      'your output. They must match. If they don\'t, redo the Process Map block and put the missing NOTEs back.\n\n' +
+      'your output. They must match. Source has 3 NOTEs under activity 4? Output has exactly 3 NOTEs ' +
+      'under activity 4. NOT 4, NOT 2. If they don\'t match, redo the Process Map block.\n\n' +
       'PROMOTE DROPPED CONTEXT TO NOTES - DO NOT DELETE INFORMATION:\n' +
       'When you shorten a task to hit the 18-word sentence cap, you must not silently delete useful ' +
       'context. "Useful context" = anything that tells the reader WHERE to look, WHICH specific column / ' +
@@ -12902,6 +12914,61 @@ createChatSurface({
         }
       } catch (e) {
         console.warn('[auto-apply] could not restore NOTE blocks:', e);
+      }
+
+      // Within-activity duplicate-NOTE dedupe. The AI sometimes polishes a
+      // single source NOTE into Q+A form but then ALSO emits the original
+      // form alongside, producing two NOTEs in the output for one source
+      // NOTE. Detect: two NOTEs in the SAME activity where one NOTE's title
+      // or body substantially repeats the other's title or body. Drop the
+      // less-informative one (the title-only directive duplicate).
+      try {
+        const norm = (s) => String(s || '')
+          .toLowerCase()
+          .replace(/[^a-z0-9 ]+/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+        let removed = 0;
+        newModel.activities.forEach(act => {
+          if (!Array.isArray(act.notes) || act.notes.length < 2) return;
+          const keep = [];
+          act.notes.forEach((n, i) => {
+            const nTitle = norm(n.title);
+            const nBody  = norm(n.body);
+            // Compare this NOTE against all NOTEs already in `keep`. If this
+            // NOTE's title is essentially the same as a kept NOTE's body, it's
+            // a duplicate (the kept NOTE already has it as the answer).
+            const isDuplicate = keep.some(k => {
+              const kTitle = norm(k.title);
+              const kBody  = norm(k.body);
+              // The substantial-overlap test: one string contains the other,
+              // and the shorter is at least 25 chars (avoids 2-word collisions).
+              const overlap = (a, b) => {
+                if (!a || !b) return false;
+                const short = a.length <= b.length ? a : b;
+                const long  = a.length <= b.length ? b : a;
+                return short.length >= 25 && long.includes(short);
+              };
+              // This NOTE's title duplicates kept NOTE's body (the classic
+              // "directive kept alongside its Q+A polish" pattern).
+              if (overlap(nTitle, kBody)) return true;
+              // Or this NOTE's body duplicates kept NOTE's body / title.
+              if (nBody && (overlap(nBody, kBody) || overlap(nBody, kTitle))) return true;
+              return false;
+            });
+            if (isDuplicate) {
+              removed++;
+            } else {
+              keep.push(n);
+            }
+          });
+          act.notes = keep;
+        });
+        if (removed > 0) {
+          console.log('[auto-apply] removed ' + removed + ' duplicate NOTE block(s) the AI emitted');
+        }
+      } catch (e) {
+        console.warn('[auto-apply] duplicate-NOTE dedupe failed:', e);
       }
 
       // Re-run the full pipeline
