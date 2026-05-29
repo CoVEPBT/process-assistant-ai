@@ -628,6 +628,78 @@ PENDING (post-pilot backlog - new features, bigger work)
     activity / NOTE rather than treating the heading as task
     continuation text.
 
+
+
+45. Parsing missed a NOTE in pasted Schedule-new-class input
+    Source: Natalie 29 May 2026 (late evening Schedule-new-class
+            test)
+    Status: [PENDING - for tomorrow]
+    Reference PDF: CoVE_-_DP_S_-_Schedule_new_class.pdf (in
+    uploads dir).
+    Input pasted into the tool (Nintex Procedure Text format):
+      Request to schedule a new class [CoVE - Program
+        Coordinator; CoVE - Program Manager; CoVE - Student
+        Lifecycle]
+        Email Student Lifecycle (ve.studentlifecycle@rmit.edu.au),
+        copy Delivery Planning & Support
+        (ve.deliveryservices@rmit.edu.au) to request new class
+        scheduling.
+      Schedule class in SAMS [CoVE - Delivery Planning & Support]
+        Review request ensuring all fields are populated that
+        are relevant to the request
+        If the request is to cancel a class, action in SAMS
+        If request is RPL or to create a new class, schedule
+        in SAMS
+        If the request is to re-schedule a class, first cancel
+        the existing class and then schedule class with new
+        details
+        If the request is to extend class end dates, cancel the
+        existing class (if applicable), schedule a new class.
+      Confirm completion of class scheduling [CoVE - Delivery
+        Planning & Support]
+        Move the completed requests from the Ad-hoc scheduling
+        request tab to Processed request tab
+    Diagnosis tomorrow: verify whether the pasted input contained
+    a NOTE: line that the parser dropped, OR whether Natalie
+    expected something to be promoted into a NOTE (e.g. one of
+    the conditional "If the request is..." branches in activity
+    2.0). Probable culprit: the Procedure Text paste handler -
+    extractSectionRanges / parseProcedureText doesn't recognise
+    a NOTE: line marker in the same format the PDF parser does.
+
+46. Auto-apply didn't enforce verb-first on tasks
+    Source: Natalie 29 May 2026 (same test as #45)
+    Status: [PENDING - for tomorrow]
+    Symptoms: in the exported output, activity 2.0 tasks all
+    still start with "If the request is..." or "Review request..."
+    rather than verb-first. CoVE Rule 6 says every task starts
+    with a verb. The auto-apply prompt has the verb-first rule,
+    but the AI isn't applying it on this input.
+    Examples that should have been rewritten:
+      "If the request is to cancel a class, action in SAMS"
+        -> "Cancel the class in SAMS when the request is a
+            cancellation"
+        or split: NOTE "When does this apply?" + task "Cancel
+        the class in SAMS"
+      "Review request ensuring all fields are populated..."
+        -> "Confirm all fields relevant to the request are
+            populated"
+    Likely cause: the verb-first rule in the prompt is less
+    aggressive than PRESERVE NOTES / PRESERVE ACTIVITY
+    STRUCTURE. The AI optimises for not-breaking-structure
+    and stops once it has tightened sentence length, without
+    cycling back to verb-first rewriting.
+    Fix candidates for tomorrow:
+      a) Promote verb-first to a mandatory-self-check item
+         alongside the dropped-context checks.
+      b) Add a post-process pass that scans each task for a
+         leading verb (against the approved-verbs list) and
+         flags non-verb-leading tasks back to the AI in a
+         second pass.
+      c) Add the post-analyse rules engine to detect non-
+         verb-leading tasks and surface as a quality flag the
+         user can click to auto-fix.
+
 ============================================================
 NUMBERING CROSS-REFERENCE
 ============================================================
@@ -651,9 +723,9 @@ SUMMARY
   Done                   30
   Needs sample input      0
   Partial / follow-up     1 (skipped - procedure-vs-process language pass)
-  Pending backlog        13
+  Pending backlog        15
   ----
-  Total                  44
+  Total                  46
 
 26 of 26 raw feedback items now shipped + 7 v2/adjacent items
 shipped. Item 30 (Admin review pack) and items 32+33 (29 May
