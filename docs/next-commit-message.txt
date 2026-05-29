@@ -1,35 +1,35 @@
-Auto-apply: restore activity numbers + linked processes
+Tracker #34: stop AI dropping conditional triggers + trailing requirements
 
-Two post-process restores added to the auto-apply pipeline.
+Examples Natalie called out from the 29 May Training Plans
+re-test (post commits a3940de + 26c65e9 + 70271ee):
 
-#183 — Activity numbers (6.1 / 6.2 / 6.3)
-The PRESERVE ACTIVITY STRUCTURE prompt rule from a3940de tells
-the AI to keep sub-decimal numbers verbatim ("6.1" not "7.0"),
-but the model still flattens them on some runs. Prompt alone
-clearly isn't enough.
+- Activity 6.2 source: "Where a Training Agreement Variation
+  is required to student nominal completion date, a training
+  plan must be downloaded and amended..." - AI dropped the
+  leading "Where X..." trigger clause, leaving the task with
+  no idea when it fires.
 
-New restore pass mirrors the existing role-restore pattern:
-walk new activities in order, overwrite each one's number
-with the original's number by position. Capped at
-min(newCount, origCount) so a legitimate multi-role split
-that adds activities doesn't trip the loop. Now 6.1 / 6.2 /
-6.3 survive the rewrite by force.
+- Activity 6.3 source ends with "All parties must agree to
+  changes." - AI dropped the trailing requirement sentence.
 
-#184 — Linked processes (act.links / "PROCESS X" lines)
-The parser captures "PROCESS X" lines under each activity
-into act.links. The three-block AI output format doesn't
-include them, so any linked-process reference disappears
-after auto-apply. The export then shows nothing under the
-activity it should belong to.
+Pattern: AI treats leading "Where / When / If X..." conditional
+clauses and trailing requirement sentences chained after a
+period as filler when tightening to 18 words. They are NOT
+filler - the first is the trigger, the second is a follow-on
+requirement.
 
-New restore pass: match new activities to original activities
-by activity NUMBER first (now reliable because of #183
-above), fall back to index. If the new activity has no links
-but the original did, copy the original list over. Doesn't
-ADD links the source didn't have - only carries forward what
-was already there.
+Three changes:
 
-Both passes log to console so we can spot how often the AI is
-still messing this up.
+1. FRONTEND PROMPT - two new EXAMPLES YOU MUST GET RIGHT
+   blocks added before the self-check:
+     - CONDITIONAL / TRIGGER CLAUSES with the activity 6.2
+       Training Agreement Variation worked example (SOURCE /
+       WRONG / RIGHT).
+     - TRAILING REQUIREMENT SENTENCES with the activity 6.3
+       program transition worked example.
+   Self-check now has 7 steps instead of 5 - explicitly asking
+   "Did I drop a Where/When/If trigger?" and "Did I drop a
+   trailing sentence?".
 
-Tracker: #183, #184 done.
+2. SERVER PROMPT - extended the existing "Promote dropped
+   context to a NOTE" bullet's (1)..(4) enumera

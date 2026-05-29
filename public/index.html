@@ -12535,7 +12535,33 @@ createChatSurface({
       '  or split into TWO tasks. NEVER delete one.\n' +
       '    SOURCE: "Use guide to update room and staff information, as well as any future changes"\n' +
       '    WRONG : "Use the guide to update room and staff information"   <- drops "as well as any future changes"\n' +
-      '    RIGHT : Task "Use the guide to update room and staff information" + Task "Update the guide with any future delivery changes"\n\n' +
+      '    RIGHT : Task "Use the guide to update room and staff information" + Task "Update the guide with any future delivery changes"\n' +
+      '  CONDITIONAL / TRIGGER CLAUSES - never drop the "Where / When / If X..." opener:\n' +
+      '  A task that begins with "Where X...", "When X...", or "If X..." is telling the reader WHEN that\n' +
+      '  task fires. Dropping the opener leaves the task floating - the reader has no idea what triggers\n' +
+      '  it. Keep the trigger in the task if it fits the 18-word cap; otherwise spin it off as a NOTE\n' +
+      '  titled "When does this task apply?" with the trigger as the body.\n' +
+      '    SOURCE: "Where a Training Agreement Variation is required to student nominal completion date,\n' +
+      '             a training plan must be downloaded and amended to include the proposed completion date."\n' +
+      '    WRONG : "Download and amend the training plan to include proposed completion date."\n' +
+      '            <- drops the "Where a Training Agreement Variation is required..." trigger - the\n' +
+      '            reader has no idea when this task fires\n' +
+      '    RIGHT : Task "Download and amend the training plan to include the proposed completion date"\n' +
+      '            + NOTE "When does this task apply? / When a Training Agreement Variation is required\n' +
+      '            to the student\'s nominal completion date."\n' +
+      '  TRAILING REQUIREMENT SENTENCES - never drop a second sentence chained after a period:\n' +
+      '  If a source task is two sentences ("Do X. All parties must Y."), the second sentence is a\n' +
+      '  follow-on requirement, not commentary. Dropping it removes a step the reader has to take.\n' +
+      '  Either keep both sentences as two tasks, or keep the first as the task and spin the second\n' +
+      '  off as a NOTE titled "What else has to happen?" with the requirement as the body.\n' +
+      '    SOURCE: "Where a program is transitioned, a new training plan must be generated in SAMS to\n' +
+      '             display the training delivery of the new program. All parties must agree to changes."\n' +
+      '    WRONG : "Generate a new training plan in SAMS for program transition."\n' +
+      '            <- drops "All parties must agree to changes" (a downstream requirement) AND drops\n' +
+      '            the "Where a program is transitioned" trigger\n' +
+      '    RIGHT : Task "Generate a new training plan in SAMS to display the new program delivery"\n' +
+      '            + Task "Confirm all parties agree to the changes"\n' +
+      '            + NOTE "When does this task apply? / When a program is transitioned."\n\n' +
       'MANDATORY SELF-CHECK: for every task you have shortened by more than 4 words from the source,\n' +
       'ask in this order:\n' +
       '  1. Did I drop a parenthetical "(...)" qualifier? If so, restore it.\n' +
@@ -12544,7 +12570,11 @@ createChatSurface({
       '     "A&T schedule", "Staff Name column")? If so, restore it.\n' +
       '  4. Did I drop an additional action joined by "and" / "as well as" / "plus"? If so, either\n' +
       '     keep both actions or split into two tasks - do NOT delete one.\n' +
-      '  5. If yes to any of the above and the result would exceed 18 words, spin the dropped detail\n' +
+      '  5. Did I drop a leading "Where / When / If X..." trigger clause? If so, restore it - either\n' +
+      '     in the task or as a NOTE "When does this task apply?".\n' +
+      '  6. Did I drop a trailing sentence (a second sentence chained after a period in the source)?\n' +
+      '     If so, restore it as a second task or as a NOTE "What else has to happen?".\n' +
+      '  7. If yes to any of the above and the result would exceed 18 words, spin the dropped detail\n' +
       '     off into a NOTE under the same activity rather than deleting it.\n\n' +
       'PRESERVE ROLES - THIS IS NON-NEGOTIABLE:\n' +
       'The role list (the [Role Name] segment in square brackets at the end of each activity heading line) ' +
@@ -12786,6 +12816,38 @@ createChatSurface({
                 });
               }
             });
+            // Leading "Where / When / If X..." trigger clauses. These tell
+            // the reader WHEN the task fires - dropping them leaves the task
+            // floating. Match the opener through to the first comma or
+            // sentence break.
+            const triggerMatch = origText.match(/^\s*(Where|When|If)\s+[^,.]{8,160}[,\.]/i);
+            if (triggerMatch) {
+              const triggerText = triggerMatch[0].trim().replace(/[,\.]$/, '');
+              // Loose containment - 12-char prefix is distinctive enough.
+              const keyChunk = triggerText.slice(0, 24);
+              if (keyChunk.length >= 12 && !newActHaystack.toLowerCase().includes(keyChunk.toLowerCase())) {
+                droppedSnippets.push({
+                  activity: newAct.number, task: newT.letter, kind: 'trigger clause', text: triggerText
+                });
+              }
+            }
+            // Trailing requirement sentences. If the original task is two
+            // sentences and the second one is short-ish (≤20 words), it's
+            // almost certainly a follow-on requirement that shouldn't be
+            // dropped. Pull the trailing sentence; check the haystack.
+            const sentences = origText.split(/(?<=[.!?])\s+(?=[A-Z])/).map(s => s.trim()).filter(Boolean);
+            if (sentences.length >= 2) {
+              const last = sentences[sentences.length - 1].replace(/[.!?]\s*$/, '');
+              const wc = last.split(/\s+/).length;
+              if (wc >= 3 && wc <= 20) {
+                const keyChunk = last.slice(0, 24);
+                if (keyChunk.length >= 12 && !newActHaystack.toLowerCase().includes(keyChunk.toLowerCase())) {
+                  droppedSnippets.push({
+                    activity: newAct.number, task: newT.letter, kind: 'trailing requirement', text: last
+                  });
+                }
+              }
+            }
           });
         });
         if (droppedSnippets.length && typeof showToast === 'function') {
