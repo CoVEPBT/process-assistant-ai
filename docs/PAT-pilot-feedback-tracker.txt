@@ -510,7 +510,7 @@ PENDING (post-pilot backlog - new features, bigger work)
 
 36. Link CoVE Process Review Checklist in exports
     Source: Natalie 29 May 2026
-    Status: [PENDING - for tomorrow]
+    Status: [DONE - same day]
     Request: users should have access to the CoVE Process Review
     Checklist when they export a file. Either:
       a) Link to it in the exported document footer/header.
@@ -566,7 +566,7 @@ PENDING (post-pilot backlog - new features, bigger work)
 
 39. Make 'Add activity' button more prominent
     Source: Natalie 29 May 2026
-    Status: [PENDING - for tomorrow]
+    Status: [DONE - same day]
     Current: discreet button after the last activity. Users
     aren't finding it. Bump prominence - probably a primary-
     button treatment instead of the muted ghost-button style,
@@ -574,13 +574,13 @@ PENDING (post-pilot backlog - new features, bigger work)
 
 40. Rename Ask PAT to Chat with PAT
     Source: Natalie 29 May 2026
-    Status: [PENDING - for tomorrow]
+    Status: [DONE - same day]
     Simple copy change wherever "Ask PAT" appears (chat tab
     label, chat panel header, any onboarding copy).
 
 41. Drop the 'AI may have dropped detail' notification
     Source: Natalie 29 May 2026
-    Status: [PENDING - for tomorrow]
+    Status: [DONE - same day]
     Rationale: with commits 26c65e9, 70271ee, 0aebe8c shipping
     the activity-structure restore, NOTE dedupe, trigger /
     trailing-requirement detection, the soft warning toast is
@@ -648,10 +648,10 @@ File 2 (15 items):  #1 = 9, #2 = 10, #3 = 6, #4 = 14, #5 = 12,
 SUMMARY
 ============================================================
 
-  Done                   26
+  Done                   30
   Needs sample input      0
   Partial / follow-up     1 (skipped - procedure-vs-process language pass)
-  Pending backlog        17
+  Pending backlog        13
   ----
   Total                  44
 

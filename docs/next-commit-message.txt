@@ -1,35 +1,30 @@
-Tracker #34: stop AI dropping conditional triggers + trailing requirements
+Tracker #36 #39 #40 #41: four small fixes bundled
 
-Examples Natalie called out from the 29 May Training Plans
-re-test (post commits a3940de + 26c65e9 + 70271ee):
+#40 - Rename Ask PAT to Chat with PAT
+The floating chat coach bubble label now reads "Chat with PAT"
+instead of "Ask PAT". Single user-facing label change; the
+4 other "Ask PAT" references in the file are JS comments only
+and were left alone.
 
-- Activity 6.2 source: "Where a Training Agreement Variation
-  is required to student nominal completion date, a training
-  plan must be downloaded and amended..." - AI dropped the
-  leading "Where X..." trigger clause, leaving the task with
-  no idea when it fires.
+#41 - Drop the "AI may have dropped detail" toast
+With the activity-structure restore (70271ee), duplicate-NOTE
+dedupe (26c65e9), and trigger / trailing-requirement
+detection (0aebe8c) all catching the real issues before they
+reach the user, the soft-warning toast is now mostly noise.
+Removed the showToast call inside the auto-apply drop-
+detector. Kept the console.log so engineering can still see
+detected drift in DevTools, just doesn't surface to users.
 
-- Activity 6.3 source ends with "All parties must agree to
-  changes." - AI dropped the trailing requirement sentence.
+#39 - Promote 'Add activity' button to primary style
+The "+ Add activity" button at the end of the doc preview is
+now solid RMIT-red on white, larger padding, centred at the
+bottom of the activity list. "+ Add task" / "+ Add note"
+inside each activity stay discreet (they're contextual and
+shouldn't fight for attention with the doc content).
+Selector targets .doc-add-btn.doc-add-activity specifically
+so only the end-of-list button gets the prominent treatment.
 
-Pattern: AI treats leading "Where / When / If X..." conditional
-clauses and trailing requirement sentences chained after a
-period as filler when tightening to 18 words. They are NOT
-filler - the first is the trigger, the second is a follow-on
-requirement.
-
-Three changes:
-
-1. FRONTEND PROMPT - two new EXAMPLES YOU MUST GET RIGHT
-   blocks added before the self-check:
-     - CONDITIONAL / TRIGGER CLAUSES with the activity 6.2
-       Training Agreement Variation worked example (SOURCE /
-       WRONG / RIGHT).
-     - TRAILING REQUIREMENT SENTENCES with the activity 6.3
-       program transition worked example.
-   Self-check now has 7 steps instead of 5 - explicitly asking
-   "Did I drop a Where/When/If trigger?" and "Did I drop a
-   trailing sentence?".
-
-2. SERVER PROMPT - extended the existing "Promote dropped
-   context to a NOTE" bullet's (1)..(4) enumera
+#36 - Link CoVE Process Review Checklist in exports
+Both the Word and PDF exports now end with a "Before you
+publish" callout linking to the SharePoint-hosted checklist.
+Word uses ExternalHyperlink (added to the docx dest
