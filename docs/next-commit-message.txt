@@ -1,45 +1,50 @@
-Fix banner filter dropping NOTE bodies + bare task letters
+PAT export test feedback: items #1 #2 #3 #4
 
-The banner filter I added in 291b3bd (PDF parser items #2 + #4
-+ banner filter) was counting how many TIMES a candidate line
-appeared across the whole document, and flagging anything that
-appeared 2+ times as a "page banner" to drop.
+Four issues Natalie hit running the Training Plans PDF through
+auto-apply then exporting to PDF.
 
-That over-matched badly on two-column PDFs:
-  - PDF.js sometimes emits single-letter "lines" (a, A, S, T,
-    V, etc.) from letter-spaced text. With bare letters from
-    task markers added in, "a" appeared many times. Counted as
-    a banner. Dropped. So bare task letters never made it to
-    the parser, and the bare-letter-merge step had nothing to
-    merge.
-  - Wrapped NOTE-body fragments and Y-bucket collisions
-    (e.g. "Enrolment Domingo" - a left-column word colliding
-    in Y-bucket with a right-column word) also got flagged.
-    Some real NOTE-body lines got dropped, so the body never
-    reached the NOTE during parseProcedureBlock continuation.
+#1  AI invented an activity 5.0 "Follow Up with Employer" out
+    of NOTE content under source activity 4.0 (the
+    "no response" / "still no response" follow-up emails). The
+    invented activity also duplicated one of the source NOTEs.
 
-User-visible symptom: when uploading a multi-page two-column
-Nintex PDF, NOTEs showed only their titles - bodies came back
-empty even though they were clearly in the source.
+#4  AI flattened source activities 6.1 / 6.2 / 6.3 (parallel
+    activities under 6.0) into whole-number 7.0 / 8.0 / 9.0,
+    losing the parallel-activity semantics. The x.y numbering
+    in Nintex specifically means "these are alternatives, not
+    sequential steps".
 
-Fix: instead of counting occurrences, track which PAGES each
-candidate line appears on. Only treat a line as a banner if it
-appears on 2+ DISTINCT pages. A column-collision artefact or a
-wrapped sentence fragment on a single page no longer gets
-filtered. The original target (title repeating between pages)
-still gets caught - it appears on every page by design.
+#3  SharePoint URL attached to source activity 6.1 ("SAMS -
+    Enter Employer Sign-off Is Not Required For A Course")
+    disappeared in the export. Root cause was the off-by-one
+    from #1: the attachment-restore pass matched new tasks
+    back to original tasks by ACTIVITY INDEX, and the invented
+    activity shifted everything by one.
 
-Verified against three PDFs:
-  - 4-page Training Plans (two-column, has NOTE bodies):
-      6 banners caught (real ones - title wrap + "None Noted"
-      placeholder). NO bare letters or task fragments dropped.
-      All NOTE bodies now parse correctly.
-  - 3-page Training Plans (older single-column, title-only
-    NOTEs): 2 banners caught - the original target
-    "Student Training Plans (Apprentices & Trainees)" still
-    drops as intended.
-  - AHPRA PDF: 2 banners caught (title wrap parts), NOTE
-    bodies still parse cleanly.
+#2  Yellow-bordered NOTE blocks in the PDF and Word exports
+    had too little top padding - the first line of the NOTE
+    title sat tight against the border.
 
-Same root cause as #176 (closed as not-a-regression earlier -
-turns out it WAS a regression, just only
+Fixes:
+
+1. New PRESERVE ACTIVITY STRUCTURE rule in BOTH the frontend
+   auto-apply prompt and the server SYSTEM_PROMPT.
+     - Never invent new activities.
+     - Never promote NOTE content into a separate activity.
+     - Preserve activity numbers verbatim, INCLUDING sub-
+       decimals like 6.1 / 6.2 / 6.3.
+     - Never duplicate a NOTE across multiple activities.
+     - Mandatory self-check: count source activities, count
+       output activities, verify each output number matches a
+       source number exactly.
+
+2. Strengthened PRESERVE URLS rule in the frontend prompt to
+   tell the AI explicitly about the "Link: https://..." row
+   the source view renders below tasks with attachments -
+   that row IS the attachment and must be kept under the same
+   task in the output.
+
+3. Defence-in-depth in the attachment-restore pass: also
+   match original activities by activity NUMBER, not just by
+   index. If the AI ever does shift activities, URLs still
+   land on the r

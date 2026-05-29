@@ -9972,7 +9972,7 @@ async function downloadReviewPack() {
           borders: Object.assign({}, cellBorders, { left: { style: BorderStyle.SINGLE, size: 18, color: AMBER } }),
           width: { size: 8500, type: WidthType.DXA },
           shading: { fill: 'FEF6E0', type: ShadingType.CLEAR },
-          margins: { top: 120, bottom: 120, left: 240, right: 240 },
+          margins: { top: 200, bottom: 200, left: 240, right: 240 },
           children: [
             new Paragraph({ children: [new TextRun({ text: 'NOTE: ' + (n.title || ''), bold: true, color: NAVY })] })
           ].concat(n.body ? [new Paragraph({ spacing: { before: 60 }, children: [new TextRun(n.body)] })] : [])
@@ -10264,14 +10264,14 @@ async function downloadAsPdf() {
     const bodyText = String(body || '');
     setText({ size: 10.5, color: BLACK });
     const bodyLines = bodyText ? doc.splitTextToSize(bodyText, innerW - 4) : [];
-    const blockHeight = 3 + (titleLines.length * 4.4) + (bodyLines.length ? 1 + (bodyLines.length * 4.4) : 0) + 3;
+    const blockHeight = 5 + (titleLines.length * 4.4) + (bodyLines.length ? 1 + (bodyLines.length * 4.4) : 0) + 5;
     ensureSpace(blockHeight + 2);
     // Light fill background
     doc.setFillColor(252, 248, 230);
     doc.setDrawColor(229, 200, 90);
     doc.setLineWidth(0.2);
     doc.rect(MARGIN_L, y, CONTENT_W, blockHeight, 'FD');
-    y += 3;
+    y += 5;
     setText({ bold: true, size: 10.5, color: NAVY });
     titleLines.forEach(line => { doc.text(line, MARGIN_L + 3, y); y += 4.4; });
     if (bodyLines.length) {
@@ -10279,7 +10279,7 @@ async function downloadAsPdf() {
       setText({ size: 10.5, color: BLACK });
       bodyLines.forEach(line => { doc.text(line, MARGIN_L + 3, y); y += 4.4; });
     }
-    y += 3 + 2;
+    y += 5 + 2;
   }
 
   // ---------- Title ----------
@@ -12403,9 +12403,14 @@ createChatSurface({
       '* MANDATORY SELF-CHECK before emitting blocks: read each sentence in your draft Objective, ' +
       'Background, and every task. Count words. Any sentence over 18 words MUST be split. Any ' +
       'multi-clause task MUST be reduced to one imperative clause. Re-do this pass twice if needed.\n\n' +
-      'PRESERVE URLS: If a task in the source contains a URL (https://...), keep it in the same task ' +
-      'in your output. Do not drop or rewrite URLs. URLs are typically training-module or system links ' +
-      'the process owner has provided - removing them breaks the documented process.\n' +
+      'PRESERVE URLS: If a task in the source contains or has attached to it a URL (https://...), ' +
+      'keep that URL in the same task in your output. The source view renders URL attachments as their ' +
+      'own line below the task, formatted like "Link: https://..." or "Link: <Title> https://..." ' +
+      '- that "Link:" row IS the attachment and MUST be kept under the same task in your output. ' +
+      'Output the URL on its own line directly under the task it belongs to, prefixed with "Link: ". ' +
+      'Do not drop or rewrite URLs. Do not move a URL to a different task. Do not summarise a URL to ' +
+      'a description. URLs are training-module or system reference links the process owner has ' +
+      'provided - removing them breaks the documented process.\n' +
       'NEVER LEAVE A TASK EMPTY: If a source task has BOTH descriptive text AND a URL ' +
       '(e.g. "[Web Link] Trades & Dental Weekly TT"), your output for that task MUST keep BOTH the ' +
       'description AND the URL. The "[Web Link]" marker is a parser artefact - drop it but KEEP the ' +
@@ -12423,6 +12428,33 @@ createChatSurface({
       'KEEP TASK ORDER STABLE: do not reorder tasks within an activity unless one is a genuine duplicate. ' +
       'The tool matches URL attachments back to tasks by their position (a, b, c, ...) so reordering ' +
       'will misalign the link rendering.\n\n' +
+      'PRESERVE ACTIVITY STRUCTURE - THIS IS NON-NEGOTIABLE:\n' +
+      'The set of activities in the source is the process owner\'s deliberate breakdown of the work. ' +
+      'Do NOT invent new activities, do NOT promote NOTE content into a new activity, do NOT split one ' +
+      'source activity into two. The SPLIT MULTI-ROLE ACTIVITIES rule (below) is the ONLY allowed reason ' +
+      'to add an activity. Count the activities in the source and emit EXACTLY that many output ' +
+      'activities (plus any required multi-role splits).\n' +
+      '* PRESERVE ACTIVITY NUMBERS VERBATIM. If the source numbers activities 1.0, 2.0, 3.0, ..., 6.0, ' +
+      '6.1, 6.2, 6.3, that numbering is meaningful - "x.1", "x.2", "x.3" are PARALLEL activities under ' +
+      '"x.0" (variations of the same step). Emit them as "6.1", "6.2", "6.3" in your output. Do NOT ' +
+      'flatten "6.1 / 6.2 / 6.3" to "7.0 / 8.0 / 9.0". Do NOT renumber sub-decimal activities to whole ' +
+      'numbers. The decimal grouping (everything under "6.x") is how the process owner says "these are ' +
+      'alternatives, not sequential steps".\n' +
+      '* NEVER convert a NOTE into an activity. NOTEs document variations / exceptions UNDER an ' +
+      'activity - they are NOT separate workflow steps. If a NOTE says "What if no response? Send a ' +
+      'follow-up email after three days", that follow-up email is NOT a new activity called "Follow Up ' +
+      'with Employer"; it stays as a NOTE under the existing activity. The "if" framing is the tell - ' +
+      'if it\'s conditional on something the main activity already covers, it\'s a NOTE, not an activity.\n' +
+      '* NEVER duplicate a NOTE across multiple activities. If the source has NOTE "X" under activity 4, ' +
+      'your output has NOTE "X" under activity 4 ONLY - not also under activity 5. A NOTE belongs in ' +
+      'exactly one place.\n' +
+      '* MANDATORY SELF-CHECK before emitting blocks:\n' +
+      '  1. Count source activities. Count output activities. If output is LARGER than source (plus ' +
+      'any multi-role splits you explicitly performed), you\'ve invented activities - find the ' +
+      'invented one and merge its content back into a NOTE under the correct source activity.\n' +
+      '  2. For each output activity number, verify it matches a source activity number EXACTLY. If ' +
+      'source has "6.1" and you wrote "7.0", fix the numbering before emitting.\n' +
+      '  3. For each NOTE in the output, verify it appears under ONE activity, not two.\n\n' +
       'PRESERVE NOTES - THIS IS NON-NEGOTIABLE:\n' +
       'Every NOTE block in the source MUST appear in your output, under the SAME activity, in the SAME order. ' +
       'NOTEs encode the 20% of variations / exceptions the process owner has explicitly chosen to document - ' +
@@ -12627,10 +12659,21 @@ createChatSurface({
         String(s || '').replace(/\s*\[Web\s*Link\]\s*/gi, ' ').replace(/\s+/g, ' ').trim();
       try {
         const origActs = (originalSnapshot.model && originalSnapshot.model.activities) || [];
+        // Build a lookup of original activities by their number so we can
+        // recover the right source activity even if the AI changed the index
+        // (e.g. inserted or reordered an activity in a way that the
+        // PRESERVE ACTIVITY STRUCTURE rule should prevent, but defence in
+        // depth - if it ever happens, the URL attachments still find their
+        // home by number match).
+        const origByNumber = {};
+        origActs.forEach(oa => { if (oa && oa.number) origByNumber[String(oa.number)] = oa; });
         let restoredText = 0;
         let restoredUrl = 0;
         newModel.activities.forEach((newAct, ai) => {
-          const origAct = origActs[ai];
+          // Prefer matching by activity number (e.g. "6.1"). Fall back to
+          // index-based matching for legacy / unstructured rewrites.
+          let origAct = (newAct && newAct.number && origByNumber[String(newAct.number)]) || null;
+          if (!origAct) origAct = origActs[ai];
           if (!origAct || !origAct.tasks) return;
           // Build a lookup by letter for the original tasks
           const origByLetter = {};
