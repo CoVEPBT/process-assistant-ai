@@ -1,45 +1,44 @@
-PDF parser fixes from Training Plans test: items #2 + #4 + banner filter
+PDF parser feedback item #1 follow-up: NOTE-truncation guardrails
 
-Three Nintex-PDF parser improvements from the Training Plans
-(Apprentices & Trainees) test. Items #1 (NOTE truncation) and #3
-(activity 5 task b merging) still pending - deeper investigation
-needed.
+Item #1 from the Training Plans (Apprentices & Trainees) test:
+the AI shortened the AHPRA monthly-submission task and moved the
+trigger condition into a NOTE - but truncated the NOTE body to
+just "Each month after the student reporting is complete",
+dropping the "...AND a formal acknowledgement of the submission
+is received from AHPRA" half. The dropped clause is the actual
+trigger condition, so losing it changes when the task runs.
 
-#2 - "Employer of Apprentice/Trainee" not recognised as role
-   isRoleLine() only matched CoVE/RMIT prefixes, en/em dashes, or
-   all-caps + role keyword. Now also recognises:
-     - "Employer of <X>" / "Student of <X>" (org noun + "of"),
-       with a guard against trailing "(X)" so document titles
-       like "Student Training Plans (Apprentices & Trainees)"
-       don't accidentally match.
-     - Short noun phrase containing a role keyword ("Hiring
-       Manager", "Accreditation Manager") - <= 6 words.
-   Critically we do NOT match "starts with org noun" alone -
-   that overshoots into document titles. 9/9 unit tests pass.
+Three changes to keep the AI from doing that again, and to stop
+the drift-detection toast from false-positiving when the AI
+DOES promote content into a NOTE correctly.
 
-#4 - bare task letter on its own line
-   PDF column extraction sometimes splits a task letter ("a") onto
-   its own line, separate from its text. Pre-process pass at the
-   top of parseProcedureBlock now merges any bare-letter line with
-   the following line when the next line doesn't already look like
-   a structural marker.
+1. server/index.js SYSTEM_PROMPT
+   Extended the "Promote dropped context to a NOTE" rule with an
+   explicit "The NOTE body MUST keep the ENTIRE dropped detail -
+   verbatim where possible" requirement, and a worked example
+   built around the AHPRA "and a formal acknowledgement..."
+   conjunction-chain pattern. Now matches the longer guidance
+   already in the frontend prompt.
 
-BANNER FILTER - title repeats between pages polluting task text
-   Some Nintex exports repeat a short "title banner" line between
-   pages (in this PDF: "Student Training Plans (Apprentices &
-   Trainees)"). It was getting appended to whichever task / NOTE
-   was open when it appeared in the line stream.
+2. public/index.html PROMOTE DROPPED CONTEXT block
+   (Already in place from earlier work - this commit keeps it
+   in sync with the server prompt.) Adds the same AHPRA worked
+   example and the "NOTE is not a place to keep dropping content"
+   rule into the frontend auto-apply prompt.
 
-   New repeatedBannerLines detector in parseNintexPdf:
-     - Counts how many times each short line (<=80 chars) appears,
-       excluding structural markers AND roles (the same role
-       appears in both the swimlane labels AND every activity that
-       uses it - we don't want to filter roles).
-     - Any non-structural, non-role line appearing 2+ times is
-       treated as a page banner and dropped from the filtered
-       line list before parseProcedureBlock sees it.
+3. public/index.html drift-detection haystack
+   The post-auto-apply "Heads up: the AI may have dropped some
+   detail" toast was scanning only the new TASK text for
+   parentheticals / step refs / specific nouns. That false-
+   positived whenever the AI did the right thing and moved
+   detail into a NOTE under the same activity.
 
-Still pending - logged in the tracker:
-  - #1 NOTE body truncated (AHPRA process)
-  - #3 task b on activity 5.0 merged into task a (deeper column-
-       extraction investigation needed)
+   Now builds a per-activity combined haystack:
+     new task texts + new NOTE titles + new NOTE bodies
+   and checks each dropped-detail candidate against that
+   combined string. So "I moved 'Staff Name column' from
+   the task into a NOTE" no longer trips the warning, but
+   "I deleted 'Staff Name column' entirely" still does.
+
+Tracker: #171 marked done. #172 (activity 5 task b two-column
+PDF split) still pending - deeper column-extraction work needed.

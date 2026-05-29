@@ -12438,7 +12438,18 @@ createChatSurface({
       '  2. Spin the dropped detail off as a NEW NOTE under the SAME activity.\n' +
       '  3. The NOTE\'s question is whatever the dropped detail answers ("Where do I find X?",\n' +
       '     "Which view should I use?", "What counts as Y?").\n' +
-      '  4. The NOTE\'s body is the detail you would have removed, lightly cleaned up.\n' +
+      '  4. The NOTE\'s body MUST contain the ENTIRE dropped detail, verbatim where possible.\n' +
+      '     The NOTE is not a place to keep dropping content - if the source said\n' +
+      '     "X happens each month after Y is complete AND Z is received", the NOTE body\n' +
+      '     must keep BOTH "Y is complete" AND "Z is received". Do not paraphrase the\n' +
+      '     NOTE body shorter than the content that triggered its creation.\n' +
+      '  5. AHPRA pattern (item #1 follow-up):\n' +
+      '     SOURCE TASK ends with "...complete and a formal acknowledgement of the submission\n' +
+      '     is received from AHPRA" (45 words total). The "and a formal acknowledgement..."\n' +
+      '     half is the trigger condition - dropping it changes when the task runs.\n' +
+      '     WRONG NOTE body: "Each month after the student reporting is complete."\n' +
+      '     RIGHT NOTE body: "Each month after the student reporting is complete AND a formal\n' +
+      '       acknowledgement of the submission is received from AHPRA."\n' +
       'Worked example - this is exactly what users are asking for:\n' +
       '  SOURCE TASK: "Allocate required staff to RPO grade rosters referring to the data noted Staff\n' +
       '                Name columns in the FRANC document" (18 words, lookup detail at end)\n' +
@@ -12673,6 +12684,16 @@ createChatSurface({
           if (!origAct || !origAct.tasks) return;
           const origByLetter = {};
           origAct.tasks.forEach(t => { if (t.letter) origByLetter[t.letter] = t; });
+          // Build a per-activity combined haystack: every new task text + every
+          // new NOTE title + every new NOTE body. The PROMOTE-DROPPED-CONTEXT
+          // rule explicitly tells the AI it MAY move dropped detail into a NOTE
+          // under the same activity rather than deleting it - so we shouldn't
+          // false-positive a "dropped" warning when the detail simply moved
+          // from the task line to a NOTE under the same activity.
+          const newActHaystack = (
+            ((newAct.tasks || []).map(t => String(t.text || '')).join(' \n ')) + ' \n ' +
+            ((newAct.notes || []).map(n => String(n.title || '') + ' ' + String(n.body || '')).join(' \n '))
+          );
           (newAct.tasks || []).forEach(newT => {
             const origT = newT.letter && origByLetter[newT.letter];
             if (!origT) return;
@@ -12682,21 +12703,21 @@ createChatSurface({
             // Parentheticals
             const origParens = origText.match(PAREN_RE) || [];
             origParens.forEach(p => {
-              if (!newText.includes(p)) droppedSnippets.push({
+              if (!newActHaystack.includes(p)) droppedSnippets.push({
                 activity: newAct.number, task: newT.letter, kind: 'qualifier', text: p
               });
             });
             // Step number references
             const origSteps = origText.match(STEP_NUM_RE) || [];
             origSteps.forEach(s => {
-              if (!newText.includes(s)) droppedSnippets.push({
+              if (!newActHaystack.includes(s)) droppedSnippets.push({
                 activity: newAct.number, task: newT.letter, kind: 'step ref', text: s
               });
             });
             // Specific noun tokens
             SPECIFIC_NOUNS.forEach(n => {
               const re = new RegExp('\\b' + n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
-              if (re.test(origText) && !re.test(newText)) {
+              if (re.test(origText) && !re.test(newActHaystack)) {
                 droppedSnippets.push({
                   activity: newAct.number, task: newT.letter, kind: 'specific noun', text: n
                 });
