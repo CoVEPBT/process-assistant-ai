@@ -444,6 +444,53 @@ PENDING (post-pilot backlog - new features, bigger work)
          apply.
 
 
+34. Auto-apply dropping conditional / scope clauses from tasks
+    Source: Natalie 29 May 2026 (Training Plans (A&T) re-test
+            after commits a3940de + 26c65e9 + 70271ee)
+    Status: [PENDING - for tomorrow]
+    Examples Natalie called out:
+      - Activity 6.2 source:
+          "Where a Training Agreement Variation is required to
+           student nominal completion date, a training plan must
+           be downloaded and details on page 2 amended to include
+           proposed completion date before this is sent to the
+           employer, student and Australian Apprenticeship Support
+           Network (AASN)."
+        AI output dropped the "Where a Training Agreement
+        Variation is required..." conditional clause entirely.
+        That clause is the TRIGGER - it tells the reader WHEN this
+        task fires. Dropping it leaves the task floating.
+      - Activity 6.3 source:
+          "Where a program is transitioned a new training plan
+           must be generated in SAMS to display the training
+           delivery of new program. All parties must agree to
+           changes."
+        AI output dropped "All parties must agree to changes."
+        That's a REQUIREMENT - a follow-on action that has to
+        happen for the task to be complete.
+    Pattern: the AI is treating leading "Where X..." conditional
+    clauses and trailing requirement sentences as filler when
+    tightening to 18 words. They are NOT filler - they are
+    trigger conditions and follow-on requirements respectively.
+    The PROMOTE DROPPED CONTEXT TO NOTES rule should be catching
+    these (they're not parenthetical qualifiers or specific
+    nouns, but they ARE "useful context" by the rule's own
+    definition). The rule needs to be extended with two new
+    explicit categories:
+      (a) Trigger / conditional clauses ("Where X...", "When
+          X...", "If X..." at the start of a task) - keep in the
+          task if it fits, otherwise spin off as a NOTE with the
+          question "When does this task apply?".
+      (b) Follow-on requirement sentences (a second sentence
+          chained after a period, like "All parties must agree
+          to changes.") - keep both sentences in two tasks, or
+          spin the second one off as a NOTE.
+    Likely needs: prompt strengthening + post-process drift
+    detection extended to flag these patterns + add to the
+    EXAMPLES YOU MUST GET RIGHT block with SOURCE / WRONG /
+    RIGHT for each.
+
+
 ============================================================
 NUMBERING CROSS-REFERENCE
 ============================================================
@@ -467,9 +514,9 @@ SUMMARY
   Done                   26
   Needs sample input      0
   Partial / follow-up     1 (skipped - procedure-vs-process language pass)
-  Pending backlog         6
+  Pending backlog         7
   ----
-  Total                  33
+  Total                  34
 
 26 of 26 raw feedback items now shipped + 7 v2/adjacent items
 shipped. Item 30 (Admin review pack) and items 32+33 (29 May
