@@ -1,30 +1,69 @@
-Tracker #36 #39 #40 #41: four small fixes bundled
+Morning Schedule-new-class test: three fixes
 
-#40 - Rename Ask PAT to Chat with PAT
-The floating chat coach bubble label now reads "Chat with PAT"
-instead of "Ask PAT". Single user-facing label change; the
-4 other "Ask PAT" references in the file are JS comments only
-and were left alone.
+Natalie's morning test of the Schedule-new-class process
+(pasted Nintex Procedure Text into the tool, ran auto-apply)
+surfaced three real issues:
 
-#41 - Drop the "AI may have dropped detail" toast
-With the activity-structure restore (70271ee), duplicate-NOTE
-dedupe (26c65e9), and trigger / trailing-requirement
-detection (0aebe8c) all catching the real issues before they
-reach the user, the soft-warning toast is now mostly noise.
-Removed the showToast call inside the auto-apply drop-
-detector. Kept the console.log so engineering can still see
-detected drift in DevTools, just doesn't surface to users.
+1. AI changed activity 1's role list.
+2. Tasks not rewritten to verb-first ("If the request is to
+   cancel a class, action in SAMS" stayed as-is across all 5
+   tasks in activity 2.0).
+3. Multi-role quality flag mis-firing: false-positive on
+   single roles that contain an "&" inside the title (e.g.
+   "CoVE - Planning & Admissions" treated as two roles), and
+   missing real comma-separated multi-role lists (e.g.
+   "CoVE - Program Coordinator, CoVE - Program Manager,
+   CoVE - Student Lifecycle" treated as one).
 
-#39 - Promote 'Add activity' button to primary style
-The "+ Add activity" button at the end of the doc preview is
-now solid RMIT-red on white, larger padding, centred at the
-bottom of the activity list. "+ Add task" / "+ Add note"
-inside each activity stay discreet (they're contextual and
-shouldn't fight for attention with the doc content).
-Selector targets .doc-add-btn.doc-add-activity specifically
-so only the end-of-list button gets the prominent treatment.
+Three fixes:
 
-#36 - Link CoVE Process Review Checklist in exports
-Both the Word and PDF exports now end with a "Before you
-publish" callout linking to the SharePoint-hosted checklist.
-Word uses ExternalHyperlink (added to the docx dest
+A. SMARTER splitRoles (issue #3)
+   The old function naively split on ";", " & ", " and ",
+   " + ", " / ", " \ ". That mis-handled roles with those
+   tokens inside the role title.
+
+   New logic: hard-split on ";" only. For ",", " & ",
+   " and ", etc. — only split if the part AFTER the separator
+   looks like the start of a new role expression (starts with
+   an org prefix like "CoVE -", "RMIT -", "DP&S -" etc, or a
+   capitalised noun + dash + role keyword).
+
+   Unit-tested 11 real RMIT cases including:
+     "CoVE - Planning & Admissions"        -> 1 role
+     "CoVE - Coordinator, Student Lifecycle" -> 1 role
+     "Customer and Service Officer"        -> 1 role
+     "DP&S - Quality Officer"              -> 1 role
+     "CoVE - X; CoVE - Y; CoVE - Z"        -> 3 roles
+     "CoVE - X, CoVE - Y"                  -> 2 roles
+     "CoVE - X and CoVE - Y"               -> 2 roles
+     "CoVE - X & CoVE - Y"                 -> 2 roles
+   11/11 pass.
+
+B. VERB-FIRST FOR EVERY TASK (issue #2)
+   New non-negotiable rule in BOTH the frontend auto-apply
+   prompt and the server SYSTEM_PROMPT. Includes worked
+   examples for the three patterns Natalie hit:
+     - Conditional opener: "If the request is to cancel a
+       class, action in SAMS" -> "Cancel the class in SAMS
+       when the request is a cancellation" (or split to task
+       + NOTE "When does this task apply?").
+     - Descriptive opener: "Review request ensuring all
+       fields are populated" -> "Confirm all fields relevant
+       to the request are populated".
+     - Noun opener: "Email sent to the employer" -> "Email
+       the employer".
+   Lists invalid first words (If, When, Where, The, All, A,
+   An, any noun, any -ing participle, present-tense is/are)
+   and a mandatory self-check that walks every task before
+   emitting the Process Map block.
+
+C. ROLE RESTORE by activity number (issue #1)
+   The role-restore post-process previously matched new tasks
+   back to original tasks by ACTIVITY INDEX. Same problem we
+   hit for attachments and linked processes: any AI activity
+   reorder breaks the mapping. Now matches by activity NUMBER
+   first (reliable thanks to the activity-number restore
+   pass), falls back to index for legacy cases. Same defence-
+   in-depth pattern as 70271ee.
+
+Tracker: #189 done (covers issues #45 + #46 + new flag bug).

@@ -5099,11 +5099,54 @@ function extractInlineUrl(input) {
  * they should use one of the above. Returns an array of trimmed strings.
  */
 function splitRoles(roleStr) {
+  // RMIT role strings are tricky because separators can also appear inside a
+  // single role title:
+  //   "CoVE - Planning & Admissions"        has " & " inside ONE role
+  //   "Customer and Service Officer"        has " and " inside ONE role
+  //   "CoVE - Coordinator, Student Lifecycle" has "," inside ONE role
+  // So we can't naively split on those. Strategy:
+  //   1. Always split on ";" - unambiguous, process owners use this to
+  //      explicitly delimit multiple roles.
+  //   2. For ",", " & ", " and ", " + ", " / ", " \\ " - only split if the
+  //      part AFTER the separator looks like a NEW role expression (starts
+  //      with a known org prefix like "CoVE -", "RMIT -", or starts with a
+  //      capitalised noun + " - " + a role keyword).
   if (!roleStr) return [];
-  return String(roleStr)
-    .split(/;|\s+and\s+|\s+&\s+|\s+\+\s+|\s+\/\s+|\s+\\\s+/i)
-    .map(r => r.trim())
-    .filter(Boolean);
+  const raw = String(roleStr);
+  const hardParts = raw.split(/;/).map(s => s.trim()).filter(Boolean);
+  const ORG_PREFIX = /^(CoVE|RMIT|VE|DP&S|PBT|STEM|SHBS|USARG|HR|IT|ITS|L&T)\s*[-\u2013\u2014]/i;
+  const ROLE_KEYWORD = /\b(Manager|Officer|Coordinator|Analyst|Consultant|Director|Lead|Specialist|Administrator|Advisor|Assistant|Champion|Designer|Engineer|Architect|Operator|Reviewer|Head|Chief|Partner|Steward|Approver|Sponsor|Representative|Lifecycle|Support|Compliance|Quality|Planning|Admissions|Services|Operations|Team)\b/i;
+  const looksLikeNewRole = (chunk) => {
+    const t = chunk.trim();
+    if (!t) return false;
+    if (ORG_PREFIX.test(t)) return true;
+    if (/^[A-Z]/.test(t) && /\s*[-\u2013\u2014]\s*/.test(t) && ROLE_KEYWORD.test(t)) return true;
+    return false;
+  };
+  // Split into tokens, keeping the separators so we can re-join when the
+  // right side doesn't look like a new role.
+  const SOFT_SEP = /(,|\s+and\s+|\s+&\s+|\s+\+\s+|\s+\/\s+|\s+\\\s+)/i;
+  const out = [];
+  hardParts.forEach(part => {
+    const tokens = part.split(SOFT_SEP);
+    let current = '';
+    for (let k = 0; k < tokens.length; k++) {
+      const tok = tokens[k];
+      if (k % 2 === 0) {
+        current += tok;
+      } else {
+        const next = tokens[k + 1] || '';
+        if (looksLikeNewRole(next)) {
+          if (current.trim()) out.push(current.trim());
+          current = '';
+        } else {
+          current += tok;
+        }
+      }
+    }
+    if (current.trim()) out.push(current.trim());
+  });
+  return out;
 }
 
 /**
@@ -12451,6 +12494,30 @@ createChatSurface({
       'that exact prefix verbatim and only rewrite the part after it. If the original is missing the ' +
       'prefix entirely, prepend "CoVE - " to your rewritten title. The verb-first rule applies to the ' +
       'part AFTER the prefix, never to the prefix itself.\n\n' +
+      'VERB-FIRST FOR EVERY TASK (CoVE Rule 6) - THIS IS NON-NEGOTIABLE:\n' +
+      'EVERY task description MUST begin with an imperative verb. The reader scans tasks to find what '
+      'they have to do - if the first word isn\'t an action, the task is broken. This applies even '
+      'when the source task is phrased conditionally or descriptively. Conditional and descriptive '
+      'phrasings MUST be rewritten:\n' +
+      '  WRONG (conditional opener): "If the request is to cancel a class, action in SAMS"\n' +
+      '  RIGHT: Task "Cancel the class in SAMS when the request is a cancellation"\n' +
+      '         (the "when" condition stays in the task because it fits the 18-word cap)\n' +
+      '  ALSO RIGHT: Task "Cancel the class in SAMS" + NOTE "When does this task apply? /\n' +
+      '         When the request is a cancellation."\n' +
+      '  WRONG (descriptive opener): "Review request ensuring all fields are populated"\n' +
+      '  RIGHT: "Confirm all fields relevant to the request are populated"\n' +
+      '  WRONG (noun opener): "Email sent to the employer with the form"\n' +
+      '  RIGHT: "Email the form to the employer"\n' +
+      'Approved verb examples (around 250 verbs - if a verb is flagged as not on the list, swap to a '
+      'clearer alternative): create, update, send, email, review, verify, confirm, approve, reject, '
+      'schedule, cancel, action, allocate, assign, complete, generate, record, file, close, notify, '
+      'submit, forward, escalate, archive, retrieve, validate, check, ensure, prepare, draft, '
+      'finalise, publish, distribute, request, receive, acknowledge, monitor, report, follow up.\n' +
+      'MANDATORY SELF-CHECK before emitting Process Map: for EVERY task in your output, read the '
+      'first word. Is it an imperative verb? If not, rewrite so it is. "If", "When", "Where", 
+      '"The", "All", "A", "An", any noun, any participle ending in -ing, any present-tense "is/are" '
+      '- ALL invalid as the first word of a task. Cycle through tasks twice if needed. Do not emit '
+      'the Process Map block until every task starts with a verb.\n\n' +
       'SENTENCE LENGTH REQUIREMENT (CoVE Rule 5) - THIS IS NON-NEGOTIABLE:\n' +
       '* Hard cap: NO sentence may exceed 18 words. Count words. If a sentence is 19 words or more, ' +
       'split it.\n' +
@@ -12974,12 +13041,17 @@ createChatSurface({
       // The user can still edit the role via Save changes if they wanted to.
       try {
         const origActs = (originalSnapshot.model && originalSnapshot.model.activities) || [];
+        // Match by activity NUMBER first - the AI shouldn't change activity
+        // numbers (PRESERVE ACTIVITY STRUCTURE + the number-restore pass
+        // below), so matching by number is more reliable than by index when
+        // the AI has reordered or split anything.
+        const origByNumber = {};
+        origActs.forEach(oa => { if (oa && oa.number) origByNumber[String(oa.number)] = oa; });
         let touched = 0;
+        const norm = (s) => String(s || '').replace(/\s+/g, ' ').trim();
         newModel.activities.forEach((newAct, ai) => {
-          const origAct = origActs[ai];
+          let origAct = (newAct && newAct.number && origByNumber[String(newAct.number)]) || origActs[ai];
           if (!origAct) return;
-          // Normalised compare so we don't churn for purely whitespace differences.
-          const norm = (s) => String(s || '').replace(/\s+/g, ' ').trim();
           if (norm(newAct.role) !== norm(origAct.role)) {
             newAct.role = origAct.role || '';
             touched++;
