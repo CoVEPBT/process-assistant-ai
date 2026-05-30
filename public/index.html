@@ -2160,22 +2160,23 @@
     outline: 2px solid var(--rmit-red);
     outline-offset: 2px;
   }
-  /* Tracker #39 (29 May 2026): bump the "+ Add activity" button to a
-     primary-style treatment so users notice it. The "+ Add task" /
-     "+ Add note" buttons inside each activity stay discreet (they sit
-     inside an activity card and don't need to dominate); only the
-     end-of-list "+ Add activity" button gets the prominent treatment. */
+  /* Tracker #39 (29 May 2026) / Tracker #50 (30 May 2026): the
+     "+ Add activity" button needs to be visible at the end of the
+     activity list, but it shouldn't fight the Export CTAs (which are
+     solid RMIT red). So: noticeable size and centred placement, but
+     navy-outline secondary treatment - not red. Hover fills with navy
+     for clear affordance. */
   .doc-add-btn.doc-add-activity {
-    background: var(--rmit-red);
-    border: 1px solid var(--rmit-red);
+    background: #FFFFFF;
+    border: 1.5px solid var(--rmit-navy, #0A2240);
     border-style: solid;
-    color: #FFFFFF;
-    padding: 8px 16px;
+    color: var(--rmit-navy, #0A2240);
+    padding: 8px 18px;
     font-size: 13.5px;
   }
   .doc-add-btn.doc-add-activity:hover {
-    background: #C40A1E;
-    border-color: #C40A1E;
+    background: var(--rmit-navy, #0A2240);
+    border-color: var(--rmit-navy, #0A2240);
     color: #FFFFFF;
   }
   .doc-add-actions-end {
@@ -10070,7 +10071,7 @@ async function downloadReviewPack() {
   children.push(new Paragraph({ spacing: { after: 80 }, children: [
     new ExternalHyperlink({
       link: CHECKLIST_URL,
-      children: [new TextRun({ text: 'Open the CoVE Process Review Checklist', style: 'Hyperlink', color: '1A56DB', underline: {} })]
+      children: [new TextRun({ text: 'Open the CoVE Process Review Checklist', style: 'Hyperlink', color: '1A56DB', underline: { type: 'single', color: '1A56DB' } })]
     })
   ] }));
 
@@ -10092,6 +10093,19 @@ async function downloadReviewPack() {
   const doc = new Document({
     styles: {
       default: { document: { run: { font: 'Segoe UI', size: 22 } } },
+      // Tracker #49 (30 May 2026): the "Hyperlink" character style must
+      // exist in the document for ExternalHyperlink TextRuns referencing
+      // style: 'Hyperlink' to render. Without it, the hyperlinked text
+      // came out missing in Word. Defining it here makes the link both
+      // appear and look like a standard Word hyperlink (blue, underlined).
+      characterStyles: [
+        {
+          id: 'Hyperlink',
+          name: 'Hyperlink',
+          basedOn: 'DefaultParagraphFont',
+          run: { color: '1A56DB', underline: { type: 'single', color: '1A56DB' } }
+        }
+      ],
       paragraphStyles: [
         { id: 'Heading1', name: 'Heading 1', basedOn: 'Normal', next: 'Normal', quickFormat: true,
           run: { size: 36, bold: true, font: 'Segoe UI', color: NAVY },

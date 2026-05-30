@@ -700,6 +700,113 @@ PENDING (post-pilot backlog - new features, bigger work)
          verb-leading tasks and surface as a quality flag the
          user can click to auto-fix.
 
+
+
+47. Dismissing a flag shifts the group, looks like neighbours deleted
+    Source: Natalie 30 May 2026 morning
+    Status: [PENDING]
+    When the user clicks [x] on warning 1 in a group, the whole
+    group slides up to fill the gap. The animation makes it
+    look like the cards BELOW also disappeared. Tested in the
+    grouped sidebar (v2 #26 / #26b style).
+    Likely fixes:
+      a) Use a fade-out-then-collapse animation rather than an
+         instant DOM removal, so the deletion focal point is
+         obvious and the shift looks intentional.
+      b) Briefly highlight the now-top-of-group card with a
+         subtle pulse so the eye anchors there after the
+         dismissed card is gone.
+      c) Render a thin "1 dismissed in this group" stub at the
+         top of the group with an undo affordance.
+    Probably combine (a) + (c) for an unambiguous UI.
+
+48. Need an undo button
+    Source: Natalie 30 May 2026 morning
+    Status: [PENDING]
+    Companion to #47 (and many other destructive interactions).
+    Users need a way to recover from accidental dismisses,
+    deletes (v2 #27 + #42 add-task / add-note / add-activity
+    removals), or "Restore original" presses.
+    Options:
+      a) Snackbar-style "Dismissed. Undo." that auto-fades but
+         can be clicked while visible (5-10s window).
+      b) A persistent "Recently dismissed" affordance somewhere
+         (drawer, kebab menu) listing the last N dismissed
+         items with click-to-restore.
+      c) Both - inline snackbar for immediate undo + recently-
+         dismissed menu for older actions.
+    Probably (a) for now; (b) later if the pilot keeps asking.
+
+49. Review checklist link missing from Word export
+    Source: Natalie 30 May 2026 morning
+    Status: [PENDING - bug, real defect]
+    Tracker #36 (commit ba3d491) added the "Before you publish"
+    callout + CoVE Process Review Checklist hyperlink to BOTH
+    the PDF and Word exports. PDF renders the link correctly.
+    Word export does NOT show the link / shows nothing where it
+    should be. Need to investigate:
+      - ExternalHyperlink import in the docx destructure: yes,
+        added in ba3d491. Confirm Word library version supports
+        it (it should - docx@8+).
+      - The Hyperlink children structure - might need to wrap
+        the TextRun differently, or the "style: 'Hyperlink'"
+        may be the issue if the document doesn't have that
+        style defined.
+      - Likely culprit: missing Hyperlink paragraph style in
+        the Document styles config. Add a "Hyperlink"
+        paragraph style alongside Heading1/2/3 entries.
+
+50. Add activity vs Export buttons competing for attention
+    Source: Natalie 30 May 2026 morning
+    Status: [PENDING]
+    Tracker #39 (commit ba3d491) promoted "+ Add activity" to a
+    solid RMIT-red primary button. The Export buttons are also
+    primary-red. Two primary CTAs in the same screen fight for
+    the user's eye - the user can't tell which is "the" action.
+    Resolution: make ONE of them secondary. Most natural is to
+    keep Export as primary (it's the export-the-thing CTA) and
+    drop "+ Add activity" to a secondary style (outline, navy,
+    or muted). The "+ Add activity" is editorial, not the
+    primary outcome.
+
+51. Reset button clearer + 'Clear all' for the paste section
+    Source: Natalie 30 May 2026 morning
+    Status: [PENDING]
+    Two related copy + affordance changes on the home page:
+      a) The Reset button needs clearer signposting. Today it's
+         in the header menu and not obvious. Probably rename
+         and/or move into a more visible spot.
+      b) The paste-into-textarea section needs a dedicated
+         "Clear all" button. Users paste, change their mind,
+         and have no quick way to wipe the paste area without
+         hitting Reset (which also nukes other state).
+    Implementation likely: add a small "Clear" link under the
+    paste textarea (right-aligned), and a clearer Reset
+    treatment in the header.
+
+52. Re-run auto-apply after user edits
+    Source: Natalie 30 May 2026 morning (workflow question)
+    Status: [PENDING - design question first]
+    Today's flow: parse -> analyse -> auto-apply -> user edits
+    in doc preview -> Save changes -> export. After Save
+    changes, the user might want to re-run auto-apply on the
+    NEW content (e.g. they added an activity, want it tightened
+    + verb-first checked + role-restored).
+    Currently the auto-apply button disappears after the first
+    run. Need to either:
+      a) Keep the auto-apply button visible after the first
+         run, labelled "Re-run auto-apply" or "Auto-apply
+         again". Each re-run treats the CURRENT model as the
+         input (not the original snapshot).
+      b) Trigger auto-apply automatically when the user clicks
+         Save changes IF the saved state introduces new
+         non-verb tasks / quality flags.
+      c) Both - automatic re-analyse but explicit re-auto-apply.
+    (a) is simplest and gives the user control. Snapshot
+    handling needs care so "Restore original" still goes back
+    to the ORIGINAL parsed model, not to the first auto-apply
+    output.
+
 ============================================================
 NUMBERING CROSS-REFERENCE
 ============================================================
@@ -723,9 +830,9 @@ SUMMARY
   Done                   30
   Needs sample input      0
   Partial / follow-up     1 (skipped - procedure-vs-process language pass)
-  Pending backlog        15
+  Pending backlog        21
   ----
-  Total                  46
+  Total                  52
 
 26 of 26 raw feedback items now shipped + 7 v2/adjacent items
 shipped. Item 30 (Admin review pack) and items 32+33 (29 May
