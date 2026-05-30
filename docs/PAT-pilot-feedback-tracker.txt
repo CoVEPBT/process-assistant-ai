@@ -495,7 +495,7 @@ PENDING (post-pilot backlog - new features, bigger work)
 
 35. Reference RMIT Indigenous cultures content in responses + outputs
     Source: Natalie 29 May 2026 (late-evening backlog)
-    Status: [PENDING - for tomorrow]
+    Status: [DONE - 31 May 2026]
     Request: tool should refer to / consider content from:
       https://www.rmit.edu.au/about/our-values/respect-for-australian-indigenous-cultures
     Options to discuss tomorrow:
@@ -631,41 +631,13 @@ PENDING (post-pilot backlog - new features, bigger work)
 
 
 45. Parsing missed a NOTE in pasted Schedule-new-class input
-    Source: Natalie 29 May 2026 (late evening Schedule-new-class
-            test)
-    Status: [PENDING - for tomorrow]
-    Reference PDF: CoVE_-_DP_S_-_Schedule_new_class.pdf (in
-    uploads dir).
-    Input pasted into the tool (Nintex Procedure Text format):
-      Request to schedule a new class [CoVE - Program
-        Coordinator; CoVE - Program Manager; CoVE - Student
-        Lifecycle]
-        Email Student Lifecycle (ve.studentlifecycle@rmit.edu.au),
-        copy Delivery Planning & Support
-        (ve.deliveryservices@rmit.edu.au) to request new class
-        scheduling.
-      Schedule class in SAMS [CoVE - Delivery Planning & Support]
-        Review request ensuring all fields are populated that
-        are relevant to the request
-        If the request is to cancel a class, action in SAMS
-        If request is RPL or to create a new class, schedule
-        in SAMS
-        If the request is to re-schedule a class, first cancel
-        the existing class and then schedule class with new
-        details
-        If the request is to extend class end dates, cancel the
-        existing class (if applicable), schedule a new class.
-      Confirm completion of class scheduling [CoVE - Delivery
-        Planning & Support]
-        Move the completed requests from the Ad-hoc scheduling
-        request tab to Processed request tab
-    Diagnosis tomorrow: verify whether the pasted input contained
-    a NOTE: line that the parser dropped, OR whether Natalie
-    expected something to be promoted into a NOTE (e.g. one of
-    the conditional "If the request is..." branches in activity
-    2.0). Probable culprit: the Procedure Text paste handler -
-    extractSectionRanges / parseProcedureText doesn't recognise
-    a NOTE: line marker in the same format the PDF parser does.
+    Source: Natalie 29 May 2026
+    Status: [WITHDRAWN - 30 May 2026, mis-reported]
+    Natalie confirmed on 30 May that she was mistaken about a
+    NOTE being present in the pasted input - no parser change
+    needed. Reproduction wasn't possible because the input as
+    captured didn't contain a NOTE line. Closing without code
+    work.
 
 46. Auto-apply didn't enforce verb-first on tasks
     Source: Natalie 29 May 2026 (same test as #45)
@@ -827,10 +799,11 @@ File 2 (15 items):  #1 = 9, #2 = 10, #3 = 6, #4 = 14, #5 = 12,
 SUMMARY
 ============================================================
 
-  Done                   40
+  Done                   41
+  Withdrawn               1
   Needs sample input      0
   Partial / follow-up     1 (skipped - procedure-vs-process language pass)
-  Pending backlog        11
+  Pending backlog         9
   ----
   Total                  52
 

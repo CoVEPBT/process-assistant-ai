@@ -1,24 +1,22 @@
-Tracker #37 + #44: Parse Triggers & Inputs / Outputs sections
+Tracker #35: Respect for Indigenous cultures in prompts
 
-Rewrote the Triggers + Inputs + Outputs parsers to handle the
-2-column PDF layout where Process Owner / Expert / RACI text
-bleeds into the same stream as the Triggers table.
+Added RMIT's Respect for Australian Indigenous Cultures
+guidance into both prompts so the AI considers it when
+responding and rewriting process content.
 
-- Triggers: bounded to TRIGGERS..first RACI/INPUTS marker.
-  Only lines after "Starts" header. Strips column headers
-  + personal-name bleed. Frequency words (Ad Hoc, Daily...)
-  delimit rows.
-- Outputs: bounded to OUTPUTS..PERFORMANCE TARGETS. Skips
-  column headers. Uses "N/A" as a hard column boundary so
-  only the Output column survives.
-- Inputs: first 200 chars after INPUTS only. "None Noted"
-  short-circuits to "None"; otherwise stops at any column-
-  bleed marker.
-
-Verified on the 4-page Training Plans PDF:
-  trigger = "After CoVE Student admitted; Training Plan
-             extension required"
-  inputs  = "None"
-  outputs = "Training Plan is created and agreed upon"
-
-Edge ca
+Server SYSTEM_PROMPT
+- Full new "RESPECT FOR INDIGENOUS CULTURES" section right
+  after LANGUAGE. Acknowledges Woi wurrung / Boon wurrung
+  unceded lands + Traditional Custodians of lands and waters
+  across Australia.
+- Use "Aboriginal and Torres Strait Islander peoples" in
+  full (plural). Don't abbreviate.
+- RMIT's framing is "Responsible Practice" - don't introduce
+  "reconciliation" into new content.
+- Capitalise Country, Elders, Ancestors, Traditional
+  Custodians, Indigenous, Aboriginal, Torres Strait Islander.
+- Don't generalise or stereotype - each community/nation/
+  language group is distinct.
+- ICIP rights recognised - don't invent details about
+  Indigenous content.
+- Ngarara Willim Centre contact
