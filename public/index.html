@@ -61,8 +61,32 @@
     background: rgba(255,255,255,0.12); color: #FFFFFF;
     border: 1px solid rgba(255,255,255,0.35); border-radius: 6px;
     padding: 8px 14px; cursor: pointer; min-height: 40px;
-    font-size: 14px; font-weight: 500;
+    font-size: 14px; font-weight: 600;
+    display: inline-flex; align-items: center; gap: 6px;
     transition: all 0.15s ease;
+  }
+  header.app-header .header-reset-btn .header-reset-icon {
+    font-size: 16px; line-height: 1; display: inline-block;
+  }
+  /* Tracker #51 (30 May 2026): "Clear all" affordance under the paste */
+  /* section heading - lets the user wipe the title + textarea without */
+  /* nuking the rest of the page state. Right-aligned, discreet text */
+  /* button so it doesn't fight the Analyse content CTA. */
+  .input-paste-area-label-row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; margin-bottom: 4px;
+  }
+  .paste-clear-btn {
+    appearance: none; -webkit-appearance: none;
+    background: none; border: none; padding: 4px 8px;
+    color: #64748B; font-family: inherit; font-size: 12.5px;
+    font-weight: 600; cursor: pointer; text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .paste-clear-btn:hover { color: var(--rmit-red); }
+  .paste-clear-btn:focus-visible {
+    outline: 2px solid var(--rmit-red); outline-offset: 2px;
+    border-radius: 4px;
   }
   header.app-header .header-reset-btn:hover {
     background: rgba(255,255,255,0.22); border-color: rgba(255,255,255,0.55);
@@ -3963,7 +3987,7 @@
     </div>
   </a>
   <div class="header-actions">
-    <button class="header-reset-btn" id="headerResetBtn" type="button" aria-label="Reset and start over">Reset</button>
+    <button class="header-reset-btn" id="headerResetBtn" type="button" aria-label="Reset and start over"><span class="header-reset-icon" aria-hidden="true">↺</span> <span class="header-reset-label" id="headerResetLabel">Start over</span></button>
     <!-- Burger menu removed in home v3 (Move 4). All references live inside the coach drawer (bottom-right). -->
   </div>
 </header>
@@ -4300,7 +4324,10 @@ NOTE: What if access is delayed? Escalate to the IT lead and update the new star
         <label class="input-meta-label" for="pasteTitleInput">Process name <span class="input-meta-required" aria-hidden="true">*</span><span class="sr-only"> (required)</span></label>
         <input type="text" id="pasteTitleInput" class="input-meta-input" placeholder="e.g. CoVE - FAC - Assign new laptop" />
       </div>
-      <label class="input-meta-label input-meta-label-block" for="pasteArea">Activities and tasks</label>
+      <div class="input-paste-area-label-row">
+        <label class="input-meta-label input-meta-label-block" for="pasteArea">Activities and tasks</label>
+        <button type="button" id="pasteClearBtn" class="paste-clear-btn" hidden>Clear all</button>
+      </div>
       <textarea id="pasteArea" placeholder="Paste your rough notes here. Use numbered headers like '1.0 Receive request' to mark activities; bullets, dashes, or letters become tasks under each.&#10;&#10;Example:&#10;1.0 Receive laptop request&#10;- Receive request via ServiceNow&#10;- Verify staff details and role&#10;&#10;2.0 Configure the laptop&#10;- Image with standard build&#10;- Install role-specific software" aria-label="Process content"></textarea>
       <div class="file-name" id="fileName"></div>
     </div>
@@ -5599,10 +5626,93 @@ document.getElementById('addActivityBtn').addEventListener('click', () => addAct
 addActivityRow(); // start with one empty activity
 
 /* ============================================================
-   RESET
+   RESET / CLEAR PASTE
    ============================================================ */
+// Tracker #51 (30 May 2026): "Clear all" under the paste section header.
+// Wipes the process name input + the textarea only - doesn't touch the
+// file upload, the form, or any analysed state. Visibility tracks the
+// pasteArea content so the button only appears when there's something
+// to clear.
+(function wirePasteClear() {
+  const btn = document.getElementById('pasteClearBtn');
+  const txt = document.getElementById('pasteArea');
+  const title = document.getElementById('pasteTitleInput');
+  if (!btn || !txt) return;
+  const sync = () => {
+    const anyContent = (txt.value || '').trim().length > 0
+      || (title && (title.value || '').trim().length > 0);
+    btn.hidden = !anyContent;
+  };
+  txt.addEventListener('input', sync);
+  if (title) title.addEventListener('input', sync);
+  btn.addEventListener('click', () => {
+    txt.value = '';
+    if (title) { title.value = ''; title.classList.remove('has-error'); }
+    sync();
+    txt.focus();
+    if (typeof showToast === 'function') showToast('Paste area cleared.', 'info', 2500);
+  });
+  // Initial state.
+  sync();
+})();
+
+// Tracker #51 (30 May 2026): make the header Reset button context-aware
+// in label, so users know what it'll actually do from where they are.
+//   - Home view: "Start over" (full reset)
+//   - Analysed view: "Revert edits" (soft reset, per Tracker #43)
+// The label is recomputed every time the user opens the burger / toggles
+// view state; cheaper to just check on click and on results-card
+// visibility changes via MutationObserver.
+(function wireResetLabel() {
+  const label = document.getElementById('headerResetLabel');
+  const resultsCard = document.getElementById('resultsCard');
+  if (!label || !resultsCard) return;
+  const refresh = () => {
+    const onAnalysedPage = !resultsCard.classList.contains('hidden');
+    label.textContent = onAnalysedPage ? 'Revert edits' : 'Start over';
+  };
+  refresh();
+  // Re-evaluate whenever the results card's class list changes (analyse
+  // shows it, reset hides it).
+  const obs = new MutationObserver(refresh);
+  obs.observe(resultsCard, { attributes: true, attributeFilter: ['class'] });
+})();
+
 document.getElementById('headerResetBtn').addEventListener('click', () => {
-  // Bring the input card back so the user can start fresh
+  // Tracker #43 (30 May 2026): context-aware Reset.
+  //   - On the analysed page (results card visible): revert the doc preview
+  //     to its original parsed state, re-show any per-session dismissed
+  //     flags, and STAY on the analysed page. The user expects Reset to
+  //     undo their edits, not nuke the whole analysis and dump them back
+  //     at the upload screen.
+  //   - On the home view: do the original full-reset behaviour so the user
+  //     can drop a fresh file / paste new content.
+  const resultsCard = document.getElementById('resultsCard');
+  const onAnalysedPage = resultsCard && !resultsCard.classList.contains('hidden');
+
+  if (onAnalysedPage && originalDocHtml) {
+    // Revert doc preview to the originally-parsed (or last-auto-applied)
+    // state. Keep currentModel + currentIssues - they're still the
+    // analysis we ran against. Just throw away the user's in-place edits.
+    const dp = document.getElementById('docPreview');
+    if (dp) dp.innerHTML = originalDocHtml;
+    // Restore dismissed flags so the sidebar matches the just-restored view.
+    if (dismissedFlagKeys && dismissedFlagKeys.size) dismissedFlagKeys.clear();
+    if (collapsedFlagGroups) collapsedFlagGroups.clear();
+    lastDismissed = null;
+    if (typeof window.refreshIssuesSidebar === 'function') window.refreshIssuesSidebar();
+    if (typeof window.updateSidebarOppsCount === 'function') window.updateSidebarOppsCount();
+    if (typeof showToast === 'function') showToast('Edits and dismissals reverted. Your analysis is unchanged.', 'info', 3500);
+    // Don't navigate. Just scroll the doc preview into view so the user
+    // sees the restored content immediately.
+    const docPreviewSection = document.getElementById('docPreviewSection') || dp;
+    if (docPreviewSection && docPreviewSection.scrollIntoView) {
+      docPreviewSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    return;
+  }
+
+  // Home-view path: full reset (the original behaviour).
   document.getElementById('inputCard').classList.remove('hidden');
   uploadedFile = null;
   fileInput.value = '';
@@ -5622,7 +5732,7 @@ document.getElementById('headerResetBtn').addEventListener('click', () => {
   document.getElementById('activityList').innerHTML = '';
   activityCounter = 0;
   addActivityRow();
-  document.getElementById('resultsCard').classList.add('hidden');
+  if (resultsCard) resultsCard.classList.add('hidden');
   // Clear the doc preview too, so stale content from a previous run can't linger
   const dp = document.getElementById('docPreview');
   if (dp) dp.innerHTML = '';

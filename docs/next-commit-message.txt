@@ -1,87 +1,80 @@
-Fix #49 + #50 bugs, ship #47 + #48 UX polish, repair JS syntax regression
+Tracker #43 + #51: Reset behaviour scope + Clear all on paste section
 
-CRITICAL FIX FIRST
-==================
-
-Repaired a JavaScript syntax error introduced in yesterday's
-commit 0c5e778 (the verb-first prompt rule).
-
-What was wrong
---------------
-The VERB-FIRST FOR EVERY TASK block in the auto-apply prompt
-had multiple bugs:
-
-  - Several string literals were missing the trailing "+"
-    operator that concatenates them into the prompt.
-  - One line had an unterminated string - the closing quote
-    was dropped mid-rule.
-
-JavaScript treated this as a SyntaxError at parse time, which
-means the WHOLE inline <script> block containing it stopped
-executing on page load. Everything defined further down in that
-block - which includes:
-
-  - startAutoApply() and the auto-apply pipeline
-  - role / activity-number / linked-process restore passes
-  - duplicate-NOTE dedupe
-  - trigger / trailing-requirement drift detection
-  - the entire post-process safety net we built up over the
-    last three days
-
-- was almost certainly not loading on the live site.
-
-How I caught it
----------------
-Ran `node --check` against every inline <script> block in
-public/index.html. The verb-first block failed parse. Fixed
-the missing "+" operators and the unterminated string. Re-ran
-the check: all 12 blocks now parse cleanly. server/index.js
-also clean.
-
-Then verified the auto-apply prompt builds at runtime
-(25,137 chars) and contains every rule we expect:
-PRESERVE ACTIVITY STRUCTURE, ONE-TO-ONE MAPPING (NOTEs),
-CONDITIONAL / TRIGGER CLAUSES, TRAILING REQUIREMENT SENTENCES,
-PRESERVE URLS, VERB-FIRST FOR EVERY TASK, and the worked
-examples (e.g. "Cancel the class in SAMS when...").
-
-Re-ran the splitRoles unit tests too: 11/11 pass.
-
-If the deployed version has been throwing a console error since
-yesterday's push, this fixes it. Worth opening DevTools on the
-live site before deploying this to confirm.
+Two related affordance fixes to the Reset flow.
 
 
-Tracker #49 - Word export missing the checklist link
-====================================================
+Tracker #43 - Reset on the analysed page stays on the page
+==========================================================
 
-The "Open the CoVE Process Review Checklist" hyperlink at the
-end of the Word export wasn't rendering. Two issues:
+Before: clicking Reset from the analysed page nuked everything
+and dumped the user back at the upload screen, including their
+parsed model, current quality flags, and any work they'd done.
+Frustrating if they just wanted to undo a few edits.
 
-  1. The TextRun inside ExternalHyperlink referenced
-     style: 'Hyperlink' - but no character style with that id
-     was defined in the Document's styles config. The reference
-     resolved to nothing and the text disappeared.
+Now Reset is context-aware:
 
-  2. The TextRun's underline was `underline: {}` - probably
-     under-specified for docx@8.5.0 and rendering nothing.
+  - On home view (no analysis yet): unchanged - full reset.
+    Clears upload state, paste area, form fields, takes the
+    user back to the input card. Same as before.
 
-Fix:
+  - On analysed view: soft reset. Reverts the doc preview to
+    its original parsed (or last-auto-applied) state, clears
+    per-session dismissed flags + collapsed groups so the
+    sidebar shows everything again, scrolls the doc preview
+    back into view. Keeps currentModel + currentIssues - the
+    underlying analysis is preserved. Toast confirms:
+      "Edits and dismissals reverted. Your analysis is
+      unchanged."
 
-  - Added a `characterStyles` array to the Document styles
-    config, defining a "Hyperlink" style (blue + underlined).
-  - Tightened the TextRun underline to
-    `{ type: 'single', color: '1A56DB' }`.
-
-Belt and braces - the hyperlink now renders even if either the
-style lookup or the explicit underline alone failed.
+The detection is simple: if #resultsCard is visible AND we have
+an originalDocHtml to revert to, take the soft path. Otherwise
+fall through to the original full-reset behaviour.
 
 
-Tracker #50 - Add activity button competing with Export
-=======================================================
+Tracker #51 - Clearer Reset label + Clear all on paste section
+==============================================================
 
-#39 (yesterday) promoted "+ Add activity" to solid RMIT-red.
-Same colour as the Export CTAs, so users couldn't tell which
-was "the" action.
+Two small affordance changes Natalie called out at the same time:
 
-Demoted "+
+  (a) The header Reset button label was "Reset" - too generic
+      to telegraph what it'd actually do.
+  (b) The paste-into-textarea section had no quick way to wipe
+      its content without firing the global Reset.
+
+Changes:
+
+  - Header Reset label is now context-aware:
+      "Start over"   on the home view
+      "Revert edits" on the analysed view
+    Updated via a MutationObserver watching #resultsCard's
+    class list, so the label flips automatically when the user
+    moves between views without any extra hooks at the call
+    sites.
+
+  - Added a ↺ icon before the label so the button reads more
+    like a recognisable action. Bumped font-weight 500 -> 600
+    so it stands out a touch more on the navy header.
+
+  - New "Clear all" text button right-aligned next to the
+    "Activities and tasks" label in the paste section. Wipes
+    the process name input + the textarea ONLY - leaves the
+    file upload, the form, and any analysed state alone.
+    Hidden when both inputs are empty so it doesn't clutter
+    the page; appears as soon as the user starts typing or
+    paste content. Confirms with a "Paste area cleared." toast
+    and focuses the textarea after clearing.
+
+
+Tracker statuses
+================
+
+#43 and #51 - flipped to [DONE] in
+docs/PAT-pilot-feedback-tracker.txt. Summary: Done 34 -> 36,
+Pending 17 -> 15.
+
+
+Syntax check
+============
+
+node --check passes on all 12 inline <script> blocks in
+public/index.html and on server/index.js.

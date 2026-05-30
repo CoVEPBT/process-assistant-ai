@@ -603,7 +603,7 @@ PENDING (post-pilot backlog - new features, bigger work)
 
 43. Reset should reset current view only, not navigate to home
     Source: Natalie 29 May 2026
-    Status: [PENDING - for tomorrow]
+    Status: [DONE - 30 May 2026]
     Current: clicking Reset takes the user back to the home /
     upload screen. If they're on the post-analyse page, they
     expect Reset to clear their edits on the analysed page and
@@ -771,7 +771,7 @@ PENDING (post-pilot backlog - new features, bigger work)
 
 51. Reset button clearer + 'Clear all' for the paste section
     Source: Natalie 30 May 2026 morning
-    Status: [PENDING]
+    Status: [DONE - same day]
     Two related copy + affordance changes on the home page:
       a) The Reset button needs clearer signposting. Today it's
          in the header menu and not obvious. Probably rename
@@ -827,10 +827,10 @@ File 2 (15 items):  #1 = 9, #2 = 10, #3 = 6, #4 = 14, #5 = 12,
 SUMMARY
 ============================================================
 
-  Done                   34
+  Done                   36
   Needs sample input      0
   Partial / follow-up     1 (skipped - procedure-vs-process language pass)
-  Pending backlog        17
+  Pending backlog        15
   ----
   Total                  52
 
