@@ -555,7 +555,7 @@ PENDING (post-pilot backlog - new features, bigger work)
 
 38. Linked process titles getting cut off
     Source: Natalie 29 May 2026
-    Status: [PENDING - for tomorrow]
+    Status: [DONE - 30 May 2026]
     Example: "CoVE - SL - A&T Admissions & Enrolment" - the
     PROCESS link title gets truncated in either parsing or
     rendering. Need to identify whether the truncation happens
@@ -592,7 +592,7 @@ PENDING (post-pilot backlog - new features, bigger work)
 
 42. Discreet [x] to remove manually added task / note / activity
     Source: Natalie 29 May 2026
-    Status: [PENDING - for tomorrow]
+    Status: [DONE - 30 May 2026]
     The v2 #27 work (commit 923d2b5) added "+ Add task" /
     "+ Add note" / "+ Add activity" buttons inside the doc
     preview. Missing: a small discreet [x] to REMOVE a
@@ -827,10 +827,10 @@ File 2 (15 items):  #1 = 9, #2 = 10, #3 = 6, #4 = 14, #5 = 12,
 SUMMARY
 ============================================================
 
-  Done                   36
+  Done                   38
   Needs sample input      0
   Partial / follow-up     1 (skipped - procedure-vs-process language pass)
-  Pending backlog        15
+  Pending backlog        13
   ----
   Total                  52
 

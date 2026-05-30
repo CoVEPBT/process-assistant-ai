@@ -68,6 +68,36 @@
   header.app-header .header-reset-btn .header-reset-icon {
     font-size: 16px; line-height: 1; display: inline-block;
   }
+  /* Tracker #42 (30 May 2026): discreet [x] on user-added tasks /  */
+  /* notes / activities so the user can undo an "+ Add task" / "+ Add */
+  /* note" / "+ Add activity" they regretted. Only rendered on items */
+  /* the user added (class .user-added) - we never put it on parsed */
+  /* source content. Positioned top-right of the item, low-emphasis */
+  /* by default, red on hover. */
+  .user-added { position: relative; }
+  .user-item-remove {
+    position: absolute; top: 6px; right: 6px;
+    appearance: none; -webkit-appearance: none;
+    background: transparent; border: none;
+    padding: 2px 6px; line-height: 1;
+    color: #94A3B8; font-size: 16px; font-weight: 700;
+    cursor: pointer; border-radius: 3px;
+    opacity: 0.6;
+    transition: opacity 0.12s ease, color 0.12s ease, background 0.12s ease;
+  }
+  .user-added:hover .user-item-remove,
+  .user-item-remove:focus-visible { opacity: 1; }
+  .user-item-remove:hover {
+    color: var(--rmit-red); background: #FEE2E2;
+  }
+  .user-item-remove:focus-visible {
+    outline: 2px solid var(--rmit-red); outline-offset: 1px;
+  }
+  /* When the remove button sits inside an activity card the absolute */
+  /* positioning would land it over the "+ Add task" buttons; nudge it */
+  /* into the activity header instead. */
+  .activity.user-added > .user-item-remove { top: 10px; right: 10px; }
+
   /* Tracker #51 (30 May 2026): "Clear all" affordance under the paste */
   /* section heading - lets the user wipe the title + textarea without */
   /* nuking the rest of the page state. Right-aligned, discreet text */
@@ -6650,6 +6680,11 @@ function parseProcedureBlock(block) {
   let inNote = false;
   let currentNote = null;
   let expectingRole = false;
+  // Tracker #38 (30 May 2026): track the most-recently-pushed PROCESS
+  // link so continuation lines like "Enrolment" (the wrap of "CoVE - SL
+  // - A&T Admissions & Enrolment") can be appended to its name instead
+  // of dropping off the end or polluting the previous task.
+  let currentLink = null;
 
   const activityRe = /^(\d+\.\d+)\s+(.+)$/;
   const taskRe     = /^([a-z])\s+(.+)$/;
@@ -6739,6 +6774,7 @@ function parseProcedureBlock(block) {
     const am = line.match(activityRe);
     if (am) {
       closeNoteAndReset();
+      currentLink = null;
       if (current) activities.push(current);
       current = { number: am[1], title: am[2], role: '', tasks: [], notes: [], links: [] };
       currentTask = null;
@@ -6773,6 +6809,7 @@ function parseProcedureBlock(block) {
     const nm = line.match(noteRe);
     if (nm) {
       closeNoteAndReset();
+      currentLink = null;
       currentNote = { title: '', body: '', _raw: nm[1].trim() };
       current.notes.push(currentNote);
       inNote = true; currentTask = null;
@@ -6782,7 +6819,9 @@ function parseProcedureBlock(block) {
     const pm = line.match(procRe);
     if (pm) {
       closeNoteAndReset();
-      current.links.push({ type: 'process', name: pm[1].trim() });
+      const linkObj = { type: 'process', name: pm[1].trim() };
+      current.links.push(linkObj);
+      currentLink = linkObj;
       currentTask = null;
       continue;
     }
@@ -6790,6 +6829,7 @@ function parseProcedureBlock(block) {
     const tm = line.match(taskRe);
     if (tm) {
       closeNoteAndReset();
+      currentLink = null;
       currentTask = { letter: tm[1], text: tm[2].trim(), attachment: null };
       current.tasks.push(currentTask);
       continue;
@@ -6798,7 +6838,15 @@ function parseProcedureBlock(block) {
     // continuation line - append to current note or current task. Skip recognised
     // section headings that may leak in from page-break artifacts in the PDF.
     if (SECTION_HEADINGS_RE.test(line)) continue;
-    if (inNote && currentNote) {
+    if (currentLink) {
+      // Tracker #38: PROCESS title continuation. PDF often wraps long
+      // PROCESS link titles across two or three lines (e.g.
+      //   PROCESS CoVE - SL - A&T Admissions &
+      //   Enrolment
+      // Append until we hit a structural marker (which is handled by
+      // the earlier `if`s and would have continued past here).
+      currentLink.name = appendContinuation(currentLink.name, line);
+    } else if (inNote && currentNote) {
       // Accumulate raw note content; title/body split happens at finalization.
       currentNote._raw = appendContinuation(currentNote._raw || '', line);
     } else if (currentTask) {
@@ -11461,6 +11509,22 @@ if (docPreviewEl) {
   };
 
   docPreviewEl.addEventListener('click', (e) => {
+    // Tracker #42 (30 May 2026): handle the discreet [x] on user-added
+    // items BEFORE the add-button logic. Walks up to the nearest
+    // .user-added ancestor and removes it. No confirmation - the user
+    // is removing their OWN addition, not source content, so it's a
+    // low-stakes action.
+    const removeBtn = e.target.closest('.user-item-remove');
+    if (removeBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      const item = removeBtn.closest('.user-added');
+      if (item && item.parentNode) {
+        item.parentNode.removeChild(item);
+        if (typeof showToast === 'function') showToast('Removed.', 'info', 2000);
+      }
+      return;
+    }
     const target = e.target.closest('.doc-add-btn');
     if (!target) return;
     e.preventDefault();
@@ -11477,9 +11541,12 @@ if (docPreviewEl) {
         : 'z';
       const actId = actCard.id.replace(/^doc-activity-/, '');
       const newTask = document.createElement('div');
-      newTask.className = 'task';
+      newTask.className = 'task user-added';
       newTask.id = 'doc-task-' + actId + '-' + nextLetter;
-      newTask.innerHTML = '<strong>' + nextLetter + '.</strong> [Click to add task]';
+      newTask.innerHTML =
+        '<button type="button" class="user-item-remove" contenteditable="false" ' +
+        'aria-label="Remove this task" title="Remove this task">&times;</button>' +
+        '<strong>' + nextLetter + '.</strong> [Click to add task]';
       // Insert before the .doc-add-actions row so the buttons stay last.
       const actionsRow = actCard.querySelector('.doc-add-actions');
       actCard.insertBefore(newTask, actionsRow);
@@ -11494,9 +11561,12 @@ if (docPreviewEl) {
       const noteCount = actCard.querySelectorAll('.note').length;
       const actId = actCard.id.replace(/^doc-activity-/, '');
       const newNote = document.createElement('div');
-      newNote.className = 'note';
+      newNote.className = 'note user-added';
       newNote.id = 'doc-note-' + actId + '-' + noteCount;
-      newNote.innerHTML = '<strong class="note-title">[Question?]</strong><br>[Answer]';
+      newNote.innerHTML =
+        '<button type="button" class="user-item-remove" contenteditable="false" ' +
+        'aria-label="Remove this note" title="Remove this note">&times;</button>' +
+        '<strong class="note-title">[Question?]</strong><br>[Answer]';
       const actionsRow = actCard.querySelector('.doc-add-actions');
       actCard.insertBefore(newNote, actionsRow);
       focusNewElement(newNote);
@@ -11517,9 +11587,11 @@ if (docPreviewEl) {
       }
       const actId = nextNum.replace('.', '-');
       const newAct = document.createElement('div');
-      newAct.className = 'activity';
+      newAct.className = 'activity user-added';
       newAct.id = 'doc-activity-' + actId;
       newAct.innerHTML =
+        '<button type="button" class="user-item-remove" contenteditable="false" ' +
+        'aria-label="Remove this activity" title="Remove this activity">&times;</button>' +
         '<div><span class="num">' + nextNum + '</span> <strong>[New activity title]</strong></div>' +
         '<div class="role role-empty" data-empty="1"><span class="role-placeholder">[Click to add accountable role]</span></div>' +
         '<div class="task" id="doc-task-' + actId + '-a"><strong>a.</strong> [Click to add task]</div>' +

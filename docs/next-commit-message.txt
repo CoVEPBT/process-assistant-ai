@@ -1,80 +1,22 @@
-Tracker #43 + #51: Reset behaviour scope + Clear all on paste section
+Tracker #38 + #42 + #43 + #51
 
-Two related affordance fixes to the Reset flow.
+- #38 Parser now reconstructs PROCESS link titles that wrap
+  across lines (e.g. "CoVE - SL - A&T Admissions & Enrolment").
+  Added currentLink tracking with continuation-line handling,
+  mirroring the existing currentTask / currentNote pattern.
 
+- #42 Discreet [x] on user-added tasks / notes / activities so
+  the user can undo their own "+ Add" without confirmation.
+  Only renders on items the user added - source content is
+  untouchable.
 
-Tracker #43 - Reset on the analysed page stays on the page
-==========================================================
+- #43 Reset is now context-aware. On the analysed page it
+  reverts doc edits + dismissals and stays on the page; on the
+  home view it does the original full reset.
 
-Before: clicking Reset from the analysed page nuked everything
-and dumped the user back at the upload screen, including their
-parsed model, current quality flags, and any work they'd done.
-Frustrating if they just wanted to undo a few edits.
+- #51 Header Reset label switches between "Start over" (home)
+  and "Revert edits" (analysed) via a MutationObserver on
+  #resultsCard. Added "Clear all" text button to the paste
+  section that wipes title + textarea only.
 
-Now Reset is context-aware:
-
-  - On home view (no analysis yet): unchanged - full reset.
-    Clears upload state, paste area, form fields, takes the
-    user back to the input card. Same as before.
-
-  - On analysed view: soft reset. Reverts the doc preview to
-    its original parsed (or last-auto-applied) state, clears
-    per-session dismissed flags + collapsed groups so the
-    sidebar shows everything again, scrolls the doc preview
-    back into view. Keeps currentModel + currentIssues - the
-    underlying analysis is preserved. Toast confirms:
-      "Edits and dismissals reverted. Your analysis is
-      unchanged."
-
-The detection is simple: if #resultsCard is visible AND we have
-an originalDocHtml to revert to, take the soft path. Otherwise
-fall through to the original full-reset behaviour.
-
-
-Tracker #51 - Clearer Reset label + Clear all on paste section
-==============================================================
-
-Two small affordance changes Natalie called out at the same time:
-
-  (a) The header Reset button label was "Reset" - too generic
-      to telegraph what it'd actually do.
-  (b) The paste-into-textarea section had no quick way to wipe
-      its content without firing the global Reset.
-
-Changes:
-
-  - Header Reset label is now context-aware:
-      "Start over"   on the home view
-      "Revert edits" on the analysed view
-    Updated via a MutationObserver watching #resultsCard's
-    class list, so the label flips automatically when the user
-    moves between views without any extra hooks at the call
-    sites.
-
-  - Added a ↺ icon before the label so the button reads more
-    like a recognisable action. Bumped font-weight 500 -> 600
-    so it stands out a touch more on the navy header.
-
-  - New "Clear all" text button right-aligned next to the
-    "Activities and tasks" label in the paste section. Wipes
-    the process name input + the textarea ONLY - leaves the
-    file upload, the form, and any analysed state alone.
-    Hidden when both inputs are empty so it doesn't clutter
-    the page; appears as soon as the user starts typing or
-    paste content. Confirms with a "Paste area cleared." toast
-    and focuses the textarea after clearing.
-
-
-Tracker statuses
-================
-
-#43 and #51 - flipped to [DONE] in
-docs/PAT-pilot-feedback-tracker.txt. Summary: Done 34 -> 36,
-Pending 17 -> 15.
-
-
-Syntax check
-============
-
-node --check passes on all 12 inline <script> blocks in
-public/index.html and on server/index.js.
+Tracker: Done 34 -> 38, Pending 17 -> 13. node --check passes.
