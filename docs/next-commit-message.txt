@@ -1,69 +1,87 @@
-Morning Schedule-new-class test: three fixes
+Fix #49 + #50 bugs, ship #47 + #48 UX polish, repair JS syntax regression
 
-Natalie's morning test of the Schedule-new-class process
-(pasted Nintex Procedure Text into the tool, ran auto-apply)
-surfaced three real issues:
+CRITICAL FIX FIRST
+==================
 
-1. AI changed activity 1's role list.
-2. Tasks not rewritten to verb-first ("If the request is to
-   cancel a class, action in SAMS" stayed as-is across all 5
-   tasks in activity 2.0).
-3. Multi-role quality flag mis-firing: false-positive on
-   single roles that contain an "&" inside the title (e.g.
-   "CoVE - Planning & Admissions" treated as two roles), and
-   missing real comma-separated multi-role lists (e.g.
-   "CoVE - Program Coordinator, CoVE - Program Manager,
-   CoVE - Student Lifecycle" treated as one).
+Repaired a JavaScript syntax error introduced in yesterday's
+commit 0c5e778 (the verb-first prompt rule).
 
-Three fixes:
+What was wrong
+--------------
+The VERB-FIRST FOR EVERY TASK block in the auto-apply prompt
+had multiple bugs:
 
-A. SMARTER splitRoles (issue #3)
-   The old function naively split on ";", " & ", " and ",
-   " + ", " / ", " \ ". That mis-handled roles with those
-   tokens inside the role title.
+  - Several string literals were missing the trailing "+"
+    operator that concatenates them into the prompt.
+  - One line had an unterminated string - the closing quote
+    was dropped mid-rule.
 
-   New logic: hard-split on ";" only. For ",", " & ",
-   " and ", etc. — only split if the part AFTER the separator
-   looks like the start of a new role expression (starts with
-   an org prefix like "CoVE -", "RMIT -", "DP&S -" etc, or a
-   capitalised noun + dash + role keyword).
+JavaScript treated this as a SyntaxError at parse time, which
+means the WHOLE inline <script> block containing it stopped
+executing on page load. Everything defined further down in that
+block - which includes:
 
-   Unit-tested 11 real RMIT cases including:
-     "CoVE - Planning & Admissions"        -> 1 role
-     "CoVE - Coordinator, Student Lifecycle" -> 1 role
-     "Customer and Service Officer"        -> 1 role
-     "DP&S - Quality Officer"              -> 1 role
-     "CoVE - X; CoVE - Y; CoVE - Z"        -> 3 roles
-     "CoVE - X, CoVE - Y"                  -> 2 roles
-     "CoVE - X and CoVE - Y"               -> 2 roles
-     "CoVE - X & CoVE - Y"                 -> 2 roles
-   11/11 pass.
+  - startAutoApply() and the auto-apply pipeline
+  - role / activity-number / linked-process restore passes
+  - duplicate-NOTE dedupe
+  - trigger / trailing-requirement drift detection
+  - the entire post-process safety net we built up over the
+    last three days
 
-B. VERB-FIRST FOR EVERY TASK (issue #2)
-   New non-negotiable rule in BOTH the frontend auto-apply
-   prompt and the server SYSTEM_PROMPT. Includes worked
-   examples for the three patterns Natalie hit:
-     - Conditional opener: "If the request is to cancel a
-       class, action in SAMS" -> "Cancel the class in SAMS
-       when the request is a cancellation" (or split to task
-       + NOTE "When does this task apply?").
-     - Descriptive opener: "Review request ensuring all
-       fields are populated" -> "Confirm all fields relevant
-       to the request are populated".
-     - Noun opener: "Email sent to the employer" -> "Email
-       the employer".
-   Lists invalid first words (If, When, Where, The, All, A,
-   An, any noun, any -ing participle, present-tense is/are)
-   and a mandatory self-check that walks every task before
-   emitting the Process Map block.
+- was almost certainly not loading on the live site.
 
-C. ROLE RESTORE by activity number (issue #1)
-   The role-restore post-process previously matched new tasks
-   back to original tasks by ACTIVITY INDEX. Same problem we
-   hit for attachments and linked processes: any AI activity
-   reorder breaks the mapping. Now matches by activity NUMBER
-   first (reliable thanks to the activity-number restore
-   pass), falls back to index for legacy cases. Same defence-
-   in-depth pattern as 70271ee.
+How I caught it
+---------------
+Ran `node --check` against every inline <script> block in
+public/index.html. The verb-first block failed parse. Fixed
+the missing "+" operators and the unterminated string. Re-ran
+the check: all 12 blocks now parse cleanly. server/index.js
+also clean.
 
-Tracker: #189 done (covers issues #45 + #46 + new flag bug).
+Then verified the auto-apply prompt builds at runtime
+(25,137 chars) and contains every rule we expect:
+PRESERVE ACTIVITY STRUCTURE, ONE-TO-ONE MAPPING (NOTEs),
+CONDITIONAL / TRIGGER CLAUSES, TRAILING REQUIREMENT SENTENCES,
+PRESERVE URLS, VERB-FIRST FOR EVERY TASK, and the worked
+examples (e.g. "Cancel the class in SAMS when...").
+
+Re-ran the splitRoles unit tests too: 11/11 pass.
+
+If the deployed version has been throwing a console error since
+yesterday's push, this fixes it. Worth opening DevTools on the
+live site before deploying this to confirm.
+
+
+Tracker #49 - Word export missing the checklist link
+====================================================
+
+The "Open the CoVE Process Review Checklist" hyperlink at the
+end of the Word export wasn't rendering. Two issues:
+
+  1. The TextRun inside ExternalHyperlink referenced
+     style: 'Hyperlink' - but no character style with that id
+     was defined in the Document's styles config. The reference
+     resolved to nothing and the text disappeared.
+
+  2. The TextRun's underline was `underline: {}` - probably
+     under-specified for docx@8.5.0 and rendering nothing.
+
+Fix:
+
+  - Added a `characterStyles` array to the Document styles
+    config, defining a "Hyperlink" style (blue + underlined).
+  - Tightened the TextRun underline to
+    `{ type: 'single', color: '1A56DB' }`.
+
+Belt and braces - the hyperlink now renders even if either the
+style lookup or the explicit underline alone failed.
+
+
+Tracker #50 - Add activity button competing with Export
+=======================================================
+
+#39 (yesterday) promoted "+ Add activity" to solid RMIT-red.
+Same colour as the Export CTAs, so users couldn't tell which
+was "the" action.
+
+Demoted "+

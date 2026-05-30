@@ -998,6 +998,25 @@
   .issue {
     border-left: 4px solid var(--severity-info);
     padding: 12px 14px; margin-bottom: 8px; background: #FAFAFA; border-radius: 0 4px 4px 0;
+    /* Tracker #47 (30 May 2026): smooth dismiss. Animate max-height + */
+    /* opacity + margin + padding so the card collapses out of view */
+    /* instead of vanishing instantly. Without this the group below */
+    /* jumps up and it looks like multiple cards got deleted. */
+    max-height: 600px;
+    overflow: hidden;
+    transition: max-height 260ms ease, opacity 220ms ease,
+                margin-bottom 260ms ease, padding 260ms ease,
+                border-width 260ms ease;
+  }
+  .issue.dismissing {
+    max-height: 0;
+    opacity: 0;
+    margin-bottom: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    border-top-width: 0;
+    border-bottom-width: 0;
+    pointer-events: none;
   }
   .issue.error { border-left-color: var(--severity-error); }
   .issue.warning { border-left-color: var(--severity-warning); }
@@ -8693,7 +8712,16 @@ window.attachDismissHandlers = function () {
       // Capture the matching issue object so the toast Undo can restore it.
       const match = (Array.isArray(currentIssues) ? currentIssues : []).find(i => flagKey(i) === key);
       lastDismissed = match ? { key, issue: match } : { key };
-      dismissedFlagKeys.add(key);
+      // Tracker #47 (30 May 2026): start the collapse animation BEFORE
+      // touching dismissedFlagKeys / refreshing the sidebar. The card has
+      // CSS transitions on max-height/opacity/margin/padding when the
+      // .dismissing class is applied; we wait ~280ms (matching the CSS
+      // transition) before re-rendering so the user sees the dismissed
+      // card shrink out, instead of having neighbours jump up.
+      const card = btn.closest('.issue');
+      if (card) card.classList.add('dismissing');
+      const finalize = () => {
+        dismissedFlagKeys.add(key);
       // Re-render the sidebar list + count badge so the dismissal takes effect.
       if (typeof window.refreshIssuesSidebar === 'function') window.refreshIssuesSidebar();
       if (typeof window.updateSidebarOppsCount === 'function') window.updateSidebarOppsCount();
@@ -8718,7 +8746,9 @@ window.attachDismissHandlers = function () {
       // user to react if the dismissal was an accident. showToast renders the
       // message via innerHTML so the inline button is interactive.
       if (typeof showToast === 'function') {
-        showToast('Flag dismissed. <button type="button" class="toast-undo-btn" id="undoDismissBtn">Undo</button>', 'info', 6000);
+        // Tracker #48 (30 May 2026): bumped from 6000 to 8000ms so users
+        // have more time to spot the toast and click Undo before it fades.
+        showToast('Flag dismissed. <button type="button" class="toast-undo-btn" id="undoDismissBtn">Undo</button>', 'info', 8000);
         requestAnimationFrame(() => {
           const undoBtn = document.getElementById('undoDismissBtn');
           if (undoBtn) {
@@ -8736,6 +8766,10 @@ window.attachDismissHandlers = function () {
           }
         });
       }
+      };
+      // Wait for the collapse animation to complete (matches the CSS
+      // transition duration), then finalise the dismissal.
+      setTimeout(finalize, 280);
     });
   });
   // v2 #26b - clickable group headings toggle collapse / expand.
@@ -12509,9 +12543,9 @@ createChatSurface({
       'prefix entirely, prepend "CoVE - " to your rewritten title. The verb-first rule applies to the ' +
       'part AFTER the prefix, never to the prefix itself.\n\n' +
       'VERB-FIRST FOR EVERY TASK (CoVE Rule 6) - THIS IS NON-NEGOTIABLE:\n' +
-      'EVERY task description MUST begin with an imperative verb. The reader scans tasks to find what '
-      'they have to do - if the first word isn\'t an action, the task is broken. This applies even '
-      'when the source task is phrased conditionally or descriptively. Conditional and descriptive '
+      'EVERY task description MUST begin with an imperative verb. The reader scans tasks to find what ' +
+      'they have to do - if the first word isn\'t an action, the task is broken. This applies even ' +
+      'when the source task is phrased conditionally or descriptively. Conditional and descriptive ' +
       'phrasings MUST be rewritten:\n' +
       '  WRONG (conditional opener): "If the request is to cancel a class, action in SAMS"\n' +
       '  RIGHT: Task "Cancel the class in SAMS when the request is a cancellation"\n' +
@@ -12522,15 +12556,15 @@ createChatSurface({
       '  RIGHT: "Confirm all fields relevant to the request are populated"\n' +
       '  WRONG (noun opener): "Email sent to the employer with the form"\n' +
       '  RIGHT: "Email the form to the employer"\n' +
-      'Approved verb examples (around 250 verbs - if a verb is flagged as not on the list, swap to a '
-      'clearer alternative): create, update, send, email, review, verify, confirm, approve, reject, '
-      'schedule, cancel, action, allocate, assign, complete, generate, record, file, close, notify, '
-      'submit, forward, escalate, archive, retrieve, validate, check, ensure, prepare, draft, '
+      'Approved verb examples (around 250 verbs - if a verb is flagged as not on the list, swap to a ' +
+      'clearer alternative): create, update, send, email, review, verify, confirm, approve, reject, ' +
+      'schedule, cancel, action, allocate, assign, complete, generate, record, file, close, notify, ' +
+      'submit, forward, escalate, archive, retrieve, validate, check, ensure, prepare, draft, ' +
       'finalise, publish, distribute, request, receive, acknowledge, monitor, report, follow up.\n' +
-      'MANDATORY SELF-CHECK before emitting Process Map: for EVERY task in your output, read the '
-      'first word. Is it an imperative verb? If not, rewrite so it is. "If", "When", "Where", 
-      '"The", "All", "A", "An", any noun, any participle ending in -ing, any present-tense "is/are" '
-      '- ALL invalid as the first word of a task. Cycle through tasks twice if needed. Do not emit '
+      'MANDATORY SELF-CHECK before emitting Process Map: for EVERY task in your output, read the ' +
+      'first word. Is it an imperative verb? If not, rewrite so it is. "If", "When", "Where", ' +
+      '"The", "All", "A", "An", any noun, any participle ending in -ing, any present-tense "is/are" ' +
+      '- ALL invalid as the first word of a task. Cycle through tasks twice if needed. Do not emit ' +
       'the Process Map block until every task starts with a verb.\n\n' +
       'SENTENCE LENGTH REQUIREMENT (CoVE Rule 5) - THIS IS NON-NEGOTIABLE:\n' +
       '* Hard cap: NO sentence may exceed 18 words. Count words. If a sentence is 19 words or more, ' +

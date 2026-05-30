@@ -704,7 +704,7 @@ PENDING (post-pilot backlog - new features, bigger work)
 
 47. Dismissing a flag shifts the group, looks like neighbours deleted
     Source: Natalie 30 May 2026 morning
-    Status: [PENDING]
+    Status: [DONE - same day]
     When the user clicks [x] on warning 1 in a group, the whole
     group slides up to fill the gap. The animation makes it
     look like the cards BELOW also disappeared. Tested in the
@@ -722,7 +722,7 @@ PENDING (post-pilot backlog - new features, bigger work)
 
 48. Need an undo button
     Source: Natalie 30 May 2026 morning
-    Status: [PENDING]
+    Status: [DONE - same day]
     Companion to #47 (and many other destructive interactions).
     Users need a way to recover from accidental dismisses,
     deletes (v2 #27 + #42 add-task / add-note / add-activity
@@ -739,7 +739,7 @@ PENDING (post-pilot backlog - new features, bigger work)
 
 49. Review checklist link missing from Word export
     Source: Natalie 30 May 2026 morning
-    Status: [PENDING - bug, real defect]
+    Status: [DONE - same day]
     Tracker #36 (commit ba3d491) added the "Before you publish"
     callout + CoVE Process Review Checklist hyperlink to BOTH
     the PDF and Word exports. PDF renders the link correctly.
@@ -758,7 +758,7 @@ PENDING (post-pilot backlog - new features, bigger work)
 
 50. Add activity vs Export buttons competing for attention
     Source: Natalie 30 May 2026 morning
-    Status: [PENDING]
+    Status: [DONE - same day]
     Tracker #39 (commit ba3d491) promoted "+ Add activity" to a
     solid RMIT-red primary button. The Export buttons are also
     primary-red. Two primary CTAs in the same screen fight for
@@ -827,10 +827,10 @@ File 2 (15 items):  #1 = 9, #2 = 10, #3 = 6, #4 = 14, #5 = 12,
 SUMMARY
 ============================================================
 
-  Done                   30
+  Done                   34
   Needs sample input      0
   Partial / follow-up     1 (skipped - procedure-vs-process language pass)
-  Pending backlog        21
+  Pending backlog        17
   ----
   Total                  52
 
