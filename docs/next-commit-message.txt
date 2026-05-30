@@ -1,22 +1,24 @@
-Tracker #38 + #42 + #43 + #51
+Tracker #37 + #44: Parse Triggers & Inputs / Outputs sections
 
-- #38 Parser now reconstructs PROCESS link titles that wrap
-  across lines (e.g. "CoVE - SL - A&T Admissions & Enrolment").
-  Added currentLink tracking with continuation-line handling,
-  mirroring the existing currentTask / currentNote pattern.
+Rewrote the Triggers + Inputs + Outputs parsers to handle the
+2-column PDF layout where Process Owner / Expert / RACI text
+bleeds into the same stream as the Triggers table.
 
-- #42 Discreet [x] on user-added tasks / notes / activities so
-  the user can undo their own "+ Add" without confirmation.
-  Only renders on items the user added - source content is
-  untouchable.
+- Triggers: bounded to TRIGGERS..first RACI/INPUTS marker.
+  Only lines after "Starts" header. Strips column headers
+  + personal-name bleed. Frequency words (Ad Hoc, Daily...)
+  delimit rows.
+- Outputs: bounded to OUTPUTS..PERFORMANCE TARGETS. Skips
+  column headers. Uses "N/A" as a hard column boundary so
+  only the Output column survives.
+- Inputs: first 200 chars after INPUTS only. "None Noted"
+  short-circuits to "None"; otherwise stops at any column-
+  bleed marker.
 
-- #43 Reset is now context-aware. On the analysed page it
-  reverts doc edits + dismissals and stays on the page; on the
-  home view it does the original full reset.
+Verified on the 4-page Training Plans PDF:
+  trigger = "After CoVE Student admitted; Training Plan
+             extension required"
+  inputs  = "None"
+  outputs = "Training Plan is created and agreed upon"
 
-- #51 Header Reset label switches between "Start over" (home)
-  and "Revert edits" (analysed) via a MutationObserver on
-  #resultsCard. Added "Clear all" text button to the paste
-  section that wipes title + textarea only.
-
-Tracker: Done 34 -> 38, Pending 17 -> 13. node --check passes.
+Edge ca

@@ -537,7 +537,7 @@ PENDING (post-pilot backlog - new features, bigger work)
 
 37. Parse Triggers & Inputs / Outputs section from Nintex PDFs
     Source: Natalie 29 May 2026
-    Status: [PENDING - for tomorrow]
+    Status: [DONE - 30 May 2026]
     Current state: parser captures the Procedure block well but
     skips the Triggers & Inputs section. The section is always
     under the heading "Triggers & Inputs" in Nintex exports.
@@ -616,7 +616,7 @@ PENDING (post-pilot backlog - new features, bigger work)
 
 44. Last task of last activity absorbed Triggers & Inputs content
     Source: Natalie 29 May 2026
-    Status: [PENDING - for tomorrow]
+    Status: [DONE - 30 May 2026 (resolved as a side-effect of #37)]
     On one specific PDF, the last task in the last activity
     pulled in text from the "Triggers & Inputs" section. Almost
     certainly a parseProcedureBlock issue - the Procedure
@@ -827,10 +827,10 @@ File 2 (15 items):  #1 = 9, #2 = 10, #3 = 6, #4 = 14, #5 = 12,
 SUMMARY
 ============================================================
 
-  Done                   38
+  Done                   40
   Needs sample input      0
   Partial / follow-up     1 (skipped - procedure-vs-process language pass)
-  Pending backlog        13
+  Pending backlog        11
   ----
   Total                  52
 

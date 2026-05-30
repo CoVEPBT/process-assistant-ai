@@ -6500,92 +6500,169 @@ function parseNintexPdf(lines) {
     ));
   }
 
-  // TRIGGERS & INPUTS
+  // TRIGGERS & INPUTS (Tracker #37, 30 May 2026)
+  // The Triggers table is rendered in a left column on a 2-column page; the
+  // right column carries the Process Owner / Expert info and the RACI
+  // CONSULTED / STAKEHOLDERS blocks. pdftotext doesn't respect 2-column
+  // layouts, so the extracted text interleaves both columns. We have to:
+  //   1. Bound the trigger search between "TRIGGERS" and the FIRST RACI /
+  //      STAKEHOLDERS / INPUTS marker - whichever comes first - so the
+  //      bleed from the right column doesn't pollute trigger rows.
+  //   2. Only consider lines AFTER the "Starts" column header.
+  //   3. Strip names of process owners / experts (FirstName LastName
+  //      pattern) that bleed in from the right column.
+  //   4. Use frequency words as row delimiters - everything between two
+  //      frequency words is the Starts text for one trigger row.
   if (sectionRanges['Triggers & Inputs']) {
     const ti = sectionRanges['Triggers & Inputs'];
-    const trigMatch = ti.match(/TRIGGERS\s*([\s\S]*?)(?=INPUTS|$)/i);
-    if (trigMatch) {
-      const rawLines = trigMatch[1].split('\n').map(s => s.trim()).filter(Boolean);
-      // Use the presence of frequency words ("Ad Hoc", "Daily" etc.) as a marker:
-      // a line containing one signals the START of a new trigger row.
-      // Lines without those are continuations of the previous row.
+    // Find the bound of the TRIGGERS table - first occurrence of any
+    // "end of triggers block" marker.
+    const trigStart = ti.search(/\bTRIGGERS\b/i);
+    if (trigStart >= 0) {
+      const after = ti.slice(trigStart + 'TRIGGERS'.length);
+      // The first occurrence of any of these markers ends the trigger block.
+      const endRe = /\b(INPUTS|CONSULTED|STAKEHOLDERS|RESPONSIBLE|ACCOUNTABLE|INFORMED|Those whose opinions)\b/i;
+      const endMatch = after.match(endRe);
+      const trigBlock = endMatch ? after.slice(0, endMatch.index) : after;
+      // Within the trigger block, find the "Starts" column header. Only
+      // consider lines AFTER it.
+      const startsIdx = trigBlock.search(/\bStarts\b/i);
+      const usableBlock = startsIdx >= 0
+        ? trigBlock.slice(startsIdx + 'Starts'.length)
+        : trigBlock;
+      const rawLines = usableBlock.split('\n').map(s => s.trim()).filter(Boolean);
       const freqRe = /\b(Ad\s*Hoc|Once|Daily|Weekly|Fortnightly|Monthly|Quarterly|Bi-Annually|Annually|Yearly|Continuous|Real\s*Time)\b/i;
-      const stripJunk = (s) => s
-        .replace(/\b(Starts|Frequency|Volume)\b/gi, '')
+      // Lines that are pure column-header noise or junk we ignore entirely.
+      const noiseRe = /^(Starts|Frequency|Volume|Frequency\s+Volume|Process|Owner|Expert|Process\s+Owner|Process\s+Expert|N\/A|None\s*Noted)$/i;
+      // FirstName-LastName pattern (e.g. "Quennie Sto Domingo", "Deborah Hardie")
+      // that bleeds in from the Process Owner / Expert right column.
+      const nameRe = /^[A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3}$/;
+      const stripFreq = (s) => s
         .replace(/\b(Ad\s*Hoc|Once|Daily|Weekly|Fortnightly|Monthly|Quarterly|Bi-Annually|Annually|Yearly|Continuous|Real\s*Time)\b/gi, '')
         .replace(/\bn\/a\b/gi, '')
         .replace(/\bN\/A\b/g, '')
-        .replace(/\bNone\s*Noted\b/gi, '')
-        .replace(/^\s*[\d,]+\s*$/, '')
         .replace(/\s+/g, ' ')
         .trim();
       const triggerRows = [];
       let current = '';
+      const pushCurrent = () => {
+        const t = current.trim();
+        if (t.length > 5) triggerRows.push(t);
+        current = '';
+      };
       rawLines.forEach(line => {
-        // Skip the table header row outright
-        if (/^Starts\s+Frequency\s+Volume$/i.test(line)) return;
-        const isNewRow = freqRe.test(line);
-        const cleanedLine = stripJunk(line);
-        if (isNewRow) {
-          // Push previous, start new
-          if (current) triggerRows.push(current);
-          current = cleanedLine;
+        if (noiseRe.test(line)) return;
+        if (nameRe.test(line)) return;            // skip "Deborah Hardie" etc.
+        if (/^\d+(?:[.,]\d+)?$/.test(line)) return;  // pure number
+        const isFreq = freqRe.test(line);
+        if (isFreq) {
+          // Frequency word(s) only -> ends the current row. Flush and reset.
+          pushCurrent();
+          return;
+        }
+        const cleaned = stripFreq(line);
+        if (!cleaned) return;
+        if (current && /-$/.test(current)) {
+          // Hyphenated wrap: re-join
+          current = current.replace(/-$/, '') + cleaned;
+        } else if (current) {
+          current += ' ' + cleaned;
         } else {
-          // Continuation - re-join hyphenated wraps if previous ended with -
-          if (/-$/.test(current)) current = current.replace(/-$/, '') + cleanedLine;
-          else if (current) current += ' ' + cleanedLine;
-          else current = cleanedLine;
+          current = cleaned;
         }
       });
-      if (current) triggerRows.push(current);
-      // Final clean-up: trim each, drop too-short fragments
-      model.trigger = triggerRows
-        .map(s => s.replace(/\s+/g, ' ').trim())
-        .filter(s => s.length > 5)
-        .join('; ');
+      pushCurrent();
+      model.trigger = triggerRows.join('; ');
     }
-    const inpMatch = ti.match(/INPUTS\s*([\s\S]*?)$/i);
-    if (inpMatch) {
-      const inputText = inpMatch[1].replace(/None Noted/i, '').trim();
-      model.inputs = inputText || 'None';
+    // INPUTS: bound very tightly to avoid RACI / Process Dependencies
+    // table bleed. If "None Noted" appears anywhere in the first few
+    // lines, treat inputs as empty. Otherwise take only the first short
+    // run of lines before any column-bleed markers fire.
+    const inpStart = ti.search(/\bINPUTS\b/i);
+    if (inpStart >= 0) {
+      const inpBlock = ti.slice(inpStart + 'INPUTS'.length);
+      // Look at the first ~200 chars only - the rest is reliably bleed.
+      const head = inpBlock.slice(0, 200);
+      if (/None\s*Noted/i.test(head)) {
+        model.inputs = 'None';
+      } else {
+        // Stop at any of these column-bleed indicators or section markers.
+        const endRe = /\b(STAKEHOLDERS|CONSULTED|RESPONSIBLE|ACCOUNTABLE|INFORMED|OUTPUTS|PERFORMANCE|Process\s+Group|Owner|Page\s+\d+|RMIT\s*>)\b/i;
+        const m = head.match(endRe);
+        const trimmed = (m ? head.slice(0, m.index) : head)
+          .replace(/\s+/g, ' ')
+          .trim();
+        model.inputs = trimmed || 'None';
+      }
     }
   }
 
-  // OUTPUTS - table with columns Output | To Process | How Used.
-  // Take the 'Output' column and skip 'How Used' descriptive jumble.
+  // OUTPUTS (Tracker #37, 30 May 2026)
+  // Table layout: Output | To Process | How Used. Only the Output column
+  // is meaningful for our purposes - To Process is usually "N/A" and
+  // How Used is descriptive jumble we don't want polluting model.outputs.
+  // The text-extracted layout puts each row vertically:
+  //   Output column text (may span multiple lines)
+  //   (blank)
+  //   To Process column value     <- often "N/A"
+  //   (blank)
+  //   How Used column value       <- often "N/A" or descriptive text
+  //   (blank)
+  //   Output column row 2 ...
+  // We scope to between "Output" header and "PERFORMANCE TARGETS" /
+  // next section, then use "N/A" as a hard row-end marker (the first
+  // N/A after some text means we've crossed into the To Process column;
+  // the next non-N/A non-junk line after a streak of N/A is the next
+  // row's Output).
   if (sectionRanges['Outputs & Targets']) {
     const o = sectionRanges['Outputs & Targets'];
-    const outMatch = o.match(/OUTPUTS\s*([\s\S]*?)(?=PERFORMANCE TARGETS|$)/i);
-    if (outMatch) {
-      const rawLines = outMatch[1].split('\n').map(s => s.trim());
-      const skipPatterns = [
-        /^Output$/i, /^To Process$/i, /^How Used$/i,
-        /^N\/A$/i, /^None Noted$/i,
-        /^Informatio?n?\s*is?\s*$/i, /^publi(shed)?\s*$/i,
-        /^accessible\s*$/i, /^and\s*$/i, /^on\s*$/i, /^the\s*$/i,
-        /^[a-z]\s+is\s*$/i,  // fragment leftovers
-        /^[\.,;]+$/  // stray punctuation
-      ];
-      const outputLines = rawLines.filter(l =>
-        l && !skipPatterns.some(p => p.test(l))
-      );
-      // Join hyphenated wraps
-      let combined = '';
-      outputLines.forEach(l => {
-        if (combined && /-$/.test(combined)) combined = combined.replace(/-$/,'') + l;
-        else if (combined) combined += ' ' + l;
-        else combined = l;
+    const outIdx = o.search(/\bOUTPUTS\b/i);
+    if (outIdx >= 0) {
+      const after = o.slice(outIdx + 'OUTPUTS'.length);
+      const endMatch = after.match(/\b(PERFORMANCE\s+TARGETS|VARIANCE|RACI|SYSTEMS|OFI|TIMEFRAMES)\b/i);
+      const block = endMatch ? after.slice(0, endMatch.index) : after;
+      // Skip the column headers (Output / To Process / How Used) at the start.
+      const headerIdx = block.search(/\bOutput\b/);
+      const usable = headerIdx >= 0
+        ? block.slice(headerIdx + 'Output'.length)
+        : block;
+      const rawLines = usable.split('\n').map(s => s.trim());
+      const headerNoiseRe = /^(Output|To\s+Process|How\s+Used)$/i;
+      const naRe = /^(N\/A|n\/a|None\s*Noted)$/i;
+      const outputRows = [];
+      let current = '';
+      let sawNa = false;
+      const pushCurrent = () => {
+        const t = current.replace(/\s+/g, ' ').trim();
+        if (t.length > 4) outputRows.push(t);
+        current = '';
+        sawNa = false;
+      };
+      rawLines.forEach(line => {
+        if (!line) return;
+        if (headerNoiseRe.test(line)) return;
+        if (naRe.test(line)) {
+          // First N/A after some Output text means we've crossed into the
+          // To Process column. Flush the current row.
+          if (current) pushCurrent();
+          sawNa = true;
+          return;
+        }
+        if (sawNa) {
+          // After N/A streak, the NEXT non-N/A line starts the next row's
+          // Output column. Reset the sawNa state.
+          sawNa = false;
+        }
+        if (current && /-$/.test(current)) {
+          current = current.replace(/-$/, '') + line;
+        } else if (current) {
+          current += ' ' + line;
+        } else {
+          current = line;
+        }
       });
-      combined = combined.replace(/\s+/g, ' ').trim();
-      // Heuristic split on capital-after-lowercase to separate distinct outputs
-      const split = combined.match(/[A-Z][^A-Z]*?(?=\s+[A-Z][a-z])|.+$/g);
-      if (split && split.length > 1) {
-        // Filter out short/junk fragments
-        const cleaned = split.map(s => s.trim()).filter(s => s.length > 4);
-        model.outputs = cleaned.length ? cleaned.join('; ') : combined;
-      } else {
-        model.outputs = combined;
-      }
+      pushCurrent();
+      model.outputs = outputRows.join('; ');
     }
   }
 
