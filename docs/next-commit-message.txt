@@ -1,22 +1,21 @@
-Tracker #35: Respect for Indigenous cultures in prompts
+Tracker #35: Respect for Indigenous cultures in prompts (strict, no ad-libbing)
 
 Added RMIT's Respect for Australian Indigenous Cultures
-guidance into both prompts so the AI considers it when
-responding and rewriting process content.
+guidance into both prompts, with a strict no-ad-libbing rule
+on top so the AI doesn't generate sensitive content from its
+own training data.
 
-Server SYSTEM_PROMPT
-- Full new "RESPECT FOR INDIGENOUS CULTURES" section right
-  after LANGUAGE. Acknowledges Woi wurrung / Boon wurrung
-  unceded lands + Traditional Custodians of lands and waters
-  across Australia.
-- Use "Aboriginal and Torres Strait Islander peoples" in
-  full (plural). Don't abbreviate.
-- RMIT's framing is "Responsible Practice" - don't introduce
-  "reconciliation" into new content.
-- Capitalise Country, Elders, Ancestors, Traditional
-  Custodians, Indigenous, Aboriginal, Torres Strait Islander.
-- Don't generalise or stereotype - each community/nation/
-  language group is distinct.
-- ICIP rights recognised - don't invent details about
-  Indigenous content.
-- Ngarara Willim Centre contact
+THE STRICT RULE
+The AI may quote / paraphrase Indigenous content ONLY from:
+  (a) the source process the user uploaded or pasted
+  (b) the explicit content embedded in the prompt (the
+      Womin djeka acknowledgement, the "Ngarara"/"Willim"
+      name etymology, "Responsible Practice" framing,
+      capitalisation rules, Ngarara Willim Centre contact
+      details, named RMIT Indigenous services)
+  (c) verbatim quotes from the two authoritative RMIT pages:
+      rmit.edu.au/about/our-values/respect-for-australian-
+        indigenous-cultures
+      rmit.edu.au/students/support-services/indigenous
+
+No invented examples, no synthesised cultural 
