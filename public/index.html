@@ -12374,6 +12374,21 @@ function createChatSurface(cfg) {
     // After the message is in the DOM, see if a Nintex download applies
     if (role === 'assistant' && !isError) {
       maybeAttachNintexDownload(el, content);
+      // Tracker #24 (30 May 2026): if the assistant promised a download
+      // button but didn't emit the marker + three code blocks, the user
+      // sees the promise but no button. Detect that mismatch and append
+      // a small italic note so the user knows what to ask for next.
+      const promisedDownload = /\b(click|tap|hit)\b[^.]{0,40}\bdownload\b/i.test(content)
+        || /\bdownload\b[^.]{0,40}\b(button|link)\b/i.test(content)
+        || /\b(\.txt|nintex[- ]ready)\b[^.]{0,40}\bbelow\b/i.test(content);
+      const deliveredDownload = el.querySelector('.ai-nintex-export');
+      if (promisedDownload && !deliveredDownload) {
+        const note = document.createElement('div');
+        note.className = 'ai-nintex-missing-note';
+        note.style.cssText = 'margin-top: 8px; padding: 8px 12px; background: #FFF7ED; border-left: 3px solid #F59E0B; font-size: 13px; color: #92400E; border-radius: 4px;';
+        note.innerHTML = '<strong>No download yet.</strong> The assistant mentioned a download but didn\'t package one. Reply with <em>"export as Nintex .txt"</em> and the file will be generated.';
+        el.appendChild(note);
+      }
     }
     messagesEl.scrollTop = messagesEl.scrollHeight;
   }

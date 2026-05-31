@@ -1,21 +1,22 @@
-Tracker #35: Respect for Indigenous cultures in prompts (strict, no ad-libbing)
+Tracker #35 + #24 + Indigenous strict-no-ad-libbing
 
-Added RMIT's Respect for Australian Indigenous Cultures
-guidance into both prompts, with a strict no-ad-libbing rule
-on top so the AI doesn't generate sensitive content from its
-own training data.
+#35 (continued) - Indigenous content strict-source rule + Centre contact
+========================================================================
 
-THE STRICT RULE
-The AI may quote / paraphrase Indigenous content ONLY from:
+Indigenous-related content is sensitive. Both prompts now
+enforce that the AI may quote / paraphrase Indigenous content
+ONLY from:
   (a) the source process the user uploaded or pasted
-  (b) the explicit content embedded in the prompt (the
-      Womin djeka acknowledgement, the "Ngarara"/"Willim"
-      name etymology, "Responsible Practice" framing,
-      capitalisation rules, Ngarara Willim Centre contact
-      details, named RMIT Indigenous services)
-  (c) verbatim quotes from the two authoritative RMIT pages:
-      rmit.edu.au/about/our-values/respect-for-australian-
-        indigenous-cultures
-      rmit.edu.au/students/support-services/indigenous
+  (b) the embedded prompt content (Womin djeka acknowledgement,
+      Ngarara/Willim etymology, "Responsible Practice" framing,
+      capitalisation rules, Centre contact details, named RMIT
+      Indigenous services)
+  (c) verbatim quotes from the two authoritative RMIT pages
 
-No invented examples, no synthesised cultural 
+No invented examples, no synthesised cultural protocols, no
+advice drawn from general training knowledge. If the user
+asks something not covered, the AI refuses and redirects to
+the Ngarara Willim Centre.
+
+In auto-apply rewrites: never paraphrase Indigenous-related
+s

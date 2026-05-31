@@ -255,7 +255,7 @@ PENDING (post-pilot backlog - new features, bigger work)
 
 24. Chat says "click the download button below" but no button visible
     Source: file 1 #9
-    Status: [PENDING]
+    Status: [DONE - 31 May 2026]
     Notes: the AI's response promises an action UI that doesn't
     exist. Either teach the AI not to mention non-existent
     buttons, OR build the affordance (chat-driven downloads).
@@ -799,11 +799,11 @@ File 2 (15 items):  #1 = 9, #2 = 10, #3 = 6, #4 = 14, #5 = 12,
 SUMMARY
 ============================================================
 
-  Done                   41
+  Done                   42
   Withdrawn               1
   Needs sample input      0
   Partial / follow-up     1 (skipped - procedure-vs-process language pass)
-  Pending backlog         9
+  Pending backlog         8
   ----
   Total                  52
 
