@@ -758,7 +758,7 @@ PENDING (post-pilot backlog - new features, bigger work)
 
 52. Re-run auto-apply after user edits
     Source: Natalie 30 May 2026 morning (workflow question)
-    Status: [PENDING - design question first]
+    Status: [DONE - 31 May 2026]
     Today's flow: parse -> analyse -> auto-apply -> user edits
     in doc preview -> Save changes -> export. After Save
     changes, the user might want to re-run auto-apply on the
@@ -799,11 +799,11 @@ File 2 (15 items):  #1 = 9, #2 = 10, #3 = 6, #4 = 14, #5 = 12,
 SUMMARY
 ============================================================
 
-  Done                   42
+  Done                   43
   Withdrawn               1
   Needs sample input      0
   Partial / follow-up     1 (skipped - procedure-vs-process language pass)
-  Pending backlog         8
+  Pending backlog         7
   ----
   Total                  52
 

@@ -1,22 +1,22 @@
-Tracker #35 + #24 + Indigenous strict-no-ad-libbing
+Tracker #52: Re-run auto-apply after user edits
 
-#35 (continued) - Indigenous content strict-source rule + Centre contact
-========================================================================
+Lets users re-run auto-apply on top of their edits to the doc
+preview, without losing the ability to "Restore original"
+back to the very first parsed state.
 
-Indigenous-related content is sensitive. Both prompts now
-enforce that the AI may quote / paraphrase Indigenous content
-ONLY from:
-  (a) the source process the user uploaded or pasted
-  (b) the embedded prompt content (Womin djeka acknowledgement,
-      Ngarara/Willim etymology, "Responsible Practice" framing,
-      capitalisation rules, Centre contact details, named RMIT
-      Indigenous services)
-  (c) verbatim quotes from the two authoritative RMIT pages
+What changes for the user
+- After the first auto-apply completes, the top-tab "Re-run
+  auto-apply" button stays visible (was hidden permanently
+  before). They can edit the doc preview - add tasks/notes,
+  fix wording, etc. - and click Re-run auto-apply to apply
+  the AI polishing pass again on the current content.
+- "Restore original" ALWAYS goes back to the very first
+  parsed state. Never to a previous auto-apply baseline.
+  The safety net is anchored to ground truth, not to the
+  last AI output.
 
-No invented examples, no synthesised cultural protocols, no
-advice drawn from general training knowledge. If the user
-asks something not covered, the AI refuses and redirects to
-the Ngarara Willim Centre.
-
-In auto-apply rewrites: never paraphrase Indigenous-related
-s
+What changes in code
+1. startAutoApply only captures originalSnapshot on the FIRST
+   run. Re-runs leave it pinned to the source parse so
+   Restore original always works correctly. Console logs the
+   re-run path fo

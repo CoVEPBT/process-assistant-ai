@@ -5768,6 +5768,7 @@ document.getElementById('headerResetBtn').addEventListener('click', () => {
   if (dp) dp.innerHTML = '';
   originalDocHtml = '';
   currentModel = null; currentIssues = []; currentRecommendation = null; currentMermaid = '';
+  if (typeof window.clearAutoApplySnapshots === 'function') window.clearAutoApplySnapshots();
   // v2 #23 + #26b: clear per-session dismissals + collapsed-group state on
   // Reset so the next analysis starts fresh.
   if (dismissedFlagKeys) dismissedFlagKeys.clear();
@@ -6018,6 +6019,10 @@ async function structureNotesWithAI(rough, titleHint) {
 })();
 
 document.getElementById('analyseBtn').addEventListener('click', async () => {
+  // Tracker #52: fresh analyse - clear any previous auto-apply snapshots
+  // so this run's originalSnapshot will be a fresh capture of the new
+  // parsed model, not a leftover from the previous analysis.
+  if (typeof window.clearAutoApplySnapshots === 'function') window.clearAutoApplySnapshots();
   // New simplified flow: choose source by what's currently visible/loaded
   // Form view active? → form. File uploaded? → file. Otherwise → paste textarea.
   const formShown = !document.getElementById('inputForm').hidden;
@@ -12625,6 +12630,17 @@ createChatSurface({
   let updatedSnapshot = null;
   let viewMode = 'updated';      // 'updated' or 'original'
 
+  // Tracker #52 (31 May 2026): expose a reset hook so the outer Reset
+  // and Analyse handlers can clear these IIFE-local snapshots. Without
+  // this, a fresh analyse would inherit the previous run's
+  // originalSnapshot, and "Restore original" would jump back to the
+  // wrong document.
+  window.clearAutoApplySnapshots = function () {
+    originalSnapshot = null;
+    updatedSnapshot = null;
+    viewMode = 'updated';
+  };
+
   // Parse three triple-backtick fenced blocks from a markdown reply.
   function parseAiThreeBlocks(reply) {
     const re = /```[a-zA-Z]*\n([\s\S]*?)```/g;
@@ -12738,8 +12754,17 @@ createChatSurface({
     if (pathStatusText) pathStatusText.innerHTML = '<strong>Auto-apply</strong> is running.';
     if (pathStatus) pathStatus.classList.add('hidden');
 
-    // Snapshot the original state for the toggle
-    originalSnapshot = snapshotCurrentState();
+    // Tracker #52 (31 May 2026): only snapshot the original state on the
+    // FIRST run. Subsequent re-runs should NOT overwrite originalSnapshot -
+    // "Restore original" must always go back to the parsed state, not to
+    // the most recent auto-apply baseline. The user can still re-run
+    // auto-apply on top of their edits as many times as they like; we
+    // just don't move the safety net.
+    if (!originalSnapshot) {
+      originalSnapshot = snapshotCurrentState();
+    } else {
+      console.log('[auto-apply] re-run detected - keeping originalSnapshot anchored to first-parse state');
+    }
 
     // Pull the current doc text + issues to send as context
     let documentText = '';
@@ -13624,13 +13649,20 @@ createChatSurface({
       if (ps) ps.classList.remove('hidden');
       if (typeof window.showSummaryChips === 'function') window.showSummaryChips();
 
-      // Auto-apply has just run - hide the now-stale UI that lets users start
-      // auto-apply again: the two top choice cards (renderResults re-shows them
-      // by default) and the sidebar "Auto apply all changes" escape hatch.
+      // Tracker #52 (31 May 2026): leave the top-tab auto-apply button
+      // visible after the first run, relabelled to "Re-run auto-apply",
+      // so the user can re-apply on top of any subsequent edits. The
+      // choice-card row (Auto-apply vs Review yourself fork) is still
+      // hidden because that fork is a once-per-analysis decision.
       const choiceRowPost = document.getElementById('choiceRow');
       if (choiceRowPost) choiceRowPost.classList.add('hidden');
       const topAutoApplyPost = document.getElementById('topTabAutoApply');
-      if (topAutoApplyPost) topAutoApplyPost.classList.add('hidden');
+      if (topAutoApplyPost) {
+        topAutoApplyPost.classList.remove('hidden');
+        const label = topAutoApplyPost.querySelector('span:not(.ai-badge)');
+        if (label) label.textContent = 'Re-run auto-apply';
+        topAutoApplyPost.setAttribute('title', 'Run auto-apply again on the current (possibly edited) content. Restore original still returns to the first parsed state.');
+      }
 
       // Signal the user that this isn't just the analysed document anymore -
       // the AI has rewritten it. Renamed to "Polished document" for clarity.
