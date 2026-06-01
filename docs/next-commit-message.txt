@@ -1,22 +1,93 @@
-Tracker #25 + #28: home-page consent + restore inline flags toggle
+Polish pass: inline NOTE/handover anchoring, card layout, title rule
 
-Bundled two changes.
+Bundled 1 Jun 2026 pilot iteration into one commit. Covers everything
+on top of 1bc2afe (Tracker #25 + #28).
 
-#25: Auto-apply by default + consent at home-page Analyse
-======================================================
+1. Inline view: anchor more flag types to the right place
+========================================================
+- Handover flags (handover-N) now render between the two activities
+  they sit between, as a dedicated amber strip with click-to-expand
+  suggestion body, instead of getting buried in the process-wide
+  banner at the top. resolveJumpTarget returns null for handover IDs
+  (skips default routing) and applyInlineFlags has a special-case
+  that parses the location and inserts the strip via
+  nextAct.parentNode.insertBefore.
+- NOTE flags (note-question, note-empty) now anchor to the specific
+  NOTE element instead of getting lumped into the process-wide
+  banner. Three changes wire this:
+    - Rules engine: note flag location now includes "NOTE N" so the
+      target can be parsed (was: just the activity loc string).
+    - resolveJumpTarget: matches the NOTE pattern before the
+      activity pattern and returns doc-note-{actNum}-{ni}. The
+      element IDs already existed at the note render site.
+    - pillLabel: NOTE locations now render as "NOTE 5.0.2" rather
+      than collapsing to "Activity 5.0".
 
-After Analyse, the AI-content consent is now captured once at
-Analyse-click time, and auto-apply runs automatically on
-completion.
+2. Quality flag card layout + content
+=====================================
+- "click for detail" pill (long-task helper): text was clipping at
+  the top + going invisible on hover. Now padding 3px 10px 4px,
+  vertical-align middle, line-height 1.6, true pill border-radius
+  999px; hover keeps white background and thickens the border + adds
+  a soft shadow so contrast can't collide.
+- buildLongTaskSplitSuggestion helper for >30-word tasks: pulls the
+  first sentence as the action, scans the rest for a named
+  guide/QRG/SOP/manual/handbook/procedure/policy via a small regex,
+  and emits a concrete "Consider splitting: keep <action>, move
+  detail to a NOTE referencing <guide>" suggestion. Falls back to
+  trim-the-first-12-words advice for run-on sentences with no guide
+  reference.
+- Card body de-duplication: stripRedundantPrefix() now removes the
+  activity/task/title prefix from the message when the location
+  pill already shows it. "Activity 5.0 title is 8 words" -> "Title
+  is 8 words"; "Task 5.0a is 38 words" -> "Is 38 words". Pill and
+  message no longer say the same thing twice.
+- row1 order swap: pill on left (where), severity badge on right
+  (how serious), dismiss at end. Inverted from previous order to
+  match expected reading flow.
+- Quality Flags sidebar header alignment: removed orphan
+  .flags-view-toggle / .flags-view-btn CSS that conflicted with the
+  current .flags-view-toggle-* styles, dropped margin-top:6px
+  offsets that pushed elements below the h4 baseline, added
+  white-space:nowrap so "In doc" doesn't break onto two lines,
+  added flex-wrap to .doc-sidebar-header so the toggle group drops
+  cleanly below the title group on narrow widths.
 
-- _doAnalyse() extracted from the click handler and exposed on
-  window so the modal Proceed handler can call it.
-- analyseBtn click gates on sessionAiConsent. First click opens
-  the modal with _runAnalyseAfterConsent = true; later clicks
-  in the same session bypass the modal.
-- Modal Proceed branch: sessionAiConsent = true, run _doAnalyse,
-  post-analyse hook auto-fires window.runAutoApplyDirect().
-- Modal Cancel branch (relabelled "Review original first"):
-  still runs _doAnalyse but skips auto-apply, so the user
-  can review themselves. Manual auto-apply later re-shows the
-  modal.
+3. Inline-mode UX cleanup
+=========================
+- "Tip: click a card to jump..." now hides when toggle is In doc -
+  the cards aren't visible there so the tip becomes incorrect; in
+  Sidebar mode the tip comes back.
+- Severity-upgrade-only logic in applyInlineFlags: when multiple
+  flags target the same element, keep only the highest severity
+  class (error > warning > info). Previously CSS source order
+  silently picked the last-applied class, which downgraded
+  warning-amber highlights to info-blue when an info-level flag
+  happened to share a target (e.g. act-verb warning + act-length
+  info both highlighting an activity title).
+
+4. Auto-apply: activity heading length, harder enforcement
+==========================================================
+- Removed the "Hard cap: 8 words" contradiction that gave the model
+  wiggle room. Now reads strict 2-7 words, "NO EXCEPTIONS", with
+  "8 words = FAIL. 9 words = FAIL." plus the explicit framing
+  "Do not skip trimming because you respect the source - the source
+  IS the thing you are correcting." Closes the most common refusal
+  mode where the model deferred to source wording.
+- Added a 5th self-check step: emitting a heading >7 words is task
+  failure, and after two retry cycles the activity must be split
+  rather than emitted long.
+
+5. Rules engine: severity rebalance + plumbing
+==============================================
+- act-length (activity title is N words) upgraded from info to
+  warning so all activity-title flags read as the same family of
+  issue and render amber consistently.
+- Long-task info suggestion (>30 words) now generates an actionable
+  prompt via buildLongTaskSplitSuggestion rather than a generic
+  "move it into an attached guide" line.
+
+Tracker: items 53-59 (see docs/PAT-pilot-feedback-tracker.txt).
+
+Files: public/index.html only.
+No server changes.

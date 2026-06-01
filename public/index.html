@@ -556,24 +556,7 @@
   #issuesOut h3:first-child { margin-top: 0; }
 
   /* Sidebar / Inline view toggle */
-  .flags-view-toggle {
-    display: inline-flex; background: #FFFFFF;
-    border: 1px solid var(--rmit-grey-mid); border-radius: 999px;
-    padding: 2px; margin: 0 8px;
-  }
-  .flags-view-btn {
-    background: transparent; border: none;
-    padding: 4px 12px; font: inherit; font-size: 12px; font-weight: 500;
-    color: #475569; cursor: pointer; border-radius: 999px;
-    transition: all 0.15s ease;
-  }
-  .flags-view-btn:hover { color: var(--rmit-text); }
-  .flags-view-btn.is-active {
-    background: var(--rmit-red); color: #FFFFFF;
-  }
-  .flags-view-btn:focus-visible {
-    outline: 2px solid var(--rmit-red); outline-offset: 2px;
-  }
+  /* (Older .flags-view-toggle / .flags-view-btn orphan rules removed for tracker #216 - the live markup uses .flags-view-toggle-* below.) */
 
   /* Inline flag markers - sit immediately after the flagged element */
   /* Tracker (31 May 2026): handover-flag strip rendered between */
@@ -665,7 +648,7 @@
 
   /* Tracker #28 follow-up (31 May 2026): wrapper with explicit label */
   .flags-view-toggle-wrap {
-    display: flex; align-items: center; gap: 8px; margin-top: 6px;
+    display: flex; align-items: center; gap: 8px;
     flex-wrap: wrap;
   }
   .flags-view-toggle-label {
@@ -674,7 +657,7 @@
   /* Tracker #28 (31 May 2026): sidebar / inline toggle for quality flag */
   /* viewing. Sits in the sidebar header, two segmented buttons. */
   .flags-view-toggle {
-    display: inline-flex; gap: 2px; margin-top: 6px;
+    display: inline-flex; gap: 2px;
     background: #F1F5F9; border-radius: 6px; padding: 2px;
   }
   .flags-view-toggle-btn {
@@ -682,6 +665,7 @@
     background: transparent; border: none;
     padding: 4px 12px; font-size: 12.5px; font-weight: 600;
     color: #64748B; cursor: pointer; border-radius: 4px;
+    white-space: nowrap;
     transition: background 0.12s ease, color 0.12s ease;
   }
   .flags-view-toggle-btn:hover { color: var(--rmit-navy, #0A2240); }
@@ -1899,8 +1883,9 @@
   .doc-with-sidebar .doc-sidebar[hidden] { display: none; }
   .doc-sidebar-header {
     display: flex; align-items: center; justify-content: space-between;
-    gap: 10px; margin: 0 0 8px;
+    gap: 10px; row-gap: 8px; margin: 0 0 8px;
     padding-bottom: 10px; border-bottom: 1px solid #C7DBF2;
+    flex-wrap: wrap;
   }
   .doc-sidebar-header h4 {
     margin: 0; font-size: 14px; font-weight: 700;
@@ -8358,7 +8343,11 @@ function runRulesEngine(model) {
     // Activity title length 2–7 words (RMIT)
     const wc = a.title.split(/\s+/).filter(Boolean).length;
     if (a.title && (wc < 2 || wc > 7)) {
-      push({ id:`act-length-${idx}`, source:'RMIT', severity:'info',
+      // Tracker (1 Jun 2026): promoted from info to warning. The 2-7 word
+      // cap is one of RMIT's stronger conventions and pilots wanted titles
+      // longer than this to read as the same kind of issue as a verb-first
+      // miss, not a softer "suggestion".
+      push({ id:`act-length-${idx}`, source:'RMIT', severity:'warning',
         message:`Activity ${a.number} title is ${wc} word${wc===1?'':'s'} (RMIT recommends 2–7).`,
         location: loc });
     }
@@ -8459,16 +8448,20 @@ function runRulesEngine(model) {
 
     // NOTES: must be Question + Answer (RMIT, Nintex 1, 6)
     a.notes.forEach((n, ni) => {
+      // Tracker (1 Jun 2026): location now includes "NOTE N" so the inline
+      // view can anchor the highlight to the specific NOTE element rather
+      // than dumping all NOTE flags in the process-wide banner.
+      const noteLoc = `${loc} NOTE ${ni + 1}`;
       if (!/\?\s*$/.test(n.title.trim())) {
         push({ id:`note-question-${idx}-${ni}`, source:'RMIT', severity:'info', informational: true,
           message:`Note "${truncate(n.title,60)}" reads like a statement, not a question.`,
-          location: loc,
+          location: noteLoc,
           suggestion:'NOTE titles must always be a question. The reader can then skip the body if they know the answer.' });
       }
       if (!n.body || n.body.length < 10) {
         push({ id:`note-empty-${idx}-${ni}`, source:'RMIT', severity:'info',
           message:`Note "${truncate(n.title,60)}" has no answer body.`,
-          location: loc,
+          location: noteLoc,
           suggestion:'Provide the answer to the question; otherwise consider removing the note.' });
       }
     });
@@ -9599,6 +9592,33 @@ async function renderResults() {
   // Issues
   const grouped = { error: [], warning: [], info: [] };
   currentIssues.forEach((i, idx) => { i._idx = idx; grouped[i.severity]?.push(i); });
+  // Tracker #212 (1 Jun 2026): when the location pill on a card already
+  // shows e.g. "Activity 5.0" or "Task 5.0a" or "Title", don't repeat the
+  // same prefix in the body. Strip it and recapitalise the first letter so
+  // "Activity 5.0 title is 8 words" reads as "Title is 8 words".
+  function stripRedundantPrefix(message, pillLabel) {
+    if (!message || !pillLabel) return message;
+    let stripPattern = null;
+    if (pillLabel === 'Title') {
+      stripPattern = /^Process\s+title\s+/i;
+    } else if (
+      pillLabel === 'Owner' || pillLabel === 'Expert' ||
+      pillLabel === 'Trigger' || pillLabel === 'Inputs' ||
+      pillLabel === 'Outputs' || pillLabel === 'Objective' ||
+      pillLabel === 'Background'
+    ) {
+      stripPattern = new RegExp('^' + pillLabel + 's?\\s+', 'i');
+    } else if (/^Activity\s+\d+\.\d+$/.test(pillLabel)) {
+      stripPattern = new RegExp('^' + pillLabel.replace('.', '\\.') + '\\s+', 'i');
+    } else if (/^Task\s+\d+\.\d+[a-z]$/.test(pillLabel)) {
+      stripPattern = new RegExp('^' + pillLabel.replace('.', '\\.') + '\\s+', 'i');
+    }
+    if (!stripPattern) return message;
+    const stripped = message.replace(stripPattern, '');
+    if (stripped === message) return message;
+    return stripped.charAt(0).toUpperCase() + stripped.slice(1);
+  }
+
   const renderIssue = (i, displayNumber) => {
     // Figure out the best place in the document to jump to. We use both the
     // location string and the issue id, since most "field is missing" errors
@@ -9624,6 +9644,9 @@ async function renderResults() {
       if (/^outputs?/i.test(loc)) return 'Outputs';
       if (/^objective/i.test(loc)) return 'Objective';
       if (/^background/i.test(loc)) return 'Background';
+      // Tracker (1 Jun 2026): NOTE pill - shows e.g. "NOTE 5.0.1"
+      const noteMatchPill = loc.match(/(\d+)\.(\d+).*?NOTE\s+(\d+)/i);
+      if (noteMatchPill) return 'NOTE ' + noteMatchPill[1] + '.' + noteMatchPill[2] + '.' + noteMatchPill[3];
       const taskMatch = loc.match(/(\d+)\.(\d+)\s*([a-z])/i);
       if (taskMatch) return 'Task ' + taskMatch[1] + '.' + taskMatch[2] + taskMatch[3].toLowerCase();
       const actMatch = loc.match(/(\d+)\.(\d+)/);
@@ -9651,14 +9674,15 @@ async function renderResults() {
     return '<div class="' + cls + '"' + tabAttr + ' data-flag-number="' + (displayNumber || '') +
       '" data-flag-key="' + escapeHtml(fkey) + '">' +
       '<div class="row1">' +
+        // Tracker (1 Jun 2026): pill first (where), severity second (how serious).
+        affordance +
         '<div class="issue-meta">' +
           numberBadge +
           '<span class="severity">' + (SEVERITY_ICONS[i.severity] || '') + ' ' + i.severity + '</span>' +
         '</div>' +
-        affordance +
         dismissBtn +
       '</div>' +
-      '<div class="message">' + i.message + '</div>' +
+      '<div class="message">' + stripRedundantPrefix(i.message, pillLabel) + '</div>' +
       (i.suggestion ? '<div class="suggestion"><strong>Try:</strong> ' + i.suggestion + '</div>' : '') +
       '</div>';
   };
@@ -9722,6 +9746,17 @@ async function renderResults() {
     // between-activities render in applyInlineFlags; don't anchor
     // them to any single element here.
     if (/^handover-/.test(id || '')) return null;
+
+    // Tracker (1 Jun 2026): NOTE flags carry a location like
+    // "Activity 5.0 ... NOTE 1" - route to the specific NOTE element
+    // (doc-note-{actNum}-{ni}, 0-indexed) so the inline view highlights
+    // the actual note instead of pushing all of them into the
+    // process-wide banner.
+    const noteMatch = location.match(/(\d+)\.(\d+).*?NOTE\s+(\d+)/i);
+    if (noteMatch) {
+      const ni = Math.max(0, parseInt(noteMatch[3], 10) - 1);
+      return 'doc-note-' + noteMatch[1] + '-' + noteMatch[2] + '-' + ni;
+    }
 
     // Activity X.Y - route by flag.id so each flag highlights only the
     // element it actually concerns (title row, role row, or nothing -
@@ -13419,8 +13454,11 @@ createChatSurface({
       '      b. Send email to HR Business Partner.\n' +
       '    (Subsequent activities renumber: source 4.0 -> 5.0, source 5.0 -> 6.0)\n\n' +
       'ACTIVITY HEADING LENGTH - THIS IS NON-NEGOTIABLE:\n' +
-      'Each activity heading (the title on the line with [Role Name]) MUST be 2-7 words. Target: 3-5 words. Hard cap: 8 words. ' +
-      'If a heading is longer than 7 words, the activity is doing too much - tighten the wording or split. Headings are verb-first imperative phrases.\n' +
+      'Each activity heading (the title on the line with [Role Name]) MUST be 2-7 words. NO EXCEPTIONS. ' +
+      'There is no soft cap, no hard cap, no allowance for "important" extra words. 8 words = FAIL. 9 words = FAIL. ' +
+      'Headings are verb-first imperative phrases. If a heading is over 7 words, the activity is doing too much - apply the STRATEGY below and rewrite, or split. ' +
+      'You MUST apply the STRATEGY to EVERY heading over 7 words, regardless of whether you think the original wording is meaningful or important. Trim first, then if still over 7, split. ' +
+      'Do not skip trimming because you respect the source - the source IS the thing you are correcting.\n' +
       'STRATEGY FOR TIGHTENING (apply in order):\n' +
       '  1. Drop articles - "the", "a", "an". "Verify the requester eligibility" -> "Verify requester eligibility".\n' +
       '  2. Drop filler phrases - "ensure that", "in order to", "for the purpose of", "as appropriate", "if applicable". These add no information.\n' +
@@ -13458,7 +13496,8 @@ createChatSurface({
       '  step 2: Count the words. (Hyphens, slashes, parens, square brackets do NOT split words. "Training-plan" counts as 1 word.)\n' +
       '  step 3: If count > 7, apply the STRATEGY above and rewrite. Then count again.\n' +
       '  step 4: If the rewritten heading is STILL > 7 words, the activity needs to be split into two.\n' +
-      'Do NOT emit the Process Map block if any heading exceeds 7 words. Cycle through twice if needed.\n\n' +
+      '  step 5: After rewriting, count ONE MORE TIME. If you emit a Process Map block with any heading over 7 words, you have failed this task.\n' +
+      'Do NOT emit the Process Map block if any heading exceeds 7 words. Cycle through twice if needed. If after two cycles a heading is still over 7 words, SPLIT the activity - do not give up and emit it long.\n\n' +
       'No preamble. No commentary. No "Here are the blocks" sentence. No closing question. ' +
       'No <<nintex-ready>> marker. The very first character of your reply must be the opening ``` of the first block.';
 
@@ -14387,7 +14426,23 @@ createChatSurface({
       // a severity-tinted background and make it clickable to expand the
       // flag callout below. Avoid double-highlighting if multiple flags
       // anchor to the same target - we just stack the severity classes.
-      target.classList.add('inline-flag-highlight', severityClass(issue.severity));
+      // Tracker (1 Jun 2026): when multiple flags anchor to the same target
+      // with different severities, keep only the HIGHEST severity class so
+      // the visible highlight matches the most serious issue. Without this,
+      // CSS source order silently picks the last-applied class which can
+      // (and did) downgrade a warning highlight to info-blue.
+      (function upgradeSeverityClass() {
+        const RANK = { 'severity-info': 1, 'severity-warning': 2, 'severity-error': 3 };
+        const newCls = severityClass(issue.severity);
+        const cur = ['severity-error','severity-warning','severity-info']
+          .find(c => target.classList.contains(c));
+        if (!cur || RANK[newCls] > RANK[cur]) {
+          if (cur) target.classList.remove(cur);
+          target.classList.add('inline-flag-highlight', newCls);
+        } else {
+          target.classList.add('inline-flag-highlight');
+        }
+      })();
       target.setAttribute('role', 'button');
       target.setAttribute('tabindex', '0');
       target.dataset.issueIdx = (target.dataset.issueIdx || '') + (target.dataset.issueIdx ? ',' : '') + String(idx);
@@ -14466,6 +14521,12 @@ createChatSurface({
     if (sidebarBtn) { sidebarBtn.classList.toggle('is-active', mode === 'sidebar'); sidebarBtn.setAttribute('aria-selected', String(mode === 'sidebar')); }
     if (inlineBtn)  { inlineBtn.classList.toggle('is-active', mode === 'inline');  inlineBtn.setAttribute('aria-selected', String(mode === 'inline')); }
     if (sidebar) sidebar.classList.toggle('inline-mode', mode === 'inline');
+    // Tracker #215 (1 Jun 2026): the tip "click a card to jump..." is only
+    // meaningful in sidebar mode. In "In doc" mode the flags render inline,
+    // so the tip becomes incorrect - hide it.
+    document.querySelectorAll('.doc-sidebar-hint').forEach(el => {
+      el.style.display = (mode === 'inline') ? 'none' : '';
+    });
     if (mode === 'inline') {
       applyInlineFlags();
       // Tracker #28 follow-up: when the user switches to in-doc view,
