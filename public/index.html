@@ -576,6 +576,180 @@
   }
 
   /* Inline flag markers - sit immediately after the flagged element */
+  /* Tracker (31 May 2026): handover-flag strip rendered between */
+  /* two activities to surface unclear-handover warnings in-context. */
+  .inline-handover-flag {
+    margin: 14px 0;
+    border-radius: 6px;
+    background: #FAEEDA;
+    border-left: 4px solid #EF9F27;
+  }
+  .inline-handover-flag-btn {
+    appearance: none; -webkit-appearance: none;
+    width: 100%; text-align: left;
+    background: transparent; border: none;
+    padding: 8px 14px;
+    display: flex; align-items: center; gap: 10px;
+    cursor: pointer;
+    font: inherit; color: #412402;
+    font-size: 13.5px;
+  }
+  .inline-handover-flag-btn:hover { filter: brightness(0.96); }
+  .inline-handover-flag-btn:focus-visible {
+    outline: 2px solid var(--rmit-red); outline-offset: 2px;
+  }
+  .inline-handover-flag .ihf-icon {
+    font-size: 16px; line-height: 1; flex-shrink: 0;
+  }
+  .inline-handover-flag .ihf-label {
+    flex: 1;
+  }
+  .inline-handover-flag .ihf-label strong {
+    font-weight: 700; font-size: 10.5px;
+    background: #EF9F27; color: #412402;
+    padding: 1px 6px; border-radius: 3px;
+    text-transform: uppercase; letter-spacing: 0.4px;
+    margin-right: 6px;
+    vertical-align: 1px;
+  }
+  .inline-handover-flag .ihf-toggle {
+    font-size: 10.5px; font-weight: 600;
+    background: #FFFFFF; color: #412402;
+    border: 1px solid #EF9F27;
+    padding: 2px 8px; border-radius: 10px;
+    white-space: nowrap; flex-shrink: 0;
+  }
+  .inline-handover-flag-body {
+    padding: 0 14px 12px 36px;
+    font-size: 13px;
+    color: #412402;
+  }
+  .inline-handover-flag-body em {
+    font-style: italic; color: #5C3514;
+  }
+
+  /* Tracker #28 follow-up: process-wide flag banner for flags that */
+  /* can't be tied to a specific task / NOTE. Shown above the procedure */
+  /* in inline mode so the count matches the sidebar. */
+  .inline-process-flags {
+    margin: 0 0 20px;
+    padding: 14px 18px;
+    background: #FEF3C7;
+    border: 2px solid #F59E0B;
+    border-radius: 8px;
+    font-size: 13.5px;
+    box-shadow: 0 2px 6px rgba(245, 158, 11, 0.18);
+  }
+  .inline-process-flags .ipf-headline {
+    margin-bottom: 6px; color: #412402;
+    font-size: 14.5px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .inline-process-flags .ipf-headline::before {
+    content: '⚠';
+    font-size: 18px;
+    line-height: 1;
+  }
+  .inline-process-flags .ipf-sub { font-weight: 400; color: #844D14; font-size: 12.5px; }
+  .inline-process-flags ul { margin: 4px 0 0; padding-left: 20px; }
+  .inline-process-flags li { margin-bottom: 4px; }
+  .inline-process-flags .ipf-sev {
+    display: inline-block; font-size: 10.5px; font-weight: 700;
+    padding: 1px 5px; border-radius: 3px; margin-right: 4px;
+    text-transform: uppercase; letter-spacing: 0.4px; vertical-align: 1px;
+  }
+  .inline-process-flags .ipf-sev-error    { background: #FCEBEB; color: #501313; }
+  .inline-process-flags .ipf-sev-warning  { background: #FAEEDA; color: #412402; }
+  .inline-process-flags .ipf-sev-info     { background: #E6F1FB; color: #042C53; }
+  .inline-process-flags em { color: #444; font-style: italic; }
+
+  /* Tracker #28 follow-up (31 May 2026): wrapper with explicit label */
+  .flags-view-toggle-wrap {
+    display: flex; align-items: center; gap: 8px; margin-top: 6px;
+    flex-wrap: wrap;
+  }
+  .flags-view-toggle-label {
+    font-size: 12.5px; color: #64748B; font-weight: 500;
+  }
+  /* Tracker #28 (31 May 2026): sidebar / inline toggle for quality flag */
+  /* viewing. Sits in the sidebar header, two segmented buttons. */
+  .flags-view-toggle {
+    display: inline-flex; gap: 2px; margin-top: 6px;
+    background: #F1F5F9; border-radius: 6px; padding: 2px;
+  }
+  .flags-view-toggle-btn {
+    appearance: none; -webkit-appearance: none;
+    background: transparent; border: none;
+    padding: 4px 12px; font-size: 12.5px; font-weight: 600;
+    color: #64748B; cursor: pointer; border-radius: 4px;
+    transition: background 0.12s ease, color 0.12s ease;
+  }
+  .flags-view-toggle-btn:hover { color: var(--rmit-navy, #0A2240); }
+  .flags-view-toggle-btn.is-active {
+    background: #FFFFFF; color: var(--rmit-navy, #0A2240);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.1);
+  }
+  .flags-view-toggle-btn:focus-visible {
+    outline: 2px solid var(--rmit-red); outline-offset: 2px;
+  }
+  /* Tracker #28 follow-up (31 May 2026): inline flag = soft background  */
+  /* highlight on the affected task / NOTE. Click to expand a callout    */
+  /* below with the flag message + suggestion. Highlight colour matches  */
+  /* severity. cursor: pointer telegraphs the click affordance.          */
+  .inline-flag-highlight {
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+    position: relative;
+    /* Subtle dashed underline tells the reader this is clickable, even */
+    /* without hovering. Matches the severity colour via currentColor.   */
+    text-decoration: underline dashed currentColor;
+    text-underline-offset: 3px;
+    text-decoration-thickness: 1px;
+    transition: filter 0.12s ease, box-shadow 0.12s ease;
+  }
+  .inline-flag-highlight:hover {
+    filter: brightness(0.94);
+    box-shadow: 0 0 0 1px currentColor;
+  }
+  .inline-flag-highlight:focus-visible {
+    outline: 2px solid var(--rmit-red); outline-offset: 1px;
+  }
+  /* Small click-hint chip appended after the flagged element so first- */
+  /* time users immediately see what to do. Stays visible on hover.     */
+  /* Uses solid white background, no underline, and is whitespace-      */
+  /* nowrap so the dashed underline on the parent doesn't bleed         */
+  /* through the pill text.                                              */
+  .inline-flag-highlight::after {
+    content: 'click for detail';
+    display: inline-block;
+    margin-left: 10px;
+    padding: 3px 10px 4px;
+    font-size: 10.5px; font-weight: 600;
+    background: #FFFFFF;
+    color: currentColor;
+    border: 1px solid currentColor;
+    border-radius: 999px;
+    vertical-align: middle;
+    white-space: nowrap;
+    text-decoration: none;
+    line-height: 1.6;
+    opacity: 0.95;
+  }
+  /* Hover: keep the pill white (so the dark text stays readable) and  */
+  /* just emphasise the border + add a soft shadow. Previously we      */
+  /* flipped to currentColor background + white text, but in some      */
+  /* severity contexts that read as white-on-white.                    */
+  .inline-flag-highlight:hover::after {
+    background: #FFFFFF;
+    color: currentColor;
+    opacity: 1;
+    border-width: 1.5px;
+    box-shadow: 0 0 0 2px rgba(0,0,0,0.04);
+  }
+  .inline-flag-highlight.severity-error    { background: #FCEBEB; color: #501313; }
+  .inline-flag-highlight.severity-warning  { background: #FAEEDA; color: #412402; }
+  .inline-flag-highlight.severity-info     { background: #E6F1FB; color: #042C53; }
   .inline-flag-marker {
     display: inline-flex; align-items: center; justify-content: center;
     width: 18px; height: 18px; border-radius: 50%;
@@ -4466,7 +4640,7 @@ NOTE: What if access is delayed? Escalate to the IT lead and update the new star
       <div class="modal">
         <button class="modal-close" id="autoApplyConsentClose" type="button" aria-label="Close">&times;</button>
         <h2 id="autoApplyConsentTitle">Before I make changes</h2>
-        <p class="consent-intro">I'm about to use AI to rewrite your draft against the quality flags I've identified. Before I do, please confirm the box below:</p>
+        <p class="consent-intro">I'll use AI to polish your draft against the quality standards. Confirm the box to continue, or pick "Review original first" to skip the AI rewrite — you can run it later from the results.</p>
         <ul class="consent-list">
           <li>
             <input type="checkbox" id="consentSensitive" />
@@ -4482,7 +4656,7 @@ NOTE: What if access is delayed? Escalate to the IT lead and update the new star
           </li>
         </ul>
         <div class="modal-footer">
-          <button class="btn btn-secondary" id="autoApplyConsentCancel" type="button">Cancel</button>
+          <button class="btn btn-secondary" id="autoApplyConsentCancel" type="button">Review original first</button>
           <button class="btn btn-primary" id="autoApplyConsentProceed" type="button" disabled>Continue with auto-apply</button>
         </div>
       </div>
@@ -4624,7 +4798,16 @@ NOTE: What if access is delayed? Escalate to the IT lead and update the new star
       <aside class="doc-sidebar" id="docSidebar" aria-labelledby="docSidebarHeading">
         <div class="doc-sidebar-header">
           <h4 id="docSidebarHeading">Quality flags <span class="sidebar-opps-count" id="sidebarOppsCount" aria-label="quality flags remaining"></span></h4>
-          <!-- Sidebar / Inline toggle removed in home v3 (Move 3) - sidebar is now the only view. -->
+          <!-- Tracker #28 (31 May 2026): sidebar / inline toggle restored so users -->
+          <!-- can view quality flags inside the document text alongside the sidebar -->
+          <!-- list. Preference persists in localStorage 'pat-flags-view-mode'.       -->
+          <div class="flags-view-toggle-wrap">
+            <span class="flags-view-toggle-label">View in:</span>
+            <div class="flags-view-toggle" role="tablist" aria-label="Quality flag view">
+              <button type="button" class="flags-view-toggle-btn is-active" id="flagsViewSidebarBtn" role="tab" aria-selected="true" title="Show flags only in this sidebar">Sidebar</button>
+              <button type="button" class="flags-view-toggle-btn" id="flagsViewInlineBtn" role="tab" aria-selected="false" title="Highlight flagged tasks and NOTEs inside the document">In doc</button>
+            </div>
+          </div>
         </div>
 
         <!-- Auto-apply moved to the top tab bar (next to Visual workflow)
@@ -5769,6 +5952,9 @@ document.getElementById('headerResetBtn').addEventListener('click', () => {
   originalDocHtml = '';
   currentModel = null; currentIssues = []; currentRecommendation = null; currentMermaid = '';
   if (typeof window.clearAutoApplySnapshots === 'function') window.clearAutoApplySnapshots();
+  // Tracker #25 (31 May 2026): clear session consent on Reset so a
+  // fresh session re-prompts before any AI call.
+  window.sessionAiConsent = null;
   // v2 #23 + #26b: clear per-session dismissals + collapsed-group state on
   // Reset so the next analysis starts fresh.
   if (dismissedFlagKeys) dismissedFlagKeys.clear();
@@ -6018,7 +6204,14 @@ async function structureNotesWithAI(rough, titleHint) {
   });
 })();
 
-document.getElementById('analyseBtn').addEventListener('click', async () => {
+// Tracker #25 (31 May 2026): the AI-content consent now fires at Analyse-
+// click time, BEFORE analysis runs. This is one consent for the whole
+// pipeline (analyse + auto-apply), instead of a separate modal at the
+// auto-apply step. Once consented, auto-apply runs automatically after
+// renderResults completes; if the user picks "Review original first", we
+// still run analyse but skip auto-apply.
+window._runAnalyseAfterConsent = null;
+async function _doAnalyse() {
   // Tracker #52: fresh analyse - clear any previous auto-apply snapshots
   // so this run's originalSnapshot will be a fresh capture of the new
   // parsed model, not a leftover from the previous analysis.
@@ -6126,9 +6319,46 @@ document.getElementById('analyseBtn').addEventListener('click', async () => {
     currentBpmnXml = buildBpmnXml(model);
 
     await renderResults();
+    // Tracker #25 (31 May 2026): if the user consented at the home-page
+    // Analyse-button moment (window.sessionAiConsent === true) AND there
+    // are actionable quality flags, auto-trigger auto-apply now. The
+    // consent has already been captured, so we don't show another
+    // modal - we just call the auto-apply pipeline directly.
+    try {
+      const actionableCount = (Array.isArray(currentIssues) ? currentIssues : [])
+        .filter(i => !i.informational).length;
+      if (actionableCount > 0 && window.sessionAiConsent === true
+          && typeof window.runAutoApplyDirect === 'function') {
+        setTimeout(() => {
+          const card = document.getElementById('resultsCard');
+          if (card && !card.classList.contains('hidden')) {
+            window.runAutoApplyDirect();
+          }
+        }, 400);
+      }
+    } catch (e) { /* best-effort */ }
   } catch (err) {
     console.error('Analyse pipeline failed:', err);
     showToast('Something went wrong while analysing: ' + (err.message || err), 'error', 8000);
+  }
+}
+window._doAnalyse = _doAnalyse;
+
+document.getElementById('analyseBtn').addEventListener('click', async () => {
+  // If the user has already consented in this session, skip the modal and
+  // analyse directly. Otherwise show the modal first; the modal Proceed /
+  // Cancel handlers route to _doAnalyse with the right sessionAiConsent
+  // value.
+  if (window.sessionAiConsent === true) {
+    await _doAnalyse();
+    return;
+  }
+  if (typeof window.openAutoApplyConsent === 'function') {
+    window._runAnalyseAfterConsent = true;
+    window.openAutoApplyConsent();
+  } else {
+    // Fallback: no modal available, just analyse.
+    await _doAnalyse();
   }
 });
 
@@ -7927,6 +8157,34 @@ function undoAutoFix() {
   showToast('Auto-fixes undone.', 'info');
 }
 
+// Build an actionable suggestion for an overly-long task.
+// Goal: give the user a concrete "split" starting point - the core action as
+// the task, and a NOTE that references any guide/QRG/SOP/handbook mentioned
+// in the rest of the text. Falls back to a generic prompt if we can't find
+// a sensible split point.
+function buildLongTaskSplitSuggestion(text) {
+  const raw = String(text || '').trim();
+  if (!raw) return 'Keep language concise. If this is system click-through detail, move it into an attached guide.';
+  // Split on sentence-ending punctuation followed by whitespace.
+  const sentences = raw.split(/(?<=[.!?])\s+/).map(s => s.trim()).filter(Boolean);
+  const action = (sentences[0] || raw).replace(/[.!?]+$/, '').trim();
+  const rest = sentences.slice(1).join(' ').trim();
+  // Look for a referenced guide / QRG / SOP / manual / handbook / procedure / policy.
+  // Quote chars include straight (' ") and curly (‘ ’ “ ”).
+  const guideRe = /(?:refer(?:ence)?\s+to|see|consult|use|via|per)\s+(?:the\s+)?['"‘“]?([^'"’”.]*?(?:QRG|SOP|guide|manual|handbook|procedure|policy)[^'"’”.]*)['"’”]?/i;
+  const m = (rest || raw).match(guideRe);
+  const guideName = m ? m[1].trim().replace(/\s{2,}/g, ' ') : '';
+  if (guideName) {
+    return 'Consider splitting: keep "' + action + '" as the task, and move the supporting detail into a NOTE, e.g. "Where can I find the full procedure? - Refer to ' + guideName + '."';
+  }
+  if (rest) {
+    const trimmedRest = rest.length > 90 ? rest.slice(0, 87).trim() + '...' : rest;
+    return 'Consider splitting: keep "' + action + '" as the task, and move the supporting detail ("' + trimmedRest + '") into a NOTE.';
+  }
+  // Single long sentence - no obvious split point. Suggest trimming + a guide.
+  return 'This task is one long sentence. Try trimming to the core action (e.g. start: "' + action.split(/\s+/).slice(0, 12).join(' ') + '...") and move any system click-through detail into a supporting guide.';
+}
+
 function runRulesEngine(model) {
   const issues = [];
   const push = (i) => issues.push(i);
@@ -8195,7 +8453,7 @@ function runRulesEngine(model) {
         push({ id:`task-long-${idx}-${ti}`, source:'CoVE', severity:'info',
           message:`Task ${a.number}${t.letter} is ${tw} words.`,
           location: `Task ${a.number}${t.letter}`,
-          suggestion:'Keep language concise. If this is system click-through detail, move it into an attached guide.' });
+          suggestion: buildLongTaskSplitSuggestion(t.text) });
       }
     });
 
@@ -8262,11 +8520,9 @@ function runRulesEngine(model) {
     a.tasks.forEach(t => { if (t.attachment) totalAttachments++; });
     a.links.forEach(l => totalAttachments++);
   });
-  if (model.activities.length > 0 && totalAttachments === 0) {
-    push({ id:'no-attachments', source:'Nintex', severity:'info', informational: true,
-      message:'Tip: attach supporting guides where useful.',
-      suggestion:'If your process refers to a system, form or detailed instruction, attach a guide or web link within your final process.' });
-  }
+  // Tracker (31 May 2026): the 'no-attachments' info flag was removed -
+  // the CoVE Process Review Checklist (linked from every export) covers
+  // 'are supporting guides attached?' so the flag was duplicating effort.
 
   // ---------- DUPLICATE / SIMILAR ACTIVITY TITLES ----------
   const titles = model.activities.map(a => a.title.toLowerCase());
@@ -9462,10 +9718,30 @@ async function renderResults() {
       return 'doc-task-' + taskMatch[1] + '-' + taskMatch[2] + '-' + taskMatch[3].toLowerCase();
     }
 
-    // Activity X.Y
+    // Tracker (31 May 2026): handover-${i} flags have a dedicated
+    // between-activities render in applyInlineFlags; don't anchor
+    // them to any single element here.
+    if (/^handover-/.test(id || '')) return null;
+
+    // Activity X.Y - route by flag.id so each flag highlights only the
+    // element it actually concerns (title row, role row, or nothing -
+    // the latter falls through to the process-wide banner rather than
+    // lighting up the whole activity card).
     const numMatch = location.match(/(\d+)\.(\d+)/);
     if (numMatch) {
-      return 'doc-activity-' + numMatch[1] + '-' + numMatch[2];
+      const actId = 'doc-activity-' + numMatch[1] + '-' + numMatch[2];
+      const fid = (iid || '').toLowerCase();
+      // Title-related flags
+      if (/^act-(verb|length)-/.test(fid)) return actId + '-title';
+      // Role-related flags (including banned-term flags scoped to roles)
+      if (/^act-(norole|multirole|split-by-role)-/.test(fid)) return actId + '-role';
+      if (/^banned-.*-role-/.test(fid)) return actId + '-role';
+      // Tracker (31 May 2026): for any other activity-level flag (no-tasks,
+      // too-many-tasks, generic banned-term, etc.) DO NOT highlight the
+      // whole activity card - the highlight pollutes title + role + every
+      // task at once and confuses users. Send it to the process-wide
+      // banner instead. Cleaner and the flag still appears in the sidebar.
+      return null;
     }
 
     // Process-level locations
@@ -9495,6 +9771,10 @@ async function renderResults() {
   // so we don't need separate "Warnings" / "Suggestions" subheadings. Order:
   // errors first (most urgent), then warnings, then suggestions.
   window.refreshIssuesSidebar = function () {
+    // Tracker #28: keep inline-mode markers in sync with the latest issue list.
+    if (typeof window.refreshInlineFlags === 'function') {
+      try { window.refreshInlineFlags(); } catch (e) {}
+    }
     const out = document.getElementById('issuesOut');
     if (!out || typeof currentIssues === 'undefined') return;
     // Filter dismissed flags out before rendering. The full currentIssues
@@ -9640,13 +9920,16 @@ function renderDocPreview(m) {
   if (m.background) html += `<h2 id="doc-background">Background</h2><p>${escapeHtml(m.background)}</p>`;
   html += `<h2 id="doc-procedure">Procedure</h2>`;
   m.activities.forEach(a => {
-    html += '<div class="activity" id="doc-activity-' + escapeHtml(a.number).replace('.', '-') + '"><div><span class="num">' + escapeHtml(a.number) + '</span> <strong>' + escapeHtml(a.title) + '</strong></div>';
+    const _actIdRoot = escapeHtml(a.number).replace('.', '-');
+    html += '<div class="activity" id="doc-activity-' + _actIdRoot + '">' +
+            '<div class="activity-title-row" id="doc-activity-' + _actIdRoot + '-title">' +
+            '<span class="num">' + escapeHtml(a.number) + '</span> <strong>' + escapeHtml(a.title) + '</strong></div>';
     // Always render the role line, even when empty - this is the primary place
     // the user adds an accountable role. A missing role gets an obvious "fill me
     // in" placeholder. The "Role:" prefix is rendered via CSS ::before so users
     // can't accidentally delete it - only the role value itself is editable.
     if (a.role) {
-      html += `<div class="role">${escapeHtml(a.role)}</div>`;
+      html += '<div class="role" id="doc-activity-' + _actIdRoot + '-role">' + escapeHtml(a.role) + '</div>';
     } else {
       html += `<div class="role role-empty" data-empty="1"><span class="role-placeholder">[Click to add accountable role]</span></div>`;
     }
@@ -11983,6 +12266,21 @@ if (restoreBtn) {
     if (proceed) proceed.disabled = true;
     if (modal) modal.setAttribute('aria-hidden', 'false');
   }
+  // Tracker #25 (31 May 2026): expose to window so the outer analyse
+  // handler can auto-open the consent modal after analyse completes.
+  window.openAutoApplyConsent = openAutoApplyConsent;
+  // Tracker #25 (31 May 2026): expose a direct auto-apply runner so
+  // the post-analyse hook can skip the modal when sessionAiConsent is
+  // already true (consent was captured at Analyse-click time).
+  window.runAutoApplyDirect = function () {
+    const choiceRow = document.getElementById('choiceRow');
+    if (choiceRow) choiceRow.classList.add('hidden');
+    if (typeof window.startAutoApply === 'function') {
+      window.startAutoApply();
+    } else if (typeof startAutoApply === 'function') {
+      startAutoApply();
+    }
+  };
   const autoApplyBtn = document.getElementById('autoApplyBtn');
   if (autoApplyBtn) autoApplyBtn.addEventListener('click', openAutoApplyConsent);
   // Escape-hatch button inside the quality flags sidebar - same flow, different trigger
@@ -12740,6 +13038,7 @@ createChatSurface({
     };
   }
 
+  window.startAutoApply = startAutoApply;
   async function startAutoApply() {
     // Hide cards, show loading state
     const cards = document.getElementById('resultsActionCards');
@@ -12932,6 +13231,14 @@ createChatSurface({
       'follow-up email after three days", that follow-up email is NOT a new activity called "Follow Up ' +
       'with Employer"; it stays as a NOTE under the existing activity. The "if" framing is the tell - ' +
       'if it\'s conditional on something the main activity already covers, it\'s a NOTE, not an activity.\n' +
+      '* THE ONE LEGITIMATE EXCEPTION - title-length split. If the source activity title itself contains ' +
+      'two verb phrases joined by "and" / "then" / "plus" (e.g. "Verify eligibility AND submit request"), ' +
+      'AND the source tasks underneath cleanly fall into two camps (some support verb 1, others support ' +
+      'verb 2), AND the title exceeds the 7-word cap even after rewording, you MAY split it into two ' +
+      'activities. This is the ONLY case where output activity count > source activity count is allowed ' +
+      '(beyond the multi-role split rule below). Splitting requires ALL THREE signals to be present. NOTE ' +
+      'content, conditional task variations ("if the request is X"), and exception flows are NOT signals ' +
+      'for splitting - they belong to a single activity. See ACTIVITY HEADING LENGTH for worked examples.\n' +
       '* NEVER duplicate a NOTE across multiple activities. If the source has NOTE "X" under activity 4, ' +
       'your output has NOTE "X" under activity 4 ONLY - not also under activity 5. A NOTE belongs in ' +
       'exactly one place.\n' +
@@ -13112,15 +13419,46 @@ createChatSurface({
       '      b. Send email to HR Business Partner.\n' +
       '    (Subsequent activities renumber: source 4.0 -> 5.0, source 5.0 -> 6.0)\n\n' +
       'ACTIVITY HEADING LENGTH - THIS IS NON-NEGOTIABLE:\n' +
-      'Each activity heading (the title on the line with [Role Name]) MUST be 2-7 words. Hard cap: 8 words. ' +
-      'If a heading is longer, the activity is doing too much - tighten the wording. Examples:\n' +
-      '  GOOD: "Verify requester eligibility"             (3 words)\n' +
-      '  GOOD: "Determine if RAF required"                (4 words)\n' +
-      '  BAD : "Verify requester eligibility and submit the request to the approver"  (11 words - split into two activities or shorten)\n' +
-      '* Activity headings are verb-first imperative phrases. Drop filler ("the", "a"), prepositions, and ' +
-      'pad-words ("ensure", "in order to").\n' +
-      '* MANDATORY SELF-CHECK before emitting blocks: count the words in every activity heading (the line ' +
-      'with [Role Name] at the end). Any heading over 8 words MUST be shortened.\n\n' +
+      'Each activity heading (the title on the line with [Role Name]) MUST be 2-7 words. Target: 3-5 words. Hard cap: 8 words. ' +
+      'If a heading is longer than 7 words, the activity is doing too much - tighten the wording or split. Headings are verb-first imperative phrases.\n' +
+      'STRATEGY FOR TIGHTENING (apply in order):\n' +
+      '  1. Drop articles - "the", "a", "an". "Verify the requester eligibility" -> "Verify requester eligibility".\n' +
+      '  2. Drop filler phrases - "ensure that", "in order to", "for the purpose of", "as appropriate", "if applicable". These add no information.\n' +
+      '  3. Drop preposition tails - if the activity scope is already clear from the role + tasks, you can drop "for the student", "to the manager", etc. "Send the form to the manager" -> "Send the form" (the role line says who).\n' +
+      '  4. Collapse compound nouns - "training plan agreement variation" -> "agreement variation".\n' +
+      '  5. Use a stronger verb that already carries meaning - "Generate and create the new training plan" -> "Generate the training plan" -> "Generate training plan".\n' +
+      '  6. If you still cannot fit in 7 words, the activity is genuinely doing two things - SPLIT it into two activities. Renumber the rest.\n' +
+      '     **SPLIT vs INVENT - this is a critical distinction.** Splitting is allowed here, inventing is NEVER allowed (see PRESERVE ACTIVITY STRUCTURE).\n' +
+      '     You may ONLY split if ALL of these signals are present:\n' +
+      '       (a) the source TITLE itself contains two verb phrases joined by "and" / "then" / "plus" / "&" - e.g. "Verify eligibility and submit request", "Generate plan then send to employer".\n' +
+      '       (b) the source TASKS under that activity clearly fall into two camps (some tasks support the first verb phrase, the rest support the second).\n' +
+      '       (c) reword strategies 1-5 above genuinely cannot get you to 7 words without losing meaning.\n' +
+      '     If ANY of (a), (b), (c) is missing, do NOT split. Just reword as far as you can and leave the title at whatever shortest count you achieved.\n' +
+      '     What splitting looks like - allowed:\n' +
+      '       SOURCE 3.0 "Verify requester eligibility and submit the request to the approver" (11 words).\n' +
+      '         Source tasks split cleanly: a-c are about verifying, d-e are about submitting.\n' +
+      '         OUTPUT: 3.0 "Verify requester eligibility" (tasks a-c) + 4.0 "Submit request to approver" (tasks d-e). Renumber 4.0 -> 5.0, 5.0 -> 6.0, etc.\n' +
+      '     What is NOT splitting (= inventing - FORBIDDEN):\n' +
+      '       SOURCE 4.0 "Employer Agreement to Training Plan via VEESS" with a NOTE "What if no response after initial email? Send a follow-up after 3 days".\n' +
+      '         WRONG: split into 4.0 "Get employer agreement" + 5.0 "Follow up with employer". The follow-up is NOTE content, not a separate activity. Do NOT promote NOTE content to an activity.\n' +
+      '       SOURCE 2.0 "Schedule class in SAMS" with tasks a-e that include conditional logic ("If the request is to cancel", "If RPL", "If reschedule").\n' +
+      '         WRONG: split into one activity per branch. The conditionals are variations of the same action (scheduling). Keep as one activity, refine the task wording.\n' +
+      'WORKED EXAMPLES (real RMIT process patterns):\n' +
+      '  SOURCE: "Generate Training Plan in SAMS"                 (5 words) - GOOD, leave as-is\n' +
+      '  SOURCE: "RMIT Agreement to Training Plan via SAMS"       (7 words) - GOOD, leave as-is\n' +
+      '  SOURCE: "Employer Agreement to Training Plan via VEESS"  (7 words) - GOOD, leave as-is\n' +
+      '  SOURCE: "Update of Training Plan - Competencies not delivered (Employer waiver)" (10 words) - BAD\n' +
+      '    -> "Update plan for missed competencies"        (5 words) GOOD\n' +
+      '  SOURCE: "Update of Training Plan - Update to nominal completion date" (10 words) - BAD\n' +
+      '    -> "Update nominal completion date"              (4 words) GOOD\n' +
+      '  SOURCE: "School Agreement to Training Plan via Email (SBAT ONLY)" (9 words) - BAD\n' +
+      '    -> "School signs training plan (SBAT)"           (5 words) GOOD\n' +
+      'MANDATORY SELF-CHECK before emitting blocks - DO THIS LITERALLY, for EVERY activity:\n' +
+      '  step 1: Read each activity heading.\n' +
+      '  step 2: Count the words. (Hyphens, slashes, parens, square brackets do NOT split words. "Training-plan" counts as 1 word.)\n' +
+      '  step 3: If count > 7, apply the STRATEGY above and rewrite. Then count again.\n' +
+      '  step 4: If the rewritten heading is STILL > 7 words, the activity needs to be split into two.\n' +
+      'Do NOT emit the Process Map block if any heading exceeds 7 words. Cycle through twice if needed.\n\n' +
       'No preamble. No commentary. No "Here are the blocks" sentence. No closing question. ' +
       'No <<nintex-ready>> marker. The very first character of your reply must be the opening ``` of the first block.';
 
@@ -13448,6 +13786,22 @@ createChatSurface({
       } catch (e) {
         console.warn('[auto-apply] could not restore activity numbers:', e);
       }
+
+      // Tracker (31 May 2026): diagnostic - check if any activity titles
+      // are still over 7 words after auto-apply. If so, the AI didn't
+      // follow the ACTIVITY HEADING LENGTH rule and we surface the
+      // titles here so engineering can see them in DevTools.
+      try {
+        const longTitles = [];
+        (newModel.activities || []).forEach(a => {
+          const t = String(a.title || '').trim();
+          const wc = t.split(/\s+/).filter(Boolean).length;
+          if (wc > 7) longTitles.push({ number: a.number, words: wc, title: t });
+        });
+        if (longTitles.length > 0) {
+          console.warn('[auto-apply] activity titles still over 7 words after auto-apply:', longTitles);
+        }
+      } catch (e) {}
 
       // Restore linked processes (act.links) the AI dropped. The three-block
       // output format doesn't include "PROCESS X" lines, so any linked
@@ -13850,6 +14204,15 @@ createChatSurface({
   document.addEventListener('DOMContentLoaded', () => {
     const modal = document.getElementById('autoApplyConsentModal');
     if (!modal) return;
+    // Tracker #25 (31 May 2026): the modal is nested inside #resultsCard
+    // which starts hidden. That means the modal can't be displayed on
+    // the home page (parent is display:none, so the modal renders at
+    // 0x0). Move it to be a direct child of document.body so it can
+    // display from any point in the lifecycle. The modal's CSS uses
+    // position:fixed so it doesn't need its previous parent for layout.
+    if (modal.parentElement !== document.body) {
+      document.body.appendChild(modal);
+    }
     const closeBtn = document.getElementById('autoApplyConsentClose');
     const cancelBtn = document.getElementById('autoApplyConsentCancel');
     const proceedBtn = document.getElementById('autoApplyConsentProceed');
@@ -13861,15 +14224,42 @@ createChatSurface({
     }
     if (cb1) cb1.addEventListener('change', refreshProceed);
     if (closeBtn) closeBtn.addEventListener('click', close);
-    if (cancelBtn) cancelBtn.addEventListener('click', close);
+    if (cancelBtn) cancelBtn.addEventListener('click', () => {
+      // Tracker #25 (31 May 2026): if the modal was opened by the
+      // analyse-button gate (not the post-analyse auto-apply step), the
+      // Cancel branch means "analyse but skip auto-apply". sessionAiConsent
+      // stays unset so a later auto-apply click will re-show the modal.
+      if (window._runAnalyseAfterConsent === true) {
+        window._runAnalyseAfterConsent = null;
+        close();
+        if (typeof window._doAnalyse === 'function') {
+          setTimeout(() => window._doAnalyse(), 80);
+        }
+        return;
+      }
+      close();
+    });
     if (proceedBtn) proceedBtn.addEventListener('click', () => {
       close();
-      // Only NOW hide the choice cards - the user has confirmed they want to
-      // auto-apply. Cancelling the consent earlier leaves the cards visible.
+      // Tracker #25 (31 May 2026): route based on where the modal was
+      // triggered from.
+      if (window._runAnalyseAfterConsent === true) {
+        // Modal was opened by the Analyse button. Mark session as consented
+        // and run analyse - the post-analyse hook will auto-trigger
+        // auto-apply.
+        window._runAnalyseAfterConsent = null;
+        window.sessionAiConsent = true;
+        if (typeof window._doAnalyse === 'function') {
+          setTimeout(() => window._doAnalyse(), 80);
+        }
+        return;
+      }
+      // Existing path: modal was opened by the auto-apply button. Hide
+      // the choice cards and run auto-apply directly.
       const choiceRow = document.getElementById('choiceRow');
       if (choiceRow) choiceRow.classList.add('hidden');
+      window.sessionAiConsent = true;
       if (typeof window.startAutoApply === 'function') {
-        // Tiny delay so the modal animates out cleanly before the loading state appears
         setTimeout(() => window.startAutoApply(), 80);
       }
     });
@@ -13887,10 +14277,14 @@ createChatSurface({
 // The Sidebar/Inline toggle was removed; we force mode='sidebar' regardless of any
 // previously saved preference, and skip the inline rendering path entirely.
 (function wireInlineFlagsView() {
-  const KEY = 'pat-flags-view-mode'; // localStorage key (kept for back-compat)
+  const KEY = 'pat-flags-view-mode';
+  // Tracker #28 (31 May 2026): restored saved-mode loading. Default to
+  // sidebar if no preference is set or if the value is invalid.
   let mode = 'sidebar';
-  // Clear any previously saved 'inline' mode so it doesn't reappear after upgrade
-  try { localStorage.removeItem(KEY); } catch (e) {}
+  try {
+    const saved = localStorage.getItem(KEY);
+    if (saved === 'inline' || saved === 'sidebar') mode = saved;
+  } catch (e) {}
 
   function getIssues() {
     return (typeof currentIssues !== 'undefined' && Array.isArray(currentIssues)) ? currentIssues : [];
@@ -13904,7 +14298,18 @@ createChatSurface({
   }
 
   function clearInlineFlags() {
-    document.querySelectorAll('.inline-flag-marker, .inline-flag-callout').forEach(n => n.remove());
+    document.querySelectorAll('.inline-flag-marker, .inline-flag-callout, .inline-handover-flag').forEach(n => n.remove());
+    // Tracker #28 follow-up: also strip the highlight classes / accessibility
+    // attributes / click-wired marker / data-issue-idx from any previously
+    // flagged target elements so re-renders start clean.
+    document.querySelectorAll('.inline-flag-highlight').forEach(n => {
+      n.classList.remove('inline-flag-highlight', 'severity-error', 'severity-warning', 'severity-info');
+      n.removeAttribute('role');
+      n.removeAttribute('tabindex');
+      n.removeAttribute('title');
+      delete n.dataset.issueIdx;
+      delete n.dataset.flagClickWired;
+    });
     const banner = document.getElementById('inlineProcessFlags');
     if (banner) banner.remove();
   }
@@ -13912,8 +14317,12 @@ createChatSurface({
   function applyInlineFlags() {
     clearInlineFlags();
     const docPreview = document.getElementById('docPreview');
-    if (!docPreview) return;
+    if (!docPreview) {
+      console.warn('[inline flags] docPreview not found');
+      return;
+    }
     const issues = getIssues();
+    console.log('[inline flags] rendering', issues.length, 'issues in inline mode');
     if (issues.length === 0) return;
 
     // Process-wide flags get a banner above the procedure section
@@ -13922,6 +14331,45 @@ createChatSurface({
 
     issues.forEach((issue, idx) => {
       issue._idx = idx;
+      // Tracker (31 May 2026): handover-${i} flags get a dedicated render -
+      // a strip inserted between the two activities the handover sits
+      // between. Cleaner than highlighting either activity (the handover
+      // belongs to neither one) or burying the warning in the process-wide
+      // banner at the top.
+      if (/^handover-/.test(issue.id || '')) {
+        const m = (issue.location || '').match(/(\d+)\.(\d+)\s*(?:\u2192|->|>)\s*(\d+)\.(\d+)/);
+        if (m) {
+          const nextAct = document.getElementById('doc-activity-' + m[3] + '-' + m[4]);
+          if (nextAct && nextAct.parentNode) {
+            const strip = document.createElement('div');
+            strip.className = 'inline-handover-flag ' + severityClass(issue.severity);
+            strip.dataset.issueIdx = String(idx);
+            const sevWord = issue.severity === 'error' ? 'Error'
+                            : issue.severity === 'warning' ? 'Warning'
+                            : 'Suggestion';
+            strip.innerHTML =
+              '<button type="button" class="inline-handover-flag-btn" aria-expanded="false">' +
+                '<span class="ihf-icon" aria-hidden="true">\u26A0</span>' +
+                '<span class="ihf-label"><strong>' + sevWord + '</strong> ' + issue.message + '</span>' +
+                '<span class="ihf-toggle" aria-hidden="true">click for detail</span>' +
+              '</button>' +
+              '<div class="inline-handover-flag-body" hidden>' +
+                (issue.suggestion ? '<em>' + issue.suggestion + '</em>' : '') +
+              '</div>';
+            const btn = strip.querySelector('.inline-handover-flag-btn');
+            const body = strip.querySelector('.inline-handover-flag-body');
+            btn.addEventListener('click', () => {
+              const expanded = btn.getAttribute('aria-expanded') === 'true';
+              btn.setAttribute('aria-expanded', String(!expanded));
+              body.hidden = expanded;
+            });
+            nextAct.parentNode.insertBefore(strip, nextAct);
+            return;
+          }
+        }
+        processWide.push(issue);
+        return;
+      }
       const resolver = window.resolveJumpTarget;
       const targetId = (typeof resolver === 'function')
         ? resolver(issue.location || '', issue.message || '', issue.id || '')
@@ -13935,19 +14383,17 @@ createChatSurface({
         processWide.push(issue);
         return;
       }
-      // Inject a marker into the target element
-      const marker = document.createElement('span');
-      marker.className = 'inline-flag-marker ' + severityClass(issue.severity);
-      marker.setAttribute('role', 'button');
-      marker.setAttribute('tabindex', '0');
-      marker.setAttribute('aria-label', issue.severity + ': ' + issue.message);
-      marker.title = issue.message;
-      marker.textContent = severityChar(issue.severity);
-      marker.dataset.issueIdx = String(idx);
-      target.appendChild(marker);
+      // Tracker #28 follow-up (31 May 2026): highlight the target element with
+      // a severity-tinted background and make it clickable to expand the
+      // flag callout below. Avoid double-highlighting if multiple flags
+      // anchor to the same target - we just stack the severity classes.
+      target.classList.add('inline-flag-highlight', severityClass(issue.severity));
+      target.setAttribute('role', 'button');
+      target.setAttribute('tabindex', '0');
+      target.dataset.issueIdx = (target.dataset.issueIdx || '') + (target.dataset.issueIdx ? ',' : '') + String(idx);
+      target.setAttribute('title', issue.message);
 
       const expand = () => {
-        // Toggle: if a callout already exists for this issue, remove it
         const existing = document.querySelector('.inline-flag-callout[data-issue-idx="' + idx + '"]');
         if (existing) { existing.remove(); return; }
         const callout = document.createElement('div');
@@ -13962,25 +14408,52 @@ createChatSurface({
           (issue.suggestion ? '<em>' + issue.suggestion + '</em>' : '') + '</div>' +
           '<button class="ifc-dismiss" type="button" aria-label="Close">&times;</button>';
         callout.querySelector('.ifc-dismiss').addEventListener('click', e => { e.stopPropagation(); callout.remove(); });
-        // Insert callout after the target's parent activity block, or after the target itself
         target.insertAdjacentElement('afterend', callout);
       };
-      marker.addEventListener('click', expand);
-      marker.addEventListener('keydown', e => {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); expand(); }
-      });
+      // Avoid attaching the click handler twice if multiple flags share a target.
+      if (!target.dataset.flagClickWired) {
+        target.dataset.flagClickWired = '1';
+        target.addEventListener('click', expand);
+        target.addEventListener('keydown', e => {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); expand(); }
+        });
+      }
     });
 
-    // Render process-wide banner
-    if (processWide.length > 0 && procEl) {
+    // Render process-wide banner. These are flags that don't anchor to a
+    // specific task / NOTE - process title checks, role-list checks,
+    // activity-count checks etc. - so they can't be highlighted in-place.
+    // Show them in a banner at the top of the doc so the inline view still
+    // accounts for every flag in the sidebar count.
+    // Tracker #28 follow-up (31 May 2026): also fall back to docPreview if
+    // #doc-procedure isn't found, so the banner always renders.
+    console.log('[inline flags] inline-anchored:', issues.length - processWide.length,
+                 'process-wide:', processWide.length);
+    if (processWide.length > 0) {
       const banner = document.createElement('div');
       banner.id = 'inlineProcessFlags';
       banner.className = 'inline-process-flags';
-      banner.innerHTML = '<strong>' + processWide.length + ' process-wide ' +
-        (processWide.length === 1 ? 'item' : 'items') + ':</strong><ul>' +
-        processWide.map(i => '<li>' + i.message + (i.suggestion ? ' - <em>' + i.suggestion + '</em>' : '') + '</li>').join('') +
+      const headline = processWide.length === 1
+        ? '1 flag applies to the whole process'
+        : processWide.length + ' flags apply to the whole process';
+      banner.innerHTML =
+        '<div class="ipf-headline"><strong>' + headline + '</strong> ' +
+        '<span class="ipf-sub">(can\'t be tied to a single task or NOTE)</span></div>' +
+        '<ul>' +
+        processWide.map(i => '<li>' +
+          '<strong class="ipf-sev ipf-sev-' + (i.severity || 'info') + '">' +
+            (i.severity === 'error' ? 'Error' : i.severity === 'warning' ? 'Warning' : 'Info') +
+          '</strong> ' +
+          i.message +
+          (i.suggestion ? '<br><em>' + i.suggestion + '</em>' : '') +
+        '</li>').join('') +
         '</ul>';
-      procEl.insertAdjacentElement('beforebegin', banner);
+      const anchor = procEl || docPreview;
+      if (anchor === procEl) {
+        anchor.insertAdjacentElement('beforebegin', banner);
+      } else {
+        anchor.insertAdjacentElement('afterbegin', banner);
+      }
     }
   }
 
@@ -13993,8 +14466,19 @@ createChatSurface({
     if (sidebarBtn) { sidebarBtn.classList.toggle('is-active', mode === 'sidebar'); sidebarBtn.setAttribute('aria-selected', String(mode === 'sidebar')); }
     if (inlineBtn)  { inlineBtn.classList.toggle('is-active', mode === 'inline');  inlineBtn.setAttribute('aria-selected', String(mode === 'inline')); }
     if (sidebar) sidebar.classList.toggle('inline-mode', mode === 'inline');
-    if (mode === 'inline') applyInlineFlags();
-    else clearInlineFlags();
+    if (mode === 'inline') {
+      applyInlineFlags();
+      // Tracker #28 follow-up: when the user switches to in-doc view,
+      // scroll the doc preview to the top so they see the process-wide
+      // banner (otherwise they might miss it if they were already
+      // scrolled deep into the doc).
+      const docPreview = document.getElementById('docPreview');
+      if (docPreview && docPreview.scrollIntoView) {
+        try { docPreview.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) {}
+      }
+    } else {
+      clearInlineFlags();
+    }
   }
 
   // Expose so re-renders can re-apply

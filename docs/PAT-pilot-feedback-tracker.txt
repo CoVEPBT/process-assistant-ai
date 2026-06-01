@@ -262,7 +262,7 @@ PENDING (post-pilot backlog - new features, bigger work)
 
 25. Auto-apply by default, with revert option
     Source: file 1 #12
-    Status: [PENDING]
+    Status: [DONE - 31 May 2026]
     Notes: bigger UX flow change. Worth running a small A/B with
     pilot users before committing.
 
@@ -306,7 +306,7 @@ PENDING (post-pilot backlog - new features, bigger work)
 
 28. Add back option to view quality flags WITHIN the document
     Source: file 2 #13
-    Status: [PENDING]
+    Status: [DONE - 31 May 2026]
     Notes: previous "inline flags" mode was removed in a UX simplification
     pass. Some users want it back. Consider as a sidebar/inline toggle.
 
@@ -799,11 +799,11 @@ File 2 (15 items):  #1 = 9, #2 = 10, #3 = 6, #4 = 14, #5 = 12,
 SUMMARY
 ============================================================
 
-  Done                   43
+  Done                   45
   Withdrawn               1
   Needs sample input      0
   Partial / follow-up     1 (skipped - procedure-vs-process language pass)
-  Pending backlog         7
+  Pending backlog         5
   ----
   Total                  52
 

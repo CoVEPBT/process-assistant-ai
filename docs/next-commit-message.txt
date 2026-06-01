@@ -1,22 +1,22 @@
-Tracker #52: Re-run auto-apply after user edits
+Tracker #25 + #28: home-page consent + restore inline flags toggle
 
-Lets users re-run auto-apply on top of their edits to the doc
-preview, without losing the ability to "Restore original"
-back to the very first parsed state.
+Bundled two changes.
 
-What changes for the user
-- After the first auto-apply completes, the top-tab "Re-run
-  auto-apply" button stays visible (was hidden permanently
-  before). They can edit the doc preview - add tasks/notes,
-  fix wording, etc. - and click Re-run auto-apply to apply
-  the AI polishing pass again on the current content.
-- "Restore original" ALWAYS goes back to the very first
-  parsed state. Never to a previous auto-apply baseline.
-  The safety net is anchored to ground truth, not to the
-  last AI output.
+#25: Auto-apply by default + consent at home-page Analyse
+======================================================
 
-What changes in code
-1. startAutoApply only captures originalSnapshot on the FIRST
-   run. Re-runs leave it pinned to the source parse so
-   Restore original always works correctly. Console logs the
-   re-run path fo
+After Analyse, the AI-content consent is now captured once at
+Analyse-click time, and auto-apply runs automatically on
+completion.
+
+- _doAnalyse() extracted from the click handler and exposed on
+  window so the modal Proceed handler can call it.
+- analyseBtn click gates on sessionAiConsent. First click opens
+  the modal with _runAnalyseAfterConsent = true; later clicks
+  in the same session bypass the modal.
+- Modal Proceed branch: sessionAiConsent = true, run _doAnalyse,
+  post-analyse hook auto-fires window.runAutoApplyDirect().
+- Modal Cancel branch (relabelled "Review original first"):
+  still runs _doAnalyse but skips auto-apply, so the user
+  can review themselves. Manual auto-apply later re-shows the
+  modal.
