@@ -680,60 +680,54 @@
   /* highlight on the affected task / NOTE. Click to expand a callout    */
   /* below with the flag message + suggestion. Highlight colour matches  */
   /* severity. cursor: pointer telegraphs the click affordance.          */
+  /* Tracker (1 Jun 2026): redesigned inline flag presentation. Previously */
+  /* the flagged element got a full coloured background + a "click for     */
+  /* detail" pill appended. Too visually heavy and clashed with active-    */
+  /* task highlighting. New design: subtle severity icon prefix + dashed   */
+  /* underline only, no background fill, no trailing pill. Click still     */
+  /* expands the callout below.                                            */
   .inline-flag-highlight {
     cursor: pointer;
-    padding: 2px 6px;
-    border-radius: 4px;
-    position: relative;
-    /* Subtle dashed underline tells the reader this is clickable, even */
-    /* without hovering. Matches the severity colour via currentColor.   */
     text-decoration: underline dashed currentColor;
     text-underline-offset: 3px;
     text-decoration-thickness: 1px;
-    transition: filter 0.12s ease, box-shadow 0.12s ease;
+    transition: filter 0.12s ease;
   }
   .inline-flag-highlight:hover {
-    filter: brightness(0.94);
-    box-shadow: 0 0 0 1px currentColor;
+    filter: brightness(0.85);
   }
   .inline-flag-highlight:focus-visible {
     outline: 2px solid var(--rmit-red); outline-offset: 1px;
   }
-  /* Small click-hint chip appended after the flagged element so first- */
-  /* time users immediately see what to do. Stays visible on hover.     */
-  /* Uses solid white background, no underline, and is whitespace-      */
-  /* nowrap so the dashed underline on the parent doesn't bleed         */
-  /* through the pill text.                                              */
-  .inline-flag-highlight::after {
-    content: 'click for detail';
-    display: inline-block;
-    margin-left: 10px;
-    padding: 3px 10px 4px;
-    font-size: 10.5px; font-weight: 600;
-    background: #FFFFFF;
-    color: currentColor;
-    border: 1px solid currentColor;
-    border-radius: 999px;
-    vertical-align: middle;
-    white-space: nowrap;
+  /* Severity icon prefix - small circular badge before the flagged text. */
+  /* Per severity: error = !  warning = ▲  info = i             */
+  /* The badge is non-interactive (parent handles click).                   */
+  .inline-flag-highlight::before {
+    content: 'i';
+    display: inline-flex;
+    align-items: center; justify-content: center;
+    width: 16px; height: 16px;
+    margin-right: 6px;
+    border-radius: 50%;
+    font-size: 10px; font-weight: 700;
+    color: #FFFFFF;
+    line-height: 1;
     text-decoration: none;
-    line-height: 1.6;
-    opacity: 0.95;
+    vertical-align: middle;
   }
-  /* Hover: keep the pill white (so the dark text stays readable) and  */
-  /* just emphasise the border + add a soft shadow. Previously we      */
-  /* flipped to currentColor background + white text, but in some      */
-  /* severity contexts that read as white-on-white.                    */
-  .inline-flag-highlight:hover::after {
-    background: #FFFFFF;
-    color: currentColor;
-    opacity: 1;
-    border-width: 1.5px;
-    box-shadow: 0 0 0 2px rgba(0,0,0,0.04);
-  }
-  .inline-flag-highlight.severity-error    { background: #FCEBEB; color: #501313; }
-  .inline-flag-highlight.severity-warning  { background: #FAEEDA; color: #412402; }
-  .inline-flag-highlight.severity-info     { background: #E6F1FB; color: #042C53; }
+  /* Per-severity content + background. Backgrounds set explicitly (NOT  */
+  /* via currentColor) because currentColor on a ::before resolves to    */
+  /* the same color set in the ::before block (white), making the badge  */
+  /* invisibly white-on-white.                                            */
+  .inline-flag-highlight.severity-error::before    { content: '!';      background: #C0223D; }
+  .inline-flag-highlight.severity-warning::before  { content: '\25B2'; background: #C77700; }
+  .inline-flag-highlight.severity-info::before     { content: 'i';      background: #1F6FB5; }
+  /* Severity colours - apply to text + underline + icon background via   */
+  /* currentColor. No background-color on the parent (that was the heavy   */
+  /* fill we dropped).                                                     */
+  .inline-flag-highlight.severity-error    { color: #C0223D; }
+  .inline-flag-highlight.severity-warning  { color: #C77700; }
+  .inline-flag-highlight.severity-info     { color: #1F6FB5; }
   .inline-flag-marker {
     display: inline-flex; align-items: center; justify-content: center;
     width: 18px; height: 18px; border-radius: 50%;
@@ -4281,7 +4275,7 @@
       <h4>Activities</h4>
       <ul class="std-list">
         <li>Aim for no more than 10 activities per process.</li>
-        <li>Aim for 2&ndash;7 words in an activity title.</li>
+        <li>Aim for 2&ndash;10 words in an activity title.</li>
         <li>Activities are the high-level steps - the &ldquo;what&rdquo;.</li>
         <li>Activities must always start with a verb.</li>
       </ul>
@@ -4363,7 +4357,7 @@
       <ul class="std-list">
         <li><strong>Number activities</strong> 1.0, 2.0, 3.0 &hellip; in the order they happen.</li>
         <li><strong>Start each activity title with a verb</strong> - "Receive", "Review", "Approve", "Notify", "Close".</li>
-        <li><strong>Keep titles short</strong> - aim for 2-7 words. If a title is long, the activity is probably doing too much.</li>
+        <li><strong>Keep titles short</strong> - aim for 2-10 words. If a title is long, the activity is probably doing too much.</li>
         <li><strong>Don't pre-write the tasks</strong> - write the activity titles first to confirm the shape of the process.</li>
       </ul>
 
@@ -5797,7 +5791,7 @@ function addActivityRow(prefill = {}) {
   block.innerHTML = `
     <div class="activity-header">
       <strong>${idx}.0</strong>
-      <input type="text" class="activity-title" placeholder="Verb-first activity title (2-7 words)" value="${prefill.title || ''}">
+      <input type="text" class="activity-title" placeholder="Verb-first activity title (2-10 words)" value="${prefill.title || ''}">
       <button class="icon-btn remove-activity" title="Remove">&times;</button>
     </div>
     <input type="text" class="activity-role" placeholder="Responsible role (single role)" value="${prefill.role || ''}" style="margin-bottom:8px;">
@@ -5992,7 +5986,7 @@ async function structureNotesWithAI(rough, titleHint) {
     "Your ONLY two jobs are:\n" +
     "  1. ASSIGN activity numbers (1.0, 2.0, 3.0...) to group related steps together.\n" +
     "  2. ASSIGN task letters (a, b, c...) within each activity, in the user's order.\n" +
-    "  3. SUGGEST a short activity title (2-7 verb-first words) for each group.\n\n" +
+    "  3. SUGGEST a short activity title (2-10 verb-first words) for each group.\n\n" +
     "Everything else - the actual step text - is COPIED VERBATIM from the user's notes.\n" +
     "You are NOT a writer. You are NOT an editor. You are a SORTER + LABELLER. Your output\n" +
     "is the user's exact words plus numbering + group labels.\n\n" +
@@ -6008,7 +6002,7 @@ async function structureNotesWithAI(rough, titleHint) {
     "  1 source line = 1 output task line.\n" +
     "- NEVER drop a step, even if it looks redundant, off-topic, or out of place. Include it as-is\n" +
     "  in whichever activity group fits best.\n" +
-    "- Activity titles are the ONLY new text you produce. Keep them verb-first and 2-7 words.\n\n" +
+    "- Activity titles are the ONLY new text you produce. Keep them verb-first and 2-10 words.\n\n" +
     "Output format - return ONLY this, inside a single fenced code block, no commentary before or after:\n" +
     "```\n" +
     "1.0 <activity title you suggest>\n" +
@@ -6214,48 +6208,50 @@ async function _doAnalyse() {
     pasteTitleInput.addEventListener('input', () => pasteTitleInput.classList.remove('has-error'), { once: true });
   }
   let model;
-  try {
-    if (formShown) {
-      model = readFormModel();
-    } else if (uploadedFile) {
-      model = await parseUploadedFile(uploadedFile);
-      // For uploaded files: the parser couldn't always find a title in rough drafts.
-      // Use the input as the source of truth when it's filled; otherwise fall back
-      // to whatever the parser extracted from the file content.
-      if (userProvidedTitle) {
-        model.title = userProvidedTitle;
-      } else if (!model.title || !model.title.trim()) {
-        showToast("I couldn't find a process name in your file. Add one in the Process name field above and try again.", 'error', 7000);
-        flagTitleInput();
-        return;
-      }
-    } else {
-      const txt = document.getElementById('pasteArea').value.trim();
-      if (!txt && !userProvidedTitle) {
-        showToast('Add a process name and paste your notes (or drop a file) to continue.', 'error', 5000);
-        flagTitleInput();
-        return;
-      }
-      // If the paste content looks like rough notes (no activity markers), offer
-      // to structure it with AI first. Skip if the user already dismissed the
-      // prompt during this session.
-      if (txt && looksLikeRoughNotes(txt) && !window._roughNotesAcknowledged) {
-        if (typeof window.openStructureNotesModal === 'function') {
-          window.openStructureNotesModal();
-          return; // cancel this analyse - user will click again after structuring/skipping
+  // Tracker (1 Jun 2026): if the Analyse-click pre-flight already parsed
+  // and validated the input, reuse that model rather than re-parsing.
+  if (window._preflightModel) {
+    model = window._preflightModel;
+    window._preflightModel = null;
+  } else {
+    // Fallback: no preflight ran (e.g. modal Proceed re-fires this path
+    // without going through the analyseBtn handler) - parse + validate here.
+    try {
+      if (formShown) {
+        model = readFormModel();
+      } else if (uploadedFile) {
+        model = await parseUploadedFile(uploadedFile);
+        if (userProvidedTitle) {
+          model.title = userProvidedTitle;
+        } else if (!model.title || !model.title.trim()) {
+          showToast("I couldn't find a process name in your file. Add one in the Process name field above and try again.", 'error', 7000);
+          flagTitleInput();
+          return;
         }
+      } else {
+        const txt = document.getElementById('pasteArea').value.trim();
+        if (!txt && !userProvidedTitle) {
+          showToast('Add a process name and paste your notes (or drop a file) to continue.', 'error', 5000);
+          flagTitleInput();
+          return;
+        }
+        if (txt && looksLikeRoughNotes(txt) && !window._roughNotesAcknowledged) {
+          if (typeof window.openStructureNotesModal === 'function') {
+            window.openStructureNotesModal();
+            return;
+          }
+        }
+        const fullText = userProvidedTitle
+          ? 'Process name: ' + userProvidedTitle + '\n\n' + txt
+          : txt;
+        model = parseStructuredText(fullText);
+        if (userProvidedTitle) model.title = userProvidedTitle;
       }
-      // Prepend "Process name: X" so the parser uses it; user-typed title wins.
-      const fullText = userProvidedTitle
-        ? 'Process name: ' + userProvidedTitle + '\n\n' + txt
-        : txt;
-      model = parseStructuredText(fullText);
-      if (userProvidedTitle) model.title = userProvidedTitle;
+    } catch (err) {
+      console.error(err);
+      showToast('Could not parse the input: ' + err.message, 'error');
+      return;
     }
-  } catch (err) {
-    console.error(err);
-    showToast('Could not parse the input: ' + err.message, 'error');
-    return;
   }
 
   // Validate the parsed result:
@@ -6345,7 +6341,151 @@ async function _doAnalyse() {
 }
 window._doAnalyse = _doAnalyse;
 
+// Tracker (1 Jun 2026): pre-flight content check. Catch obvious "no content"
+// cases (empty paste, missing title, file with no detectable title) BEFORE
+// opening the consent modal so users don't click through the modal to see
+// the error afterwards. Returns true if the input has enough to proceed,
+// false (with toast + flagged title input) if not.
+function _preflightAnalyseContent() {
+  const formShown = !document.getElementById('inputForm').hidden;
+  const pasteTitleInput = document.getElementById('pasteTitleInput');
+  const userProvidedTitle = pasteTitleInput ? pasteTitleInput.value.trim() : '';
+  function flagTitle() {
+    if (!pasteTitleInput) return;
+    pasteTitleInput.classList.add('has-error');
+    pasteTitleInput.focus();
+    pasteTitleInput.addEventListener('input', () => pasteTitleInput.classList.remove('has-error'), { once: true });
+  }
+  if (formShown) {
+    // Form mode: verify at least one user-typed field has content. Deeper
+    // validation (title, activity count) still runs inside _doAnalyse.
+    const formFields = document.querySelectorAll('#inputForm input[type="text"], #inputForm textarea');
+    const anyFilled = Array.from(formFields).some(el => (el.value || '').trim());
+    if (!anyFilled) {
+      if (typeof showToast === 'function') {
+        showToast('Fill in the form to continue.', 'error', 5000);
+      }
+      return false;
+    }
+    return true;
+  }
+  if (uploadedFile) {
+    // File uploaded - the parser will pull a title from the file or fall
+    // back to userProvidedTitle. Either is sufficient; deeper title
+    // validation stays in _doAnalyse.
+    return true;
+  }
+  // Paste / textarea mode
+  const pasteVal = (document.getElementById('pasteArea').value || '').trim();
+  if (!pasteVal && !userProvidedTitle) {
+    if (typeof showToast === 'function') {
+      showToast('Add a process name and paste your notes (or drop a file) to continue.', 'error', 5000);
+    }
+    flagTitle();
+    return false;
+  }
+  if (!pasteVal) {
+    if (typeof showToast === 'function') {
+      showToast('Paste your notes (or drop a file) to continue.', 'error', 5000);
+    }
+    return false;
+  }
+  return true;
+}
+
+// Tracker (1 Jun 2026): full parse + validation BEFORE the consent modal
+// opens. Previously the preflight only caught completely-empty inputs;
+// content errors (file with no detectable title, paste with no activities,
+// etc.) only surfaced AFTER the user clicked through the modal. Now we
+// run the whole parse + validation upfront. If it succeeds, the parsed
+// model is cached on window._preflightModel so _doAnalyse can reuse it
+// without re-parsing.
+async function _parseAndValidateInput() {
+  const formShown = !document.getElementById('inputForm').hidden;
+  const pasteTitleInput = document.getElementById('pasteTitleInput');
+  const userProvidedTitle = pasteTitleInput ? pasteTitleInput.value.trim() : '';
+  function flagTitleInput() {
+    if (!pasteTitleInput) return;
+    pasteTitleInput.classList.add('has-error');
+    pasteTitleInput.focus();
+    pasteTitleInput.addEventListener('input', () => pasteTitleInput.classList.remove('has-error'), { once: true });
+  }
+  let model;
+  try {
+    if (formShown) {
+      model = readFormModel();
+    } else if (uploadedFile) {
+      model = await parseUploadedFile(uploadedFile);
+      if (userProvidedTitle) {
+        model.title = userProvidedTitle;
+      } else if (!model.title || !model.title.trim()) {
+        if (typeof showToast === 'function') {
+          showToast("I couldn't find a process name in your file. Add one in the Process name field above and try again.", 'error', 7000);
+        }
+        flagTitleInput();
+        return null;
+      }
+    } else {
+      const txt = document.getElementById('pasteArea').value.trim();
+      if (!txt && !userProvidedTitle) {
+        if (typeof showToast === 'function') {
+          showToast('Add a process name and paste your notes (or drop a file) to continue.', 'error', 5000);
+        }
+        flagTitleInput();
+        return null;
+      }
+      // Rough-notes structuring modal opens here (NOT the consent modal).
+      // We bail out and let the user complete that side-quest, then re-click
+      // Analyse - this is the same behaviour as before.
+      if (txt && typeof looksLikeRoughNotes === 'function' && looksLikeRoughNotes(txt) && !window._roughNotesAcknowledged) {
+        if (typeof window.openStructureNotesModal === 'function') {
+          window.openStructureNotesModal();
+          return null;
+        }
+      }
+      const fullText = userProvidedTitle
+        ? 'Process name: ' + userProvidedTitle + '\n\n' + txt
+        : txt;
+      model = parseStructuredText(fullText);
+      if (userProvidedTitle) model.title = userProvidedTitle;
+    }
+  } catch (err) {
+    console.error(err);
+    if (typeof showToast === 'function') {
+      showToast('Could not parse the input: ' + (err.message || err), 'error');
+    }
+    return null;
+  }
+  // Title required
+  const hasTitle = !!(model.title && model.title.trim());
+  if (!hasTitle) {
+    if (typeof showToast === 'function') {
+      showToast('Please add a process name to continue.', 'error', 5000);
+    }
+    if (!formShown) flagTitleInput();
+    return null;
+  }
+  // At least one activity / task required
+  const hasActivities = Array.isArray(model.activities) &&
+    model.activities.some(a => (a.title && a.title.trim()) || (a.tasks && a.tasks.length > 0));
+  if (!hasActivities) {
+    const msg = uploadedFile
+      ? "I couldn't find any activities in your file. Make sure your content includes activity headers (like '1.0 Activity name') with tasks under each."
+      : 'Add at least one activity with a task before analysing.';
+    if (typeof showToast === 'function') {
+      showToast(msg, 'error', 6000);
+    }
+    return null;
+  }
+  return model;
+}
+
 document.getElementById('analyseBtn').addEventListener('click', async () => {
+  // Full parse + validate BEFORE the consent modal so any input errors
+  // surface immediately. Cache the parsed model so _doAnalyse can reuse it.
+  const model = await _parseAndValidateInput();
+  if (!model) return;
+  window._preflightModel = model;
   // If the user has already consented in this session, skip the modal and
   // analyse directly. Otherwise show the modal first; the modal Proceed /
   // Cancel handlers route to _doAnalyse with the right sessionAiConsent
@@ -7588,22 +7728,44 @@ function parseStructuredText(text) {
       // (1. / 2. / 3. with no letters / no bullets / no decimals), treat each
       // numbered line as a NEW activity rather than a task. Captures the
       // "1. Buy spaghetti. 2. cook spaghetti." pattern users actually type.
-      const treatAsActivity = isDecimalSep || !current || currentHasBulletTasks || allFlatNumbered;
+      //
+      // Separator-style hierarchy signal (1 Jun 2026): when the user uses one
+      // terminator for activities ("1.") and a different one for tasks ("1)"),
+      // a new line matching the ACTIVITY terminator after tasks in the OTHER
+      // terminator should be treated as a new activity. Catches the pattern
+      //   "1. Prepare meal / 1) Get ingredients / 2) Cook / 2. Eat meal"
+      // where "2. Eat meal" was previously absorbed as task c of activity 1.
+      const _newSepStr = (sep || '').trim();
+      const _curActSep = (current && current._actSepStyle) || '';
+      const _curTaskSep = (current && current._taskSepStyle) || '';
+      const sepHierarchySignal = !!(current && current.tasks.length > 0 &&
+        _curTaskSep && _curActSep &&
+        _newSepStr === _curActSep && _newSepStr !== _curTaskSep);
+      const treatAsActivity = isDecimalSep || !current || currentHasBulletTasks || allFlatNumbered || sepHierarchySignal;
       if (current && !treatAsActivity) {
         const idx = current.tasks.length;
         const letter = (idx < 26) ? String.fromCharCode(97 + idx) : 'z';
         current.tasks.push({ letter, text: am[3] });
         if (!current._taskStyle) current._taskStyle = 'numeric';
+        // Tracker (1 Jun 2026): remember the terminator the user used for
+        // this task so a later activity-style line ("." vs ")") can be
+        // distinguished as a new activity heading, not the next task.
+        if (!current._taskSepStyle) current._taskSepStyle = _newSepStr;
         inNote = false;
         continue;
       }
       if (current) {
         delete current._taskStyle;  // internal field - don't ship in the model
+        delete current._actSepStyle;
+        delete current._taskSepStyle;
         model.activities.push(current);
       }
       // Normalise the number: keep as "N.0" for display consistency.
       const number = isDecimalSep ? am[1] + sep : am[1] + '.0';
-      current = { number, title: am[3], role: '', tasks: [], notes: [], links: [] };
+      current = { number, title: am[3], role: '', tasks: [], notes: [], links: [],
+                  // Track the terminator style of THIS activity heading so
+                  // later disambiguation can compare against task-line styles.
+                  _actSepStyle: _newSepStr };
       currentNote = null; inNote = false;
       inProcedure = true;
       continue;
@@ -8275,7 +8437,7 @@ function runRulesEngine(model) {
         suggestion:'If "' + firstWord(titleAfterPrefix) + '" is the right verb for your context, you can leave it. Otherwise consider a standard business verb like Create, Update, Manage, Plan, Onboard, or Process.' });
     }
     // Process title length: 3-8 words after the prefix. Matches the spirit of
-    // the activity-title rule (2-7 words) - if the process title is doing too
+    // the activity-title rule (2-10 words) - if the process title is doing too
     // much, the process itself is probably doing too much.
     const titleWords = titleAfterPrefix.split(/\s+/).filter(Boolean);
     if (titleWords.length > 0 && (titleWords.length < 3 || titleWords.length > 8)) {
@@ -8290,21 +8452,11 @@ function runRulesEngine(model) {
   }
 
   // ---------- TRIGGER / INPUTS / OUTPUTS (CoVE 1) ----------
-  if (!model.trigger) {
-    push({ id:'no-trigger', source:'CoVE', severity:'warning',
-      message:'Trigger is not defined.',
-      suggestion:'State exactly what starts the process (e.g. "Staff member requests a new laptop via ServiceNow").' });
-  }
-  if (!model.outputs) {
-    push({ id:'no-outputs', source:'CoVE', severity:'warning',
-      message:'Outputs are not defined.',
-      suggestion:'State the end result of the process (e.g. "Laptop provided to staff member").' });
-  }
-  if (!model.inputs) {
-    push({ id:'no-inputs', source:'CoVE', severity:'info',
-      message:'Inputs are not noted.',
-      suggestion:'If the process needs forms, data or materials to start, list them here. Use "None" if not applicable.' });
-  }
+  // Tracker (1 Jun 2026): no-trigger / no-outputs / no-inputs flags
+  // removed. Empty fields now show "To be assigned in Nintex Process
+  // Manager" placeholder (see renderDocPreview), matching the owner /
+  // expert pattern. User can still type a value into the field if they
+  // want - the field stays contenteditable.
 
   // ---------- OWNER / EXPERT (RMIT) ----------
   // Pilot: skip these checks entirely. Owner/Expert aren't captured during
@@ -8407,15 +8559,14 @@ function runRulesEngine(model) {
         suggestion:'If "' + firstWord(a.title) + '" is the right verb for what this activity does, you can leave it. Otherwise consider Receive, Review, Approve, Notify, Close, or another standard process verb.' });
     }
 
-    // Activity title length 2–7 words (RMIT)
+    // Activity title length 2–10 words (RMIT)
     const wc = a.title.split(/\s+/).filter(Boolean).length;
-    if (a.title && (wc < 2 || wc > 7)) {
-      // Tracker (1 Jun 2026): promoted from info to warning. The 2-7 word
-      // cap is one of RMIT's stronger conventions and pilots wanted titles
-      // longer than this to read as the same kind of issue as a verb-first
-      // miss, not a softer "suggestion".
+    if (a.title && (wc < 2 || wc > 10)) {
+      // Tracker (1 Jun 2026): cap raised from 7 to 10 words after pilot
+      // feedback. Still warning severity so the count flag matches verb-first
+      // and role-empty flags visually.
       push({ id:`act-length-${idx}`, source:'RMIT', severity:'warning',
-        message:`Activity ${a.number} title is ${wc} word${wc===1?'':'s'} (RMIT recommends 2–7).`,
+        message:`Activity ${a.number} title is ${wc} word${wc===1?'':'s'} (RMIT recommends 2–10).`,
         location: loc });
     }
 
@@ -9992,7 +10143,13 @@ function renderDocPreview(m) {
   // Render a labelled meta field. Splits on ';' for bulleted sub-items when present.
   const metaField = (label, value) => {
     const v = (value || '').trim();
-    if (!v) return `<p><strong>${label}:</strong> -</p>`;
+    if (!v) {
+      // Tracker (1 Jun 2026): empty Trigger / Inputs / Outputs now show
+      // the "assign in Nintex Process Manager" placeholder, mirroring
+      // the owner / expert pattern. Field stays contenteditable so the
+      // user can replace the placeholder with a real value if they want.
+      return `<p class="doc-meta-placeholder"><strong>${label}:</strong> ${escapeHtml(OWNER_EXPERT_PLACEHOLDER)}</p>`;
+    }
     const parts = v.split(/\s*;\s*/).filter(Boolean);
     if (parts.length > 1) {
       return `<p><strong>${label}:</strong></p><ul>${parts.map(p => `<li>${escapeHtml(p)}</li>`).join('')}</ul>`;
@@ -10029,7 +10186,10 @@ function renderDocPreview(m) {
     if (a.role) {
       html += '<div class="role" id="doc-activity-' + _actIdRoot + '-role">' + escapeHtml(a.role) + '</div>';
     } else {
-      html += `<div class="role role-empty" data-empty="1"><span class="role-placeholder">[Click to add accountable role]</span></div>`;
+      // Tracker (1 Jun 2026): keep the same id on the empty-role placeholder
+      // so the act-norole-N quality flag can anchor here in In-doc mode
+      // rather than falling through to the process-wide banner.
+      html += '<div class="role role-empty" id="doc-activity-' + _actIdRoot + '-role" data-empty="1"><span class="role-placeholder">[Click to add accountable role]</span></div>';
     }
     const actId = escapeHtml(a.number).replace('.', '-');
     a.tasks.forEach(t => {
@@ -11401,7 +11561,7 @@ async function generateBlankTemplate() {
   c.push(para('Background: [Brief context - why this process exists]'));
 
   c.push(para('Activities', { heading: HeadingLevel.HEADING_1 }));
-  c.push(para('Each activity title starts with a verb (2 to 7 words). Each activity has one responsible role. Each task starts with a verb.', { italic: true }));
+  c.push(para('Each activity title starts with a verb (2 to 10 words). Each activity has one responsible role. Each task starts with a verb.', { italic: true }));
 
   for (let i = 1; i <= 5; i++) {
     c.push(para(i + '.0 [Verb-first activity title]', { heading: HeadingLevel.HEADING_2 }));
@@ -12056,7 +12216,9 @@ if (docPreviewEl) {
         '<button type="button" class="user-item-remove" contenteditable="false" ' +
         'aria-label="Remove this activity" title="Remove this activity">&times;</button>' +
         '<div><span class="num">' + nextNum + '</span> <strong>[New activity title]</strong></div>' +
-        '<div class="role role-empty" data-empty="1"><span class="role-placeholder">[Click to add accountable role]</span></div>' +
+        // Tracker (1 Jun 2026): empty-role placeholder gets the same id as
+        // populated roles so act-norole-N flags can anchor here too.
+        '<div class="role role-empty" id="doc-activity-' + actId + '-role" data-empty="1"><span class="role-placeholder">[Click to add accountable role]</span></div>' +
         '<div class="task" id="doc-task-' + actId + '-a"><strong>a.</strong> [Click to add task]</div>' +
         '<div class="doc-add-actions" contenteditable="false">' +
           '<button type="button" class="doc-add-btn doc-add-task" data-act-num="' + nextNum + '">+ Add task</button>' +
@@ -12219,7 +12381,7 @@ if (restoreBtn) {
     [
       'Number activities 1.0, 2.0, 3.0 \u2026 in the order they happen.',
       'Start each activity title with a verb - "Receive", "Review", "Approve", "Notify", "Close".',
-      'Keep titles short - aim for 2-7 words. If a title is long, the activity is probably doing too much.',
+      'Keep titles short - aim for 2-10 words. If a title is long, the activity is probably doing too much.',
       "Don't pre-write the tasks - write the activity titles first to confirm the shape of the process."
     ].forEach(t => c.push(bullet(t)));
 
@@ -13315,9 +13477,17 @@ createChatSurface({
       'PRESERVE ACTIVITY STRUCTURE - THIS IS NON-NEGOTIABLE:\n' +
       'The set of activities in the source is the process owner\'s deliberate breakdown of the work. ' +
       'Do NOT invent new activities, do NOT promote NOTE content into a new activity, do NOT split one ' +
-      'source activity into two. The SPLIT MULTI-ROLE ACTIVITIES rule (below) is the ONLY allowed reason ' +
-      'to add an activity. Count the activities in the source and emit EXACTLY that many output ' +
-      'activities (plus any required multi-role splits).\n' +
+      'source activity into two, **and do NOT merge two source activities into one**. The SPLIT MULTI-ROLE ' +
+      'ACTIVITIES rule (below) is the ONLY allowed reason to add an activity. Count the activities in the ' +
+      'source and emit EXACTLY that many output activities (plus any required multi-role splits).\n' +
+      '* ACTIVITY COUNT INVARIANT - MANDATORY SELF-CHECK: count the activities in the source and count the ' +
+      'activities in your output. They must match EXACTLY (plus any sanctioned multi-role split). ' +
+      '**If the source has 2 activities ("Prepare meal", "Eat meal") your output has 2 activities. ' +
+      'You may NEVER merge two activities into one because the second one looks short, simple, or related ' +
+      'to the first.** If the source has 2 activities and your output has 1, redo the Process Map block. ' +
+      'Worked example: SOURCE = "1. Prepare meal (tasks: Get ingredients, Cook) / 2. Eat meal (task: Set table)". ' +
+      'WRONG: 1 activity "Prepare meal" with Get ingredients / Cook / Eat the meal (merges the two activities). ' +
+      'RIGHT: 2 activities. 1.0 "Prepare meal" (Get ingredients, Cook), 2.0 "Eat meal" (Set table).\n' +
       '* PRESERVE ACTIVITY NUMBERS VERBATIM. If the source numbers activities 1.0, 2.0, 3.0, ..., 6.0, ' +
       '6.1, 6.2, 6.3, that numbering is meaningful - "x.1", "x.2", "x.3" are PARALLEL activities under ' +
       '"x.0" (variations of the same step). Emit them as "6.1", "6.2", "6.3" in your output. Do NOT ' +
@@ -13527,10 +13697,10 @@ createChatSurface({
       '      b. Send email to HR Business Partner.\n' +
       '    (Subsequent activities renumber: source 4.0 -> 5.0, source 5.0 -> 6.0)\n\n' +
       'ACTIVITY HEADING LENGTH - THIS IS NON-NEGOTIABLE:\n' +
-      'Each activity heading (the title on the line with [Role Name]) MUST be 2-7 words. NO EXCEPTIONS. ' +
-      'There is no soft cap, no hard cap, no allowance for "important" extra words. 8 words = FAIL. 9 words = FAIL. ' +
-      'Headings are verb-first imperative phrases. If a heading is over 7 words, the activity is doing too much - apply the STRATEGY below and rewrite, or split. ' +
-      'You MUST apply the STRATEGY to EVERY heading over 7 words, regardless of whether you think the original wording is meaningful or important. Trim first, then if still over 7, split. ' +
+      'Each activity heading (the title on the line with [Role Name]) MUST be 2-10 words. NO EXCEPTIONS. ' +
+      'There is no soft cap, no hard cap, no allowance for "important" extra words. 11 words = FAIL. 12 words = FAIL. ' +
+      'Headings are verb-first imperative phrases. If a heading is over 10 words, the activity is doing too much - apply the STRATEGY below and rewrite, or split. ' +
+      'You MUST apply the STRATEGY to EVERY heading over 10 words, regardless of whether you think the original wording is meaningful or important. Trim first, then if still over 10, split. ' +
       'Do not skip trimming because you respect the source - the source IS the thing you are correcting.\n' +
       'STRATEGY FOR TIGHTENING (apply in order):\n' +
       '  1. Drop articles - "the", "a", "an". "Verify the requester eligibility" -> "Verify requester eligibility".\n' +
@@ -13538,12 +13708,12 @@ createChatSurface({
       '  3. Drop preposition tails - if the activity scope is already clear from the role + tasks, you can drop "for the student", "to the manager", etc. "Send the form to the manager" -> "Send the form" (the role line says who).\n' +
       '  4. Collapse compound nouns - "training plan agreement variation" -> "agreement variation".\n' +
       '  5. Use a stronger verb that already carries meaning - "Generate and create the new training plan" -> "Generate the training plan" -> "Generate training plan".\n' +
-      '  6. If you still cannot fit in 7 words, the activity is genuinely doing two things - SPLIT it into two activities. Renumber the rest.\n' +
+      '  6. If you still cannot fit in 10 words, the activity is genuinely doing two things - SPLIT it into two activities. Renumber the rest.\n' +
       '     **SPLIT vs INVENT - this is a critical distinction.** Splitting is allowed here, inventing is NEVER allowed (see PRESERVE ACTIVITY STRUCTURE).\n' +
       '     You may ONLY split if ALL of these signals are present:\n' +
       '       (a) the source TITLE itself contains two verb phrases joined by "and" / "then" / "plus" / "&" - e.g. "Verify eligibility and submit request", "Generate plan then send to employer".\n' +
       '       (b) the source TASKS under that activity clearly fall into two camps (some tasks support the first verb phrase, the rest support the second).\n' +
-      '       (c) reword strategies 1-5 above genuinely cannot get you to 7 words without losing meaning.\n' +
+      '       (c) reword strategies 1-5 above genuinely cannot get you to 10 words without losing meaning.\n' +
       '     If ANY of (a), (b), (c) is missing, do NOT split. Just reword as far as you can and leave the title at whatever shortest count you achieved.\n' +
       '     What splitting looks like - allowed:\n' +
       '       SOURCE 3.0 "Verify requester eligibility and submit the request to the approver" (11 words).\n' +
@@ -13564,13 +13734,22 @@ createChatSurface({
       '    -> "Update nominal completion date"              (4 words) GOOD\n' +
       '  SOURCE: "School Agreement to Training Plan via Email (SBAT ONLY)" (9 words) - BAD\n' +
       '    -> "School signs training plan (SBAT)"           (5 words) GOOD\n' +
+      'SPECIFICS BELONG IN THE BODY, NOT THE HEADING - critical rule for legally-flavoured titles:\n' +
+      'When a heading is loaded with legal references, document names, section numbers, Act titles, or other specific nouns, the right move is NOT to keep them all in the heading. ' +
+      'The HEADING is a short verb-first description of what happens. The specifics go into the tasks (or a NOTE) under that activity, where they belong. ' +
+      'Keeping every specific noun in the heading is what makes it 18 words long - and is the WRONG application of the "preserve specific nouns" rule. Specific nouns must be preserved SOMEWHERE in the activity, not necessarily in its heading.\n' +
+      'Worked example (real RMIT case):\n' +
+      '  SOURCE: "Respond to the Notice under section 88 of the National Law for Student Registration - Request for Information email" (18 words) - BAD\n' +
+      '    WRONG: keep all the specifics in the heading because they are "important". Result: 18 words still, FAIL.\n' +
+      '    RIGHT: heading = "Respond to AHPRA Information request" (5 words). The "section 88", "National Law", "Student Registration", "Notice" / "Request for Information email" details belong in TASKS under this activity (or a NOTE explaining the trigger), NOT in the heading.\n' +
+      'Treat the heading as a label that lets a reader find the activity in a process map. The legal and document references can - and should - sit in the body where there is room for them.\n' +
       'MANDATORY SELF-CHECK before emitting blocks - DO THIS LITERALLY, for EVERY activity:\n' +
       '  step 1: Read each activity heading.\n' +
       '  step 2: Count the words. (Hyphens, slashes, parens, square brackets do NOT split words. "Training-plan" counts as 1 word.)\n' +
-      '  step 3: If count > 7, apply the STRATEGY above and rewrite. Then count again.\n' +
-      '  step 4: If the rewritten heading is STILL > 7 words, the activity needs to be split into two.\n' +
-      '  step 5: After rewriting, count ONE MORE TIME. If you emit a Process Map block with any heading over 7 words, you have failed this task.\n' +
-      'Do NOT emit the Process Map block if any heading exceeds 7 words. Cycle through twice if needed. If after two cycles a heading is still over 7 words, SPLIT the activity - do not give up and emit it long.\n\n' +
+      '  step 3: If count > 10, apply the STRATEGY above and rewrite. Then count again.\n' +
+      '  step 4: If the rewritten heading is STILL > 10 words, the activity needs to be split into two.\n' +
+      '  step 5: After rewriting, count ONE MORE TIME. If you emit a Process Map block with any heading over 10 words, you have failed this task.\n' +
+      'Do NOT emit the Process Map block if any heading exceeds 10 words. Cycle through twice if needed. If after two cycles a heading is still over 10 words, SPLIT the activity - do not give up and emit it long.\n\n' +
       'No preamble. No commentary. No "Here are the blocks" sentence. No closing question. ' +
       'No <<nintex-ready>> marker. The very first character of your reply must be the opening ``` of the first block.';
 
@@ -13899,21 +14078,84 @@ createChatSurface({
         console.warn('[auto-apply] could not restore activity numbers:', e);
       }
 
-      // Tracker (31 May 2026): diagnostic - check if any activity titles
-      // are still over 7 words after auto-apply. If so, the AI didn't
-      // follow the ACTIVITY HEADING LENGTH rule and we surface the
-      // titles here so engineering can see them in DevTools.
+      // Tracker (31 May 2026, cap raised 1 Jun 2026): diagnostic - check
+      // if any activity titles are still over 10 words after auto-apply.
+      // If so, the AI didn't follow the ACTIVITY HEADING LENGTH rule and
+      // we surface the titles here so engineering can see them in DevTools.
       try {
         const longTitles = [];
         (newModel.activities || []).forEach(a => {
           const t = String(a.title || '').trim();
           const wc = t.split(/\s+/).filter(Boolean).length;
-          if (wc > 7) longTitles.push({ number: a.number, words: wc, title: t });
+          if (wc > 10) longTitles.push({ number: a.number, words: wc, title: t });
         });
         if (longTitles.length > 0) {
-          console.warn('[auto-apply] activity titles still over 7 words after auto-apply:', longTitles);
+          console.warn('[auto-apply] activity titles still over 10 words after auto-apply:', longTitles);
         }
       } catch (e) {}
+
+      // Tracker #223 (1 Jun 2026): post-process safety net. Compare source
+      // vs auto-apply output to catch the AI silently dropping tasks /
+      // activities or inventing NOTEs (the spaghetti / prepare-meal / AHPRA
+      // regressions we kept trying to fix via prompt-tuning alone). This
+      // is a deterministic check - prompt-independent - so even if the AI
+      // ignores the rules in its prompt, the user gets a visible warning.
+      try {
+        const srcActs = (originalSnapshot && originalSnapshot.model && originalSnapshot.model.activities) || [];
+        const outActs = newModel.activities || [];
+
+        const srcTaskTotal = srcActs.reduce((s, a) => s + (a.tasks ? a.tasks.length : 0), 0);
+        const outTaskTotal = outActs.reduce((s, a) => s + (a.tasks ? a.tasks.length : 0), 0);
+        const srcNoteTotal = srcActs.reduce((s, a) => s + (a.notes ? a.notes.length : 0), 0);
+        const outNoteTotal = outActs.reduce((s, a) => s + (a.notes ? a.notes.length : 0), 0);
+
+        // Count multi-role splits the AI was allowed to add. Each split adds
+        // (number-of-tasks-in-source-activity) tasks across the new activities
+        // but the TOTAL task count should still match. So a permitted multi-role
+        // split is detectable by an activity-count delta where the total task
+        // count is unchanged. We accept any activity-count increase as long as
+        // the total task count is >= source total task count.
+        const activitiesDropped = srcActs.length > outActs.length;
+        const tasksDropped = outTaskTotal < srcTaskTotal;
+        const notesInvented = outNoteTotal > srcNoteTotal;
+        const longTitlesAfter = (outActs || []).filter(a => {
+          const wc = String(a.title || '').trim().split(/\s+/).filter(Boolean).length;
+          return wc > 10;
+        });
+
+        const warnings = [];
+        if (activitiesDropped) {
+          warnings.push((srcActs.length - outActs.length) + ' activit' +
+            ((srcActs.length - outActs.length) === 1 ? 'y' : 'ies') + ' missing');
+        }
+        if (tasksDropped) {
+          warnings.push((srcTaskTotal - outTaskTotal) + ' task' +
+            ((srcTaskTotal - outTaskTotal) === 1 ? '' : 's') + ' missing');
+        }
+        if (notesInvented) {
+          warnings.push((outNoteTotal - srcNoteTotal) + ' new NOTE' +
+            ((outNoteTotal - srcNoteTotal) === 1 ? '' : 's') + ' added');
+        }
+        if (longTitlesAfter.length > 0) {
+          warnings.push(longTitlesAfter.length + ' activity title' +
+            (longTitlesAfter.length === 1 ? '' : 's') + ' over 10 words');
+        }
+
+        if (warnings.length > 0) {
+          console.warn('[auto-apply safety net] differences vs source:', {
+            source: { activities: srcActs.length, tasks: srcTaskTotal, notes: srcNoteTotal },
+            output: { activities: outActs.length, tasks: outTaskTotal, notes: outNoteTotal },
+            longTitlesOver10: longTitlesAfter.map(a => ({ number: a.number, title: a.title }))
+          });
+          const msg = 'Heads up: auto-apply produced ' + warnings.join(', ') +
+            ' compared with your original. Spot-check the doc and use "Restore original" if needed.';
+          if (typeof showToast === 'function') {
+            showToast(msg, 'warning', 10000);
+          }
+        }
+      } catch (e) {
+        console.warn('[auto-apply safety net] check failed:', e);
+      }
 
       // Restore linked processes (act.links) the AI dropped. The three-block
       // output format doesn't include "PROCESS X" lines, so any linked
@@ -14426,6 +14668,59 @@ createChatSurface({
     if (banner) banner.remove();
   }
 
+  // Tracker (1 Jun 2026): one delegated click/keydown handler on docPreview
+  // instead of per-element listeners. The previous per-element wiring
+  // captured idx + issue in a closure, which went stale after Save changes
+  // re-ran the rules engine - clicking a freshly-added task flag did
+  // nothing because the listener referenced a now-empty index.
+  let _delegatedClickWired = false;
+  function wireDelegatedClickOnce(docPreview) {
+    if (_delegatedClickWired || !docPreview) return;
+    _delegatedClickWired = true;
+    function handleActivate(target) {
+      const idxStr = target.dataset.issueIdx || '';
+      const firstIdx = parseInt(idxStr.split(',')[0], 10);
+      if (isNaN(firstIdx)) return;
+      const issues = getIssues();
+      const issue = issues[firstIdx];
+      if (!issue) return;
+      // Toggle: if a callout for this idx is already showing, remove it.
+      const existing = document.querySelector('.inline-flag-callout[data-issue-idx="' + firstIdx + '"]');
+      if (existing) { existing.remove(); return; }
+      const callout = document.createElement('div');
+      callout.className = 'inline-flag-callout ' + severityClass(issue.severity);
+      callout.dataset.issueIdx = String(firstIdx);
+      callout.setAttribute('contenteditable', 'false');
+      const sevWord = issue.severity === 'error' ? 'Error'
+                      : issue.severity === 'warning' ? 'Warning'
+                      : 'Suggestion';
+      callout.innerHTML =
+        '<span class="ifc-badge">' + sevWord + '</span>' +
+        '<div class="ifc-body"><strong>' + issue.message + '</strong>' +
+        (issue.suggestion ? '<em>' + issue.suggestion + '</em>' : '') + '</div>' +
+        '<button class="ifc-dismiss" type="button" aria-label="Close">&times;</button>';
+      callout.querySelector('.ifc-dismiss').addEventListener('click', function (e) {
+        e.stopPropagation();
+        callout.remove();
+      });
+      target.insertAdjacentElement('afterend', callout);
+    }
+    docPreview.addEventListener('click', function (e) {
+      const t = e.target.closest && e.target.closest('.inline-flag-highlight');
+      if (!t || !docPreview.contains(t)) return;
+      // Don't swallow clicks on the callout's own dismiss button or body
+      if (e.target.closest && e.target.closest('.inline-flag-callout')) return;
+      handleActivate(t);
+    });
+    docPreview.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const t = e.target.closest && e.target.closest('.inline-flag-highlight');
+      if (!t || !docPreview.contains(t)) return;
+      e.preventDefault();
+      handleActivate(t);
+    });
+  }
+
   function applyInlineFlags() {
     clearInlineFlags();
     const docPreview = document.getElementById('docPreview');
@@ -14520,33 +14815,13 @@ createChatSurface({
       target.setAttribute('tabindex', '0');
       target.dataset.issueIdx = (target.dataset.issueIdx || '') + (target.dataset.issueIdx ? ',' : '') + String(idx);
       target.setAttribute('title', issue.message);
-
-      const expand = () => {
-        const existing = document.querySelector('.inline-flag-callout[data-issue-idx="' + idx + '"]');
-        if (existing) { existing.remove(); return; }
-        const callout = document.createElement('div');
-        callout.className = 'inline-flag-callout ' + severityClass(issue.severity);
-        callout.dataset.issueIdx = String(idx);
-        const sevWord = issue.severity === 'error' ? 'Error'
-                        : issue.severity === 'warning' ? 'Warning'
-                        : 'Suggestion';
-        callout.innerHTML =
-          '<span class="ifc-badge">' + sevWord + '</span>' +
-          '<div class="ifc-body"><strong>' + issue.message + '</strong>' +
-          (issue.suggestion ? '<em>' + issue.suggestion + '</em>' : '') + '</div>' +
-          '<button class="ifc-dismiss" type="button" aria-label="Close">&times;</button>';
-        callout.querySelector('.ifc-dismiss').addEventListener('click', e => { e.stopPropagation(); callout.remove(); });
-        target.insertAdjacentElement('afterend', callout);
-      };
-      // Avoid attaching the click handler twice if multiple flags share a target.
-      if (!target.dataset.flagClickWired) {
-        target.dataset.flagClickWired = '1';
-        target.addEventListener('click', expand);
-        target.addEventListener('keydown', e => {
-          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); expand(); }
-        });
-      }
+      // Click + keyboard handling moved to a single delegated listener on
+      // docPreview (see wireDelegatedClickOnce below). Per-element listeners
+      // captured idx/issue in a closure which went stale after Save changes
+      // re-ran the rules engine.
     });
+
+    wireDelegatedClickOnce(docPreview);
 
     // Render process-wide banner. These are flags that don't anchor to a
     // specific task / NOTE - process title checks, role-list checks,
@@ -14715,7 +14990,14 @@ createChatSurface({
 (function wireSaveEdits() {
   function extractText(el) {
     if (!el) return '';
-    return (el.innerText || el.textContent || '').replace(/\s+/g, ' ').trim();
+    // Tracker (1 Jun 2026): clone + strip UI affordance elements before
+    // reading text. Otherwise the dismiss-button character ("×") and the
+    // "+ Add task" / "+ Add note" labels bleed into the saved task text
+    // and end up parsed as the first word of the task (which then trips
+    // the verb-first check with messages like 'Task starts with "×"').
+    const clone = el.cloneNode(true);
+    clone.querySelectorAll('.user-item-remove, .doc-add-actions, .doc-add-btn').forEach(n => n.remove());
+    return (clone.innerText || clone.textContent || '').replace(/\s+/g, ' ').trim();
   }
   function stripLabel(text, label) {
     // "Owner: Sarah Chen" -> "Sarah Chen". Tolerates dash separators too.
@@ -14749,6 +15031,9 @@ createChatSurface({
       // Collapse internal whitespace + strip Unicode dashes used for placeholder
       txt = txt.replace(/\s+/g, ' ').trim();
       if (txt === '-' || txt === '-' || txt === '\u2013') txt = '';
+      // Tracker (1 Jun 2026): treat the "To be assigned in Nintex..." text
+      // as empty so saving doesn't capture the placeholder as a real value.
+      if (txt === OWNER_EXPERT_PLACEHOLDER) txt = '';
       m[key] = txt;
     });
 

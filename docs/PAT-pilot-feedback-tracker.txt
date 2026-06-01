@@ -779,165 +779,165 @@ PENDING (post-pilot backlog - new features, bigger work)
     to the ORIGINAL parsed model, not to the first auto-apply
     output.
 
-53. Handover flags rendered between activities
+53. Handover flags rendered between activities (in-doc mode)
     Source: Natalie 31 May 2026
     Status: [DONE - 1 Jun 2026]
-    Previously handover-N flags went into the process-wide
-    banner at the top, which buried the warning. Now they
-    render as a dedicated amber strip between the two
-    activities they sit between, with click-to-expand
-    suggestion body. resolveJumpTarget returns null for
-    handover IDs (skip default routing), applyInlineFlags has
-    a special case that parses the location ("4.0 -> 5.0"),
-    finds the next activity element, and inserts the strip via
-    nextAct.parentNode.insertBefore.
+    Render handover-N flags as an amber strip with click-to-
+    expand body between the two activities they sit between,
+    instead of the process-wide banner.
 
 54. Long-task flag generates actionable split suggestion
-    Source: Natalie 1 Jun 2026 (3.0b AHPRA / SAMS / QRG case)
+    Source: Natalie 1 Jun 2026 (3.0b AHPRA/SAMS/QRG)
     Status: [DONE - 1 Jun 2026]
-    The generic "Keep language concise. If this is system
-    click-through detail, move it into an attached guide."
-    suggestion gave the user no concrete starting point. New
-    buildLongTaskSplitSuggestion() helper pulls the first
-    sentence as the action, scans the rest for a named
-    guide/QRG/SOP/manual/handbook/procedure/policy, and emits
-    a tailored prompt like "Consider splitting: keep '<action>'
-    as the task, move detail to a NOTE referencing '<guide>'."
-    Severity stays info - human still makes the final call.
-    Auto-apply automation deferred to backlog after one more
-    pilot round (Option B in the chat thread).
+    buildLongTaskSplitSuggestion() pulls first sentence as the
+    action, scans rest for a named guide/QRG/SOP/manual/handbook,
+    emits 'Consider splitting: keep <action>, move detail to
+    NOTE referencing <guide>'. Severity stays info.
 
 55. Quality flag card de-duplication + layout swap
     Source: Natalie 1 Jun 2026
     Status: [DONE - 1 Jun 2026]
-    Two card-layout fixes:
-    (a) stripRedundantPrefix() removes the activity/task/title
-        prefix from the message when the location pill already
-        shows it. "Activity 5.0 title is 8 words" -> "Title is
-        8 words"; "Task 5.0a is 38 words" -> "Is 38 words".
-    (b) row1 order swap: pill on left (where), severity badge
-        on right (how serious), dismiss at end. Inverted from
-        previous order to match expected reading flow.
+    stripRedundantPrefix() removes activity/task/title prefix
+    when location pill already shows it. row1 order swapped:
+    pill on left, severity badge on right.
 
 56. Inline-mode UX cleanup (tip + header alignment)
     Source: Natalie 1 Jun 2026
     Status: [DONE - 1 Jun 2026]
-    (a) "Tip: click a card to jump..." hides when toggle is
-        In doc - the cards aren't visible there so the tip
-        was incorrect. setMode toggles display:none on
-        .doc-sidebar-hint.
-    (b) Quality Flags sidebar header alignment: removed orphan
-        .flags-view-toggle / .flags-view-btn CSS that
-        conflicted with the current .flags-view-toggle-*
-        rules, dropped margin-top:6px offsets, added
-        white-space:nowrap so "In doc" doesn't break onto two
-        lines, added flex-wrap to .doc-sidebar-header so the
-        toggle group drops cleanly below on narrow widths.
+    Tip 'click a card to jump...' hides in In-doc mode.
+    Quality Flags header alignment fixed - removed orphan CSS
+    that fought with current toggle styles.
 
-57. Card highlight colour matches severity (warning stays amber)
+57. Card highlight colour matches severity
     Source: Natalie 1 Jun 2026
     Status: [DONE - 1 Jun 2026]
-    Two parts:
-    (a) Upgraded act-length flag (activity title too long)
-        from info to warning so all activity-title flags read
-        as the same family of issue.
-    (b) Defensive fix in applyInlineFlags: when multiple flags
-        target the same DOM element, keep only the HIGHEST
-        severity class (error > warning > info). Previously
-        CSS source order silently picked the last-applied
-        class, which downgraded warning-amber highlights to
-        info-blue when an info-level flag happened to share a
-        target. Without this, an act-verb warning + act-length
-        info on the same activity title rendered as blue.
+    act-length upgraded info -> warning. applyInlineFlags now
+    keeps only the HIGHEST severity class when multiple flags
+    target the same element (CSS source order was silently
+    downgrading warning highlights to info-blue).
 
 58. NOTE flags anchor to the specific NOTE
-    Source: Natalie 1 Jun 2026 (screenshot: 6 NOTE flags
-            lumped in process-wide banner)
+    Source: Natalie 1 Jun 2026 (6 NOTE flags lumped in banner)
     Status: [DONE - 1 Jun 2026]
-    NOTE flags (note-question, note-empty) were going into
-    the process-wide banner instead of anchoring to their
-    actual NOTE. Three changes:
-    (a) Rules engine: note flag location now includes
-        "NOTE N" (was: just loc).
-    (b) resolveJumpTarget: matches the NOTE pattern before
-        the activity pattern and returns
-        doc-note-{actNum}-{ni}. The element IDs already
-        existed at the note render site.
-    (c) pillLabel: NOTE locations now render as "NOTE 5.0.2"
-        rather than collapsing to "Activity 5.0".
+    Note flag location includes 'NOTE N', resolveJumpTarget
+    matches the NOTE pattern before activity, returns
+    doc-note-{X}-{Y}-{ni}. pillLabel renders as 'NOTE 5.0.2'.
 
-59. Auto-apply: activity heading length, harder enforcement
-    Source: Natalie 1 Jun 2026 (pilot: titles still over 7
-            words after auto-apply)
+59. Auto-apply: activity heading length (initial pass)
+    Source: pilot test
     Status: [DONE - 1 Jun 2026]
-    Follow-up to #206. The existing "Hard cap: 8 words"
-    contradiction gave the model wiggle room. Now reads
-    strict 2-7 words, "NO EXCEPTIONS. 8 words = FAIL. 9 words
-    = FAIL." Added explicit framing "Do not skip trimming
-    because you respect the source - the source IS the thing
-    you are correcting" to close the most common refusal mode.
-    Added a 5th self-check step that says emitting a heading
-    >7 words is task failure, and after two retry cycles the
-    activity must be split rather than emitted long. Needs
-    live test in next pilot round to confirm fix.
+    Removed 'Hard cap: 8 words' contradiction. Strict 2-7
+    (later raised to 2-10 - see #71). Added 5th self-check
+    step + explicit framing 'do not skip trimming because you
+    respect the source'.
 
 60. Post-analyse: hide scaffolding until analysis completes
     Source: Natalie 1 Jun 2026
     Status: [DONE - 1 Jun 2026]
-    Two changes:
-    (a) Removed "I've raised X quality flags... Choose how you
-        want to handle them" headline entirely - duplicated
-        the "X to review" pill in the sidebar header AND the
-        choice cards below it. "No quality flags raised"
-        success message for the empty case still renders.
-    (b) No more scaffolding flash before auto-apply. In
-        _doAnalyse, immediately after renderResults() we hide
-        postAnalyseDetail, choiceRow, flagHeadline and show
-        autoApplyLoading. Then trigger the API on the next
-        paint frame (50ms instead of 400ms). User sees only
-        the loading spinner - no flash of the unprocessed
-        layout.
+    Removed 'I've raised X quality flags...' headline. Hide
+    postAnalyseDetail + choiceRow + flagHeadline immediately
+    after renderResults, show autoApplyLoading spinner. API
+    kicks off on next paint frame (50ms not 400ms).
 
-61. Auto-apply: stop dropping tasks + inventing NOTEs
-    Source: Natalie 1 Jun 2026 (spaghetti regression -
-            "1. Buy. 2. Cook. 3. Drain. 4. Eat" produced 3
-            tasks + invented NOTE about serving size)
+61. Auto-apply: stop dropping tasks + inventing NOTEs (prompt)
+    Source: Natalie 1 Jun 2026 (spaghetti regression)
     Status: [DONE - 1 Jun 2026]
-    Auto-apply prompt had a NOTE-count invariant but the zero
-    case was implicit. And there was NO equivalent task-count
-    invariant.
-    (a) Strengthened NOTE COUNT INVARIANT: explicit on the
-        zero case ("If the source has ZERO NOTEs under an
-        activity, the output also has ZERO NOTEs under that
-        activity - you may NOT add a helpful NOTE about
-        serving size, or scope, or any other context the
-        source did not write.").
-    (b) Added TASK COUNT INVARIANT: "If the source has 4
-        tasks the output has at least 4 tasks. If you cannot
-        fit a task under the activity title, change the
-        activity title - do NOT drop the task." Worked
-        example uses the spaghetti regression directly.
-    Defensive post-process count-check logged as backlog #223.
+    NOTE COUNT INVARIANT strengthened on zero case. TASK
+    COUNT INVARIANT added. Worked example uses spaghetti.
 
-62. Parser: flat top-level "1. 2. 3." becomes activities
-    Source: Natalie 1 Jun 2026 (spaghetti structure - she
-            expected 4 activities, got 1 activity + 3 tasks)
+62. Parser: flat top-level '1. 2. 3.' becomes activities
+    Source: Natalie 1 Jun 2026 (spaghetti structure)
     Status: [DONE - 1 Jun 2026]
-    Two-part parser fix:
-    (a) Pre-process: split inline "N. text. M. text" patterns
-        into separate lines so the parser sees four numbered
-        lines rather than one (which would otherwise become
-        one activity with the whole string as the title).
-    (b) Detect "allFlatNumbered" mode: when every action line
-        is top-level "N. text" with no decimals, letters, or
-        bullets, treat each as a new ACTIVITY rather than a
-        task under the current activity.
-    Tightened with two nesting signals so legitimate nested
-    numbering doesn't get flipped: any numbered line with
-    leading whitespace (indented under a parent), OR any
-    number repeat (1, 2, 3, 1, 2 again) disqualifies
-    allFlatNumbered. Falls back to task-under-current-activity
-    behaviour if either signal is present.
+    Pre-process splits inline 'N. text. M. text' onto separate
+    lines. allFlatNumbered mode treats each as a new activity.
+    Tightened with indent + number-repeat nesting signals.
+
+63. Pre-flight content validation before consent modal
+    Source: Natalie 1 Jun 2026
+    Status: [DONE - 1 Jun 2026]
+    _parseAndValidateInput() runs full parse + validation
+    upfront. Cached on window._preflightModel so _doAnalyse
+    reuses it. All input error toasts surface BEFORE the
+    consent modal opens.
+
+64. Parser: sep-style hierarchy + AI activity-count invariant
+    Source: Natalie 1 Jun 2026 (Prepare meal regression)
+    Status: [DONE - 1 Jun 2026]
+    Parser: when activities use one terminator ('.') and tasks
+    use another (')'), a new line matching activity terminator
+    after tasks in the other terminator is treated as a new
+    activity. AI prompt: ACTIVITY COUNT INVARIANT added,
+    forbids merging two source activities into one.
+
+65. Empty-role placeholder missing ID so flags couldn't anchor
+    Source: Natalie 1 Jun 2026
+    Status: [DONE - 1 Jun 2026]
+    Empty-role placeholder gets id='doc-activity-X-Y-role' so
+    act-norole-N flags anchor on '[Click to add accountable
+    role]' instead of process-wide banner.
+
+66. Inline flag visual redesign: severity icon + underline
+    Source: Natalie 1 Jun 2026
+    Status: [DONE - 1 Jun 2026]
+    Dropped background fill + 'click for detail' pill. Added
+    circular severity-coloured icon (!/triangle/i) before the
+    flagged text. Dashed underline preserved. Per-severity
+    backgrounds set explicitly (currentColor on a ::before
+    resolves to the same color in the same block).
+
+67. Inline flag click no-op after Save changes
+    Source: Natalie 1 Jun 2026 (new tasks unresponsive)
+    Status: [DONE - 1 Jun 2026]
+    Per-element addEventListener captured idx/issue in a
+    closure that went stale after Save changes re-ran the
+    rules engine. Replaced with one delegated click + keydown
+    listener on docPreview that looks up the current issue from
+    currentIssues[dataset.issueIdx] at click-time.
+
+68. extractText leaks user-item-remove button into task text
+    Source: Natalie 1 Jun 2026 (new task 'starts with x')
+    Status: [DONE - 1 Jun 2026]
+    extractText clones the element and strips .user-item-remove,
+    .doc-add-actions, .doc-add-btn before reading innerText.
+    Stops the dismiss-button x bleeding into saved task text.
+
+69. Trigger/Inputs/Outputs flags removed + Nintex placeholder
+    Source: Natalie 1 Jun 2026
+    Status: [DONE - 1 Jun 2026]
+    no-trigger, no-outputs, no-inputs rules removed. Empty
+    fields show 'To be assigned in Nintex Process Manager'
+    placeholder (mirrors owner/expert). Field stays contenteditable.
+    extractModelFromDocPreview treats placeholder as empty.
+
+70. Activity title cap raised 7 -> 10 words
+    Source: Natalie 1 Jun 2026
+    Status: [DONE - 1 Jun 2026]
+    Rules engine threshold, all UI copy, Word/PDF generators,
+    and the auto-apply prompt block all updated 2-7 -> 2-10.
+    11 words = FAIL. 12 words = FAIL.
+
+71. AI prompt: specifics belong in the body, not the heading
+    Source: Natalie 1 Jun 2026 (AHPRA Notice 18-word title)
+    Status: [DONE - 1 Jun 2026]
+    Added rule + worked example to the ACTIVITY HEADING LENGTH
+    block. When a heading is loaded with legal references /
+    section numbers / Act names, those go into tasks or NOTEs,
+    NOT in the heading. Specific nouns must be preserved
+    SOMEWHERE - not necessarily in the heading.
+
+72. Post-process safety net for auto-apply drift
+    Source: Natalie 1 Jun 2026 (after multiple regressions)
+    Status: [DONE - 1 Jun 2026]
+    Deterministic, prompt-independent check after auto-apply
+    parses the AI response. Compares source vs output for:
+    - activity count dropped
+    - total task count dropped
+    - total NOTE count grew (invented NOTEs)
+    - any activity title still over 10 words
+    Surfaces ONE consolidated warning toast (10s) +
+    console.warn diagnostic. User keeps control - the safety
+    net warns but doesn't auto-revert. This is the backstop
+    for the regressions that prompt-tuning alone couldn't fix.
 
 ============================================================
 NUMBERING CROSS-REFERENCE
@@ -959,19 +959,19 @@ File 2 (15 items):  #1 = 9, #2 = 10, #3 = 6, #4 = 14, #5 = 12,
 SUMMARY
 ============================================================
 
-  Done                   55
+  Done                   65
   Withdrawn               1
   Needs sample input      0
   Partial / follow-up     1 (skipped - procedure-vs-process language pass)
-  Pending backlog         6
+  Pending backlog         5
   ----
-  Total                  63
+  Total                  72
 
 26 of 26 raw feedback items now shipped + 7 v2/adjacent items
 shipped. Item 30 (Admin review pack) and items 32+33 (29 May
 AI guardrail tightenings) added beyond the original 26.
-Items 53-62 (1 Jun 2026 polish pass) added from the inline-mode
-+ card-layout + spaghetti regression batch.
+Items 53-72 (1 Jun 2026 polish pass) added from the inline-mode
++ card-layout + AI-safety-net pilot batch.
 
 #46 (verb-first verification) remains pending live re-test.
 
@@ -982,6 +982,3 @@ Open backlog items from the 1 Jun 2026 conversation:
   - Strip everything related to Process Owner / Expert
   - Auto-apply: split long task into task + NOTE (after one
     more pilot round of the helper-only Option A)
-  - Post-process safety net: detect dropped tasks + invented
-    NOTEs after auto-apply (defensive complement to #61's
-    prompt strengthening - tracker #223)
