@@ -1,4 +1,5 @@
-Polish pass: inline NOTE/handover anchoring, card layout, title rule
+Polish pass: inline NOTE/handover anchoring, card layout, title rule,
+              spaghetti regressions, post-analyse render gating
 
 Bundled 1 Jun 2026 pilot iteration into one commit. Covers everything
 on top of 1bc2afe (Tracker #25 + #28).
@@ -78,7 +79,26 @@ on top of 1bc2afe (Tracker #25 + #28).
   failure, and after two retry cycles the activity must be split
   rather than emitted long.
 
-5. Rules engine: severity rebalance + plumbing
+5. Auto-apply: stop dropping tasks + inventing NOTEs
+====================================================
+Pilot regression on minimal input "1. Buy. 2. Cook. 3. Drain. 4. Eat":
+auto-apply produced 1 activity "Prepare spaghetti" with 3 tasks
+(Buy dropped) plus an invented NOTE about serving size.
+
+- Strengthened NOTE COUNT INVARIANT: was "count must match" with a
+  3-NOTE example. Now explicit on the zero case: "If the source has
+  ZERO NOTEs under an activity, the output also has ZERO NOTEs under
+  that activity - you may NOT add a helpful NOTE about serving size,
+  or scope, or any other context the source did not write."
+- Added TASK COUNT INVARIANT (was missing entirely): "If the source
+  has 4 tasks the output has at least 4 tasks. If you cannot fit a
+  task under the activity title, change the activity title - do NOT
+  drop the task." Worked example uses the exact spaghetti regression
+  - WRONG: Activity "Prepare spaghetti" with Cook/Drain/Eat (drops
+  Buy). RIGHT: Activity "Manage spaghetti meal" with Buy/Cook/Drain/
+  Eat.
+
+6. Rules engine: severity rebalance + plumbing
 ==============================================
 - act-length (activity title is N words) upgraded from info to
   warning so all activity-title flags read as the same family of
@@ -87,7 +107,41 @@ on top of 1bc2afe (Tracker #25 + #28).
   prompt via buildLongTaskSplitSuggestion rather than a generic
   "move it into an attached guide" line.
 
-Tracker: items 53-59 (see docs/PAT-pilot-feedback-tracker.txt).
+7. Post-analyse: hide scaffolding until analysis completes
+==========================================================
+- Removed the "I've raised X quality flags... Choose how you want to
+  handle them" headline entirely on the non-empty case. It duplicated
+  both the discreet "X to review" pill in the sidebar header AND the
+  choice cards directly below. The "No quality flags raised" success
+  message for the empty case still renders.
+- No more scaffolding flash before auto-apply. Previously the results
+  card unhid showing doc preview + choice cards + headline for ~400ms
+  before startAutoApply hid them. In _doAnalyse, immediately after
+  renderResults() and before the auto-apply API kicks off, we hide
+  postAnalyseDetail, choiceRow, flagHeadline and show autoApplyLoading.
+  Then we trigger the API on the next paint frame (50ms instead of
+  400ms). Net effect: when the consent modal closes, the user sees
+  only the loading spinner - no flash of the unprocessed layout.
+
+8. Parser: flat top-level "1. 2. 3." numbering becomes activities
+=================================================================
+Pilot: "1. Buy spaghetti. 2. cook spaghetti. 3. drain spaghetti. 4.
+eat spaghetti" pasted on one line produced one activity with the
+whole string as the title, then auto-apply tried (and failed) to
+clean it up.
+
+- Pre-process: split inline "N. text. M. text" runs into separate
+  lines so the parser sees four numbered lines rather than one.
+- Detect "allFlatNumbered" mode: when every action line is top-level
+  "N. text" with no decimals, letters, or bullets, treat each as a
+  new ACTIVITY rather than a task under the current activity.
+- Tightened with two nesting signals so legitimate nested numbering
+  doesn't get flipped: any numbered line with leading whitespace
+  (indented under a parent), OR any number repeat (1, 2, 3, 1, 2
+  again) disqualifies allFlatNumbered. Either signal alone is enough
+  to fall back to the existing task-under-current-activity behaviour.
+
+Tracker: items 53-62 (see docs/PAT-pilot-feedback-tracker.txt).
 
 Files: public/index.html only.
 No server changes.

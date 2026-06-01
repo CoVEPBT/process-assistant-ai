@@ -881,6 +881,64 @@ PENDING (post-pilot backlog - new features, bigger work)
     activity must be split rather than emitted long. Needs
     live test in next pilot round to confirm fix.
 
+60. Post-analyse: hide scaffolding until analysis completes
+    Source: Natalie 1 Jun 2026
+    Status: [DONE - 1 Jun 2026]
+    Two changes:
+    (a) Removed "I've raised X quality flags... Choose how you
+        want to handle them" headline entirely - duplicated
+        the "X to review" pill in the sidebar header AND the
+        choice cards below it. "No quality flags raised"
+        success message for the empty case still renders.
+    (b) No more scaffolding flash before auto-apply. In
+        _doAnalyse, immediately after renderResults() we hide
+        postAnalyseDetail, choiceRow, flagHeadline and show
+        autoApplyLoading. Then trigger the API on the next
+        paint frame (50ms instead of 400ms). User sees only
+        the loading spinner - no flash of the unprocessed
+        layout.
+
+61. Auto-apply: stop dropping tasks + inventing NOTEs
+    Source: Natalie 1 Jun 2026 (spaghetti regression -
+            "1. Buy. 2. Cook. 3. Drain. 4. Eat" produced 3
+            tasks + invented NOTE about serving size)
+    Status: [DONE - 1 Jun 2026]
+    Auto-apply prompt had a NOTE-count invariant but the zero
+    case was implicit. And there was NO equivalent task-count
+    invariant.
+    (a) Strengthened NOTE COUNT INVARIANT: explicit on the
+        zero case ("If the source has ZERO NOTEs under an
+        activity, the output also has ZERO NOTEs under that
+        activity - you may NOT add a helpful NOTE about
+        serving size, or scope, or any other context the
+        source did not write.").
+    (b) Added TASK COUNT INVARIANT: "If the source has 4
+        tasks the output has at least 4 tasks. If you cannot
+        fit a task under the activity title, change the
+        activity title - do NOT drop the task." Worked
+        example uses the spaghetti regression directly.
+    Defensive post-process count-check logged as backlog #223.
+
+62. Parser: flat top-level "1. 2. 3." becomes activities
+    Source: Natalie 1 Jun 2026 (spaghetti structure - she
+            expected 4 activities, got 1 activity + 3 tasks)
+    Status: [DONE - 1 Jun 2026]
+    Two-part parser fix:
+    (a) Pre-process: split inline "N. text. M. text" patterns
+        into separate lines so the parser sees four numbered
+        lines rather than one (which would otherwise become
+        one activity with the whole string as the title).
+    (b) Detect "allFlatNumbered" mode: when every action line
+        is top-level "N. text" with no decimals, letters, or
+        bullets, treat each as a new ACTIVITY rather than a
+        task under the current activity.
+    Tightened with two nesting signals so legitimate nested
+    numbering doesn't get flipped: any numbered line with
+    leading whitespace (indented under a parent), OR any
+    number repeat (1, 2, 3, 1, 2 again) disqualifies
+    allFlatNumbered. Falls back to task-under-current-activity
+    behaviour if either signal is present.
+
 ============================================================
 NUMBERING CROSS-REFERENCE
 ============================================================
@@ -901,19 +959,19 @@ File 2 (15 items):  #1 = 9, #2 = 10, #3 = 6, #4 = 14, #5 = 12,
 SUMMARY
 ============================================================
 
-  Done                   52
+  Done                   55
   Withdrawn               1
   Needs sample input      0
   Partial / follow-up     1 (skipped - procedure-vs-process language pass)
-  Pending backlog         5
+  Pending backlog         6
   ----
-  Total                  59
+  Total                  63
 
 26 of 26 raw feedback items now shipped + 7 v2/adjacent items
 shipped. Item 30 (Admin review pack) and items 32+33 (29 May
 AI guardrail tightenings) added beyond the original 26.
-Items 53-59 (1 Jun 2026 polish pass) added from the inline-mode
-+ card-layout pilot batch.
+Items 53-62 (1 Jun 2026 polish pass) added from the inline-mode
++ card-layout + spaghetti regression batch.
 
 #46 (verb-first verification) remains pending live re-test.
 
@@ -924,3 +982,6 @@ Open backlog items from the 1 Jun 2026 conversation:
   - Strip everything related to Process Owner / Expert
   - Auto-apply: split long task into task + NOTE (after one
     more pilot round of the helper-only Option A)
+  - Post-process safety net: detect dropped tasks + invented
+    NOTEs after auto-apply (defensive complement to #61's
+    prompt strengthening - tracker #223)

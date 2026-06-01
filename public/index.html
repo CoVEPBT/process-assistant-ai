@@ -6314,12 +6314,28 @@ async function _doAnalyse() {
         .filter(i => !i.informational).length;
       if (actionableCount > 0 && window.sessionAiConsent === true
           && typeof window.runAutoApplyDirect === 'function') {
+        // Tracker #213 (1 Jun 2026): hide the scaffolding (doc detail,
+        // choice cards, flag headline) BEFORE auto-apply starts so the user
+        // doesn't see a brief flash of the unprocessed layout. Show the
+        // auto-apply loading spinner immediately. startAutoApply does this
+        // itself at its top - we just bring the timing forward so there's
+        // no gap between renderResults completing and the spinner appearing.
+        const _detail = document.getElementById('postAnalyseDetail');
+        if (_detail) _detail.hidden = true;
+        const _choice = document.getElementById('choiceRow');
+        if (_choice) _choice.classList.add('hidden');
+        const _flag = document.getElementById('flagHeadline');
+        if (_flag) _flag.classList.add('hidden');
+        const _loading = document.getElementById('autoApplyLoading');
+        if (_loading) _loading.classList.remove('hidden');
+        // Keep the small frame to let the browser paint the loading state
+        // before we kick off the async API call. 50ms is plenty.
         setTimeout(() => {
           const card = document.getElementById('resultsCard');
           if (card && !card.classList.contains('hidden')) {
             window.runAutoApplyDirect();
           }
-        }, 400);
+        }, 50);
       }
     } catch (e) { /* best-effort */ }
   } catch (err) {
@@ -7414,7 +7430,54 @@ function parseStructuredText(text) {
     return parseProcedureTextExport(text);
   }
 
+  // Tracker (1 Jun 2026): if the user pasted multiple "N. text. M. text"
+  // items on a SINGLE line (e.g. "1. Buy spaghetti. 2. Cook spaghetti."),
+  // split them onto separate lines before parsing - otherwise the whole
+  // string ends up as one activity title.
+  text = text.replace(/([.!?])\s+(?=\d+[.):]\s+\S)/g, '$1\n');
+
   const lines = text.split(/\r?\n/).map(l => l.trim());
+
+  // Tracker (1 Jun 2026): detect "all-flat-numbered" mode. When every
+  // action-bearing line in the paste uses the top-level "N. text" pattern
+  // (no decimals, no letters, no bullets), the user is using the numbers
+  // as ACTIVITY markers, not task markers. Without this flag the
+  // disambiguation below would treat 2., 3., 4. as tasks under activity 1.
+  const _fieldLeadRe = /^(Process|Title|Name|Owner|Expert|Author|Trigger|Inputs?|Outputs?|Objective|Purpose|Aim|Goal|Background|Scope|Context|Overview|Role)\b/i;
+  const _flatNumRe = /^\(?\s*\d+[.):]\s+\S/;
+  const _decimalActRe = /^\(?\s*\d+\.\d+\s/;
+  const _letterTaskRe = /^[a-z][.)]\s+\S/i;
+  const _bulletRe = /^[\-*\u2022+]\s+\S/;
+  const _stepActRe = /^(?:step|activity|stage|phase)\s+\d+/i;
+  const _actionLines = lines.filter(l => l && !_fieldLeadRe.test(l));
+  // Additional nesting signals from the UNTRIMMED source lines: indented
+  // numbered items (e.g. "  1) Get ingredients" under "1. Prepare meal")
+  // and repeated numbers (1, 2, 3, then 1, 2 again) both indicate the
+  // user has nested numbering, not flat. Either signal turns
+  // allFlatNumbered off so the disambiguation falls back to the existing
+  // task-under-current-activity behaviour.
+  let _anyIndentedNumbered = false;
+  let _anyNumberRepeat = false;
+  const _numbersSeenInOrder = [];
+  const _rawLines = text.split(/\r?\n/);
+  for (const raw of _rawLines) {
+    const trimmed = raw.trim();
+    if (!trimmed) continue;
+    if (_fieldLeadRe.test(trimmed)) continue;
+    const m = trimmed.match(/^\(?\s*(\d+)[.):]\s+\S/);
+    if (!m) continue;
+    if (/^\s/.test(raw)) _anyIndentedNumbered = true;
+    const n = parseInt(m[1], 10);
+    if (_numbersSeenInOrder.indexOf(n) !== -1) _anyNumberRepeat = true;
+    _numbersSeenInOrder.push(n);
+  }
+  const allFlatNumbered =
+    _actionLines.length >= 2 &&
+    _actionLines.every(l => _flatNumRe.test(l) && !_decimalActRe.test(l) && !_stepActRe.test(l)) &&
+    !_actionLines.some(l => _letterTaskRe.test(l) || _bulletRe.test(l)) &&
+    !_anyIndentedNumbered &&
+    !_anyNumberRepeat;
+
   const model = {
     title: '', version: '',
     owner: '', expert: '',
@@ -7521,7 +7584,11 @@ function parseStructuredText(text) {
       const sep = am[2];
       const isDecimalSep = /^\.\d+$/.test(sep);
       const currentHasBulletTasks = !!(current && current._taskStyle === 'bullet');
-      const treatAsActivity = isDecimalSep || !current || currentHasBulletTasks;
+      // Tracker (1 Jun 2026): when the whole paste is flat top-level numbering
+      // (1. / 2. / 3. with no letters / no bullets / no decimals), treat each
+      // numbered line as a NEW activity rather than a task. Captures the
+      // "1. Buy spaghetti. 2. cook spaghetti." pattern users actually type.
+      const treatAsActivity = isDecimalSep || !current || currentHasBulletTasks || allFlatNumbered;
       if (current && !treatAsActivity) {
         const idx = current.tasks.length;
         const letter = (idx < 26) ? String.fromCharCode(97 + idx) : 'z';
@@ -9453,17 +9520,13 @@ async function renderResults() {
       // No path-choice needed - hide the choice cards entirely
       if (choiceRowEl) choiceRowEl.classList.add('hidden');
     } else {
-      const word = totalIssues === 1 ? 'quality flag' : 'quality flags';
-      // Lightbulb SVG - "ideas / quality flags" framing replaces the old warning triangle
-      const lightbulbSvg = '<span class="flag-headline-icon" aria-hidden="true">' +
-        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
-        '<path d="M9 18h6"/>' +
-        '<path d="M10 22h4"/>' +
-        '<path d="M12 2a7 7 0 0 0-4 12.7c.7.7 1 1.7 1 2.7v.6h6v-.6c0-1 .3-2 1-2.7A7 7 0 0 0 12 2z"/>' +
-        '</svg></span>';
-      flagEl.innerHTML = lightbulbSvg +
-        '<span class="flag-headline-text"><strong>I\'ve raised ' + totalIssues + ' ' + word +
-        ' on your process.</strong> Choose how you want to handle them.</span>';
+      // Tracker #213 (1 Jun 2026): the "I've raised X quality flags... Choose
+      // how you want to handle them" headline duplicated the discreet "X to
+      // review" pill in the sidebar header AND the choice cards directly
+      // below it. Per Natalie: drop it entirely on the non-empty case. The
+      // empty-state success message above still renders.
+      flagEl.innerHTML = '';
+      flagEl.classList.add('hidden');
       flagEl.classList.remove('flag-headline-clear');
     }
   }
@@ -13306,9 +13369,19 @@ createChatSurface({
       'directive statements ("NOTE: Refer to X", "NOTE: The school must agree via email") can stay as ' +
       'a single statement on the title line - do not invent a question to wrap them in. Only convert ' +
       'to Q+A if it genuinely clarifies the content.\n' +
-      '* MANDATORY SELF-CHECK before emitting blocks: count the NOTEs in the source and count the NOTEs in ' +
-      'your output. They must match. Source has 3 NOTEs under activity 4? Output has exactly 3 NOTEs ' +
-      'under activity 4. NOT 4, NOT 2. If they don\'t match, redo the Process Map block.\n\n' +
+      '* MANDATORY SELF-CHECK before emitting blocks - NOTE COUNT INVARIANT: count the NOTEs in the source and count the NOTEs in ' +
+      'your output. They must match EXACTLY. Source has 3 NOTEs under activity 4? Output has exactly 3 NOTEs ' +
+      'under activity 4. NOT 4, NOT 2. **If the source has ZERO NOTEs under an activity, the output also has ZERO NOTEs under that activity** - you may NOT add a helpful NOTE about serving size, or scope, or any other context the source did not write. ' +
+      'If a NOTE would be helpful but the source did not include one, you do NOT add it. Period. ' +
+      'If counts don\'t match, redo the Process Map block.\n' +
+      '* MANDATORY SELF-CHECK before emitting blocks - TASK COUNT INVARIANT: count the tasks (a, b, c, ... lines) in the source and count the tasks in your output. They must match EXACTLY ' +
+      '(plus any tasks added by an allowed multi-role split - see SPLIT MULTI-ROLE ACTIVITIES below). ' +
+      '**You may NEVER silently drop a source task** because it looks redundant, obvious, off-topic, or out of scope for the activity title you chose. ' +
+      'If the source has 4 tasks (a, b, c, d) the output has at least 4 tasks. If you cannot fit a task under the activity title, change the activity title - do NOT drop the task. ' +
+      'Worked example: SOURCE = "1. Buy spaghetti. 2. Cook spaghetti. 3. Drain spaghetti. 4. Eat spaghetti." OUTPUT MUST contain all four actions as tasks. ' +
+      'WRONG: Activity "Prepare spaghetti" with tasks Cook / Drain / Eat (drops Buy). ' +
+      'RIGHT: Activity "Manage spaghetti meal" with tasks Buy / Cook / Drain / Eat. ' +
+      'If counts don\'t match (and it isn\'t a multi-role split), redo the Process Map block.\n\n' +
       'PROMOTE DROPPED CONTEXT TO NOTES - DO NOT DELETE INFORMATION:\n' +
       'When you shorten a task to hit the 18-word sentence cap, you must not silently delete useful ' +
       'context. "Useful context" = anything that tells the reader WHERE to look, WHICH specific column / ' +
