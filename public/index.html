@@ -9935,6 +9935,13 @@ async function renderResults() {
       'title-missing': 'doc-title',
       'title-prefix': 'doc-title',
       'title-verb': 'doc-title',
+      // Audit P1 #5: explicit entry for title-inferred so we don't rely on
+      // the accidental location-substring fallback further down.
+      'title-inferred': 'doc-title',
+      // Note: no-trigger / no-inputs / no-outputs flag rules were removed
+      // in tracker #232 (Trigger/In/Out fields now show a Nintex placeholder
+      // instead of a flag). Entries left in this map intentionally for
+      // backward-compat if a re-analyse race condition produces them.
       'no-trigger': 'doc-meta-trigger',
       'no-inputs': 'doc-meta-inputs',
       'no-outputs': 'doc-meta-outputs',
@@ -9985,6 +9992,15 @@ async function renderResults() {
       // Role-related flags (including banned-term flags scoped to roles)
       if (/^act-(norole|multirole|split-by-role)-/.test(fid)) return actId + '-role';
       if (/^banned-.*-role-/.test(fid)) return actId + '-role';
+      // Audit P1 #1: AU-spelling flags carry a location like
+      // "Activity 5.0 - Title" or "Activity 5.0 - Title (role)". The flag.id
+      // is au-spelling-<word>-<location>. Route to the matching sub-element
+      // so the misspelling highlight lands on the actual word instead of
+      // dumping in the process-wide banner.
+      if (/^au-spelling-/.test(fid)) {
+        if (/\(role\)/i.test(location)) return actId + '-role';
+        return actId + '-title';
+      }
       // Tracker (31 May 2026): for any other activity-level flag (no-tasks,
       // too-many-tasks, generic banned-term, etc.) DO NOT highlight the
       // whole activity card - the highlight pollutes title + role + every
@@ -13988,9 +14004,15 @@ createChatSurface({
       try {
         const EMAIL_RE = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g;
         const origActs = (originalSnapshot.model && originalSnapshot.model.activities) || [];
+        // Audit P1 #2: match source activities by NUMBER first (e.g. "6.1"),
+        // fall back to index. Otherwise multi-role splits would pull
+        // emails from the wrong source activity by shifted index.
+        const origByNumber = {};
+        origActs.forEach(oa => { if (oa && oa.number) origByNumber[String(oa.number)] = oa; });
         let restored = 0;
         newModel.activities.forEach((newAct, ai) => {
-          const origAct = origActs[ai];
+          let origAct = (newAct && newAct.number && origByNumber[String(newAct.number)]) || null;
+          if (!origAct) origAct = origActs[ai];
           if (!origAct || !origAct.tasks) return;
           const origByLetter = {};
           origAct.tasks.forEach(t => { if (t.letter) origByLetter[t.letter] = t; });
@@ -14069,6 +14091,28 @@ createChatSurface({
           if (String(newAct.number || '') !== String(origAct.number)) {
             newAct.number = origAct.number;
             touchedN++;
+          }
+        }
+        // Audit P1 #3: any activities BEYOND the source count (e.g. created
+        // by a multi-role split) won't be touched by the loop above.
+        // Continue sequential numbering from the last source number so the
+        // split activities get a sensible "N.0" rather than whatever the
+        // AI emitted. Uses the last source major number + 1, 2, 3, ...
+        if (newModel.activities.length > origActs.length && origActs.length > 0) {
+          const lastSrcNum = origActs[origActs.length - 1] && origActs[origActs.length - 1].number;
+          const lastMajor = parseInt(String(lastSrcNum || '').split('.')[0], 10);
+          if (!isNaN(lastMajor)) {
+            let next = lastMajor + 1;
+            for (let i = lim; i < newModel.activities.length; i++) {
+              const a = newModel.activities[i];
+              if (!a) continue;
+              const expected = next + '.0';
+              if (String(a.number || '') !== expected) {
+                a.number = expected;
+                touchedN++;
+              }
+              next++;
+            }
           }
         }
         if (touchedN > 0) {
@@ -14999,6 +15043,22 @@ createChatSurface({
     clone.querySelectorAll('.user-item-remove, .doc-add-actions, .doc-add-btn').forEach(n => n.remove());
     return (clone.innerText || clone.textContent || '').replace(/\s+/g, ' ').trim();
   }
+  // Audit P1 #4: variant of extractText that preserves paragraph breaks.
+  // extractText collapses ALL whitespace runs to a single space, which
+  // flattens multi-line NOTE bodies into one line on save. Use this helper
+  // for content where line breaks carry meaning (NOTE bodies, Objective,
+  // Background prose). Horizontal whitespace inside a line is still
+  // collapsed, but newlines are preserved (run of >1 newlines collapse to 1).
+  function extractTextPreservingLines(el) {
+    if (!el) return '';
+    const clone = el.cloneNode(true);
+    clone.querySelectorAll('.user-item-remove, .doc-add-actions, .doc-add-btn').forEach(n => n.remove());
+    const raw = clone.innerText || clone.textContent || '';
+    return raw
+      .replace(/[ \t]+/g, ' ')        // collapse horizontal whitespace
+      .replace(/\n{3,}/g, '\n\n')   // cap consecutive newlines at 2
+      .replace(/^\s+|\s+$/g, '');    // trim leading/trailing whitespace
+  }
   function stripLabel(text, label) {
     // "Owner: Sarah Chen" -> "Sarah Chen". Tolerates dash separators too.
     const re = new RegExp('^\\s*' + label + '\\s*[:\\-\\u2013\-]\\s*', 'i');
@@ -15096,7 +15156,14 @@ createChatSurface({
           const html = noteEl.innerHTML.replace(/<strong[^>]*>NOTE:<\/strong>\s*/i, '').trim();
           const parts = html.split(/<br\s*\/?>/i);
           const titlePart = (parts[0] || '').replace(/<[^>]+>/g, '').trim();
-          const bodyPart = (parts.slice(1).join('\n') || '').replace(/<[^>]+>/g, '').trim();
+          // Audit P1 #4: preserve line breaks in the body (was: collapsed to
+          // single line by .replace(/\s+/g, ' ')). Multi-paragraph NOTE bodies
+          // no longer flatten on save.
+          const bodyPart = (parts.slice(1).join('\n') || '')
+            .replace(/<[^>]+>/g, '')
+            .replace(/[ \t]+/g, ' ')
+            .replace(/\n{3,}/g, '\n\n')
+            .replace(/^\s+|\s+$/g, '');
           if (!titlePart) return;
           // v2 #27: ignore unedited "+ Add note" placeholder.
           if (/^\[?\s*question\??\s*\]?$/i.test(titlePart) &&

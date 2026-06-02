@@ -164,7 +164,47 @@ prompt-side.
   stays contenteditable. extractModelFromDocPreview treats the
   placeholder text as empty on save.
 
-Tracker: items 53-72 (see docs/PAT-pilot-feedback-tracker.txt).
+12. End-of-day audit + P1 bug fixes
+====================================
+Four parallel sub-agents reviewed the codebase at end of day. Report
+saved to docs/audit-2026-06-01.md. Fixed the five P1 bugs the audit
+surfaced before committing:
+
+- AU-spelling flag routing: au-spelling-* flag IDs had no handler in
+  resolveJumpTarget. Every misspelling flag (potentially dozens per
+  process) silently landed in the process-wide banner instead of
+  anchoring inline. Added a regex branch inside the numMatch block
+  that routes "Activity X.Y - Title" locations to the title row,
+  "Activity X.Y - Title (role)" to the role row. Task / NOTE
+  locations were already routing correctly via the existing taskMatch
+  and noteMatch branches.
+- Email-restoration matches by activity number first. The
+  email-restoration post-process pass at line ~13992 used index-based
+  matching (origActs[ai]) with no number fallback. Multi-role splits
+  would pull emails from the wrong source activity. Mirrored the
+  attachment-restoration pattern (origByNumber lookup, prefer number
+  match, fall back to index).
+- Activity-number restoration continues past origCount. The
+  Math.min(newCount, origCount) cap silently truncated the
+  restoration loop after a multi-role split, leaving split activities
+  with whatever number the AI emitted. Added a second pass that
+  continues sequential numbering from lastSourceMajor + 1 for any
+  activities beyond origCount.
+- NOTE bodies preserve line breaks on save. extractText collapses all
+  whitespace to single spaces, which flattens multi-paragraph NOTE
+  bodies to one line in extractModelFromDocPreview. Added a sibling
+  helper extractTextPreservingLines() that collapses horizontal
+  whitespace only, caps consecutive newlines at 2. NOTE body
+  extraction uses the new logic; general extractText behaviour
+  unchanged for tasks and titles.
+- title-inferred added to ID_TO_TARGET pointing to doc-title.
+  Previously resolved only via the accidental location-substring
+  fallback. Stale no-trigger / no-inputs / no-outputs entries left in
+  the map with a comment pointing to tracker #232 (rules removed,
+  fields now show Nintex placeholder).
+
+Tracker: items 53-77 (see docs/PAT-pilot-feedback-tracker.txt).
+Audit report: docs/audit-2026-06-01.md (P2 / P3 items remain).
 
 Files: public/index.html (+ small server/index.js tail truncation
-restore).
+restore + new docs/audit-2026-06-01.md).

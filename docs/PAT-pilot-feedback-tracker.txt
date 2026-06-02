@@ -939,6 +939,53 @@ PENDING (post-pilot backlog - new features, bigger work)
     net warns but doesn't auto-revert. This is the backstop
     for the regressions that prompt-tuning alone couldn't fix.
 
+73. End-of-day audit (4 sub-agent reviews)
+    Source: self-audit 1 Jun 2026
+    Status: [DONE - 1 Jun 2026] (report saved)
+    Four parallel Explore sub-agents reviewed AI prompts,
+    parsers / extraction, flag routing / rendering, and the
+    auto-apply pipeline. Consolidated findings saved to
+    docs/audit-2026-06-01.md (P1, P2, P3 ranked). P1 items
+    fixed before commit (#74-77). P2/P3 remain.
+
+74. P1: au-spelling routing (audit #1)
+    Source: audit 1 Jun 2026
+    Status: [DONE - 1 Jun 2026]
+    Added au-spelling-* branch inside the numMatch block in
+    resolveJumpTarget. 'Activity X.Y - Title' locations route
+    to the title row; '(role)' locations route to the role
+    row. Task / NOTE locations already worked via existing
+    taskMatch / noteMatch branches.
+
+75. P1: email + activity-number restoration after splits
+    Source: audit 1 Jun 2026 (#2 + #3)
+    Status: [DONE - 1 Jun 2026]
+    (a) Email-restoration now matches source activities by
+        number first (origByNumber lookup), index fallback.
+        Mirrors the attachment-restoration pattern. Multi-role
+        splits no longer pull emails from the wrong source.
+    (b) Activity-number restoration past Math.min cap: added a
+        second pass that continues sequential numbering from
+        lastSourceMajor + 1 for any activities beyond origCount
+        (i.e. split-added).
+
+76. P1: multi-line NOTE body preservation on save (audit #4)
+    Source: audit 1 Jun 2026
+    Status: [DONE - 1 Jun 2026]
+    extractText collapses all whitespace to single space - good
+    for tasks/titles but flattens multi-paragraph NOTE bodies.
+    Added extractTextPreservingLines() that collapses horizontal
+    whitespace only, caps consecutive newlines at 2. NOTE body
+    extraction in extractModelFromDocPreview uses the new logic.
+
+77. P1: title-inferred added to ID_TO_TARGET (audit #5)
+    Source: audit 1 Jun 2026
+    Status: [DONE - 1 Jun 2026]
+    Explicit 'title-inferred' -> 'doc-title' entry added.
+    Previously resolved via accidental location-substring
+    fallback. Stale no-trigger / no-inputs / no-outputs entries
+    left in the map with a comment pointing to tracker #232.
+
 ============================================================
 NUMBERING CROSS-REFERENCE
 ============================================================
@@ -959,19 +1006,19 @@ File 2 (15 items):  #1 = 9, #2 = 10, #3 = 6, #4 = 14, #5 = 12,
 SUMMARY
 ============================================================
 
-  Done                   65
+  Done                   70
   Withdrawn               1
   Needs sample input      0
   Partial / follow-up     1 (skipped - procedure-vs-process language pass)
   Pending backlog         5
   ----
-  Total                  72
+  Total                  77
 
 26 of 26 raw feedback items now shipped + 7 v2/adjacent items
 shipped. Item 30 (Admin review pack) and items 32+33 (29 May
 AI guardrail tightenings) added beyond the original 26.
-Items 53-72 (1 Jun 2026 polish pass) added from the inline-mode
-+ card-layout + AI-safety-net pilot batch.
+Items 53-77 (1 Jun 2026 polish pass + audit) added from the
+inline-mode + card-layout + AI-safety-net + audit P1 batch.
 
 #46 (verb-first verification) remains pending live re-test.
 
