@@ -1029,8 +1029,9 @@ Source: User Testing Feedback Log (Live Sessions) + Internal
     allFlatNumbered logic from #224.
 
 80. P1: Auto-apply created duplicate task for content in NOTE
-    Source: Internal #2 + screenshot 4 (2 Jun 2026)
-    Status: [PENDING - confirmed by screenshot]
+    Source: Internal #2 + screenshot 4 (2 Jun 2026); reproduced
+    4 Jun against Daily Acceptances Report (Domestic + International)
+    Status: [DONE 4 Jun - prompt rules + post-process detector]
     CONFIRMED: source Activity 1.0 'Submit class cap amendment
     request' has task 'a. Request class cap change via email or
     Teams chat' + NOTE 'Class details to be included: Program
@@ -1038,10 +1039,32 @@ Source: User Testing Feedback Log (Live Sessions) + Internal
     'New cap size'. Auto-apply added a NEW task 'b. Enter class
     details: Program Code, Term, RMIT Course Code,...' which
     duplicates the NOTE body verbatim. NOTE was retained too.
-    Fix: prompt rule to detect NOTE-body overlap and skip the
-    task creation, OR post-process safety net diff that flags
-    any new task whose text matches a NOTE body on the same
-    activity.
+    Reproduced 4 Jun in Daily Acceptances test: source NOTE
+    'MONDAY ONLY: Set Start Date = Friday' became BOTH a NOTE
+    and a standalone task 'Set Start Date = Friday'. Same run
+    also invented pointer-tasks 'NOTE: What if it's Monday?'
+    that were never in the source.
+    FIX (4 Jun): Two-layer defence:
+      (a) Prompt: new NEVER INVENT POINTER TASKS + NEVER
+          DUPLICATE NOTE BODY CONTENT AS A STANDALONE TASK rules
+          added before PROMOTE DROPPED CONTEXT TO NOTES. Each
+          has a worked-example wrong/right pair using the Daily
+          Acceptances Monday case.
+      (b) Post-process detector: runs after the AI output is
+          parsed and BEFORE the #223 count safety net. Strips
+          tasks starting with 'NOTE:' / 'See NOTE' / 'Refer to
+          NOTE' / 'Read NOTE' (invented pointer tasks). Strips
+          tasks whose normalised text equals/is contained in /
+          contains the normalised body or title of any NOTE on
+          the same activity. Both strip counts surface in the
+          existing toast: '... N invented NOTE-pointer task(s)
+          removed, M task(s) duplicating NOTE content removed'.
+    Verified with unit tests: pointer regex hits all 8 wording
+    variants (NOTE:, NOTE -, NOTE-, NOTE en-dash, See NOTE,
+    See the NOTE, Refer to (the) NOTE, Read NOTE) and rejects
+    4 legitimate variants ('Add a NOTE to...', 'Review NOTEs
+    from...', etc.). End-to-end detector test on both source
+    activities confirms expected strip counts.
 
 81. P1: Auto-apply reworded detailed task into generic placeholder
     Source: Internal #6 + screenshots 2 & 3 (2 Jun 2026)
@@ -1132,6 +1155,121 @@ Source: User Testing Feedback Log (Live Sessions) + Internal
     baseline to .doc-preview .note::before. Pill now stays as
     one piece regardless of parent line wrapping.
 
+92. P1: Prompt hardening - SOURCE TASK PRESERVATION + roles + anti-SOP
+    Source: same refund-process regression as item 91 (Tracker #258)
+    Status: [DONE 4 Jun - 3 new prompt rules, then revised per
+            user feedback to allow additions]
+    Cause analysis showed the existing 'ALLOWED enhancements'
+    block at line 13463 explicitly licensed adding generic
+    completeness steps. First-pass fix removed that allowance
+    entirely. User feedback rejected that: the added 'Notify
+    the Finance Officer of the decision' was NOT the problem;
+    the bug was REPLACING source content ('Check eligibility
+    against the refund policy' -> 'Review supporting documentation
+    for accuracy') and DROPPING the no-role activity. Revised.
+    Final state - three top-priority rule blocks added BEFORE
+    'NO INVENTED FACTUAL DETAIL' (positioned right after the
+    Indigenous content section):
+      (a) SOURCE TASK PRESERVATION: direction reversed from the
+          first-pass attempt. Every SOURCE task must have a
+          matching task in the output that preserves its
+          specific verb, object, and qualifiers. ADDING
+          completeness tasks is FINE - the bug is REPLACING
+          source content with a vaguer substitute or dropping
+          specific nouns ('eligibility', 'refund policy').
+          Worked example uses the refund 1.0 - WRONG output has
+          5 source-content drops and 1 OK addition; RIGHT output
+          preserves all 4 source tasks PLUS keeps the helpful
+          'Notify the Finance Officer' addition.
+      (b) NEVER INVENT OR REPLACE ROLES + NO-ROLE ACTIVITIES
+          ARE STILL ACTIVITIES: 'NEVER invent a role name. If
+          you are tempted to write Finance Officer, Coordinator,
+          Manager, or any other role on an output activity, that
+          role MUST appear verbatim on the corresponding source
+          activity. If the source activity has no role, the
+          output role is [Role TBD]. NEVER replace a source role
+          with a different one. Role names are NOT yours to
+          refine.' Plus the existing no-role-still-activities
+          + [Role TBD] placeholder rules. Worked example uses
+          source 1.0/2.0/3.0 and shows the wrong (drop 2.0,
+          renumber 3.0) vs right (keep 2.0 with [Role TBD])
+          output structure.
+      (c) DO NOT PATTERN-MATCH TO TRAINING DATA: anti-SOP
+          instinct rule. 'You have seen thousands of refund /
+          onboarding / approval processes in training. Resist
+          the urge to make THIS source look more like the
+          average... Your polish is sentence-level, never
+          structural.'
+    Restored (per user feedback): the 'add a generic completeness
+    or handover step' allowance, with the constraint that 'an
+    added completeness step may NEVER replace a source task. If
+    the source already has a task for that step, polish it; do
+    not add a parallel one.'
+    Coverage gap closed (in theory):
+      - SOURCE TASK PRESERVATION prevents the 'Confirm the
+        student's identity matches the request' -> 'Confirm
+        the details of the refund request' drift (specific
+        noun dropped)
+      - SOURCE TASK PRESERVATION prevents 'Check eligibility
+        against the refund policy' -> 'Review supporting
+        documentation' substitution (verb + object both
+        changed)
+      - NEVER INVENT ROLES blocks 'Finance Officer' being
+        applied to an activity the source labelled differently
+      - NO-ROLE rule prevents activity 2.0 deletion
+      - Anti-SOP rule prevents the underlying instinct that
+        triggered the structural cascade, while keeping
+        sentence-level polish allowed
+    Adding tasks like 'Notify the Finance Officer of the
+    decision' remains permitted as long as the source tasks
+    above are still present.
+    Combined with #257 safety net (deterministic backstop -
+    severe-drift threshold also revised: NOTE invention alone
+    no longer triggers revert) and #245 NOTE-pointer detector
+    (deterministic strip), this is now 3-layer defence:
+    prompt -> deterministic strip -> severe-drift revert.
+    Verification will need a re-run of the refund PDF in the
+    live tool after deploy.
+    Also covers tracker item #246 (auto-apply reworded
+    detailed task into generic placeholder).
+
+91. P1: Severe-drift auto-revert (refund-process regression)
+    Source: sample-test-process A (4) PDF, tested 4 Jun 2026
+    Status: [DONE 4 Jun - severe-drift tier added to safety net,
+            threshold revised per user feedback]
+    Source had 3 activities (1.0 Verify refund [Refunds Officer],
+    2.0 Approve and action [no role], 3.0 Inform student [Finance
+    Officer]) / 9 tasks / 0 NOTEs. Auto-apply output had 2
+    activities / 7 tasks / 1 NOTE: activity 2.0 dropped entirely,
+    1.0 and 3.0 tasks were extensively rewritten or invented,
+    NOTE 'What if the refund request is incomplete?' was invented.
+    The semantic overlap between 1.0c 'If eligible, action the
+    refund' and 2.0 'Approve and action the refund' appears to
+    have triggered the merge - the no-role status on 2.0 made
+    it 'feel' droppable to the AI. The existing #223 toast did
+    fire ('1 activity missing, 2 tasks missing, 1 new NOTE
+    added') but a warning is insufficient for damage this
+    severe - the document is largely fabricated.
+    FIX (4 Jun): Severity-tier check before the warning toast.
+    Initial threshold: severeDrift = activitiesDropped ||
+    taskDropRatio > 0.25 || notesInventedDelta >= 2.
+    Revised threshold (per user feedback - invented NOTEs
+    alone are noise, not structural damage):
+    severeDrift = activitiesDropped || taskDropRatio > 0.25.
+    When severe, deep-clone the originalSnapshot.model over
+    newModel in-place (preserves caller references), set
+    window._autoApplyReverted = true, and show an 'error' (not
+    'warning') toast: 'Auto-apply changed too much (...).
+    Restored your original. Try editing the flagged items
+    manually instead.' Sub-severe drift keeps the existing 10s
+    warning toast unchanged. Verified with 8 classifier tests:
+    refund regression (severe), Daily Acceptances (not severe),
+    1-task drop (not severe), 25% / 38% task-drop edges,
+    3 invented NOTEs (NOW not severe per user), multi-role
+    split adding activities (not severe), clean run (not
+    severe).
+
+
 POSITIVE SIGNAL (no action - just keep doing this):
   Live #4: 'simplifies content in QRGs. Stripping out unnecessary
   wording and making good suggestions.' Auto-apply IS working well
@@ -1158,11 +1296,11 @@ File 2 (15 items):  #1 = 9, #2 = 10, #3 = 6, #4 = 14, #5 = 12,
 SUMMARY
 ============================================================
 
-  Done                   72
+  Done                   75
   Withdrawn               1
   Needs sample input      0
   Partial / follow-up     1 (skipped - procedure-vs-process language pass)
-  Pending backlog        16
+  Pending backlog        15
   ----
   Total                  90
 

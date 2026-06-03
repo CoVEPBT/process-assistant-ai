@@ -13446,6 +13446,66 @@ createChatSurface({
       '* If a source task or NOTE involves engagement with Aboriginal and Torres Strait Islander students, staff, community, or knowledges, treat that as meaningful detail to preserve verbatim - do NOT paraphrase it away or collapse it into generic "student support" language. Specifically, names like "Ngarara Willim Centre", "Indigenous Student Success Strategy", or "Office of Indigenous Education, Research and Engagement" must be kept as written.\n' +
       '* Ngarara Willim Centre contact (provide when a task / NOTE mentions Indigenous student support, cultural support, or Indigenous community engagement): phone +61 3 9925 4885 (9am-5pm Mon-Fri), email ngarara.willim@rmit.edu.au, web https://www.rmit.edu.au/students/support-services/indigenous. If a process references Indigenous support without naming a contact, you can add a NOTE pointing to the Ngarara Willim Centre with these details.\n' +
       '* Indigenous Cultural and Intellectual Property (ICIP) rights are recognised by RMIT. Do not invent or paraphrase Indigenous-related content - keep the source\'s wording.\n\n' +
+      'SOURCE TASK PRESERVATION - DO NOT DROP OR GENERALISE SOURCE CONTENT (tracker #258 revised, 4 Jun 2026):\n' +
+      'This is the most-violated rule in your output. Read it carefully.\n' +
+      '* DIRECTION: every SOURCE task must have a matching task in the output that preserves its ' +
+      'specific verb, object, and qualifiers. Source "Check eligibility against the refund policy" ' +
+      'must appear in the output with the words "eligibility" and "refund policy" intact - or close ' +
+      'synonyms ("criteria" / "policy" is OK; "documentation" / "accuracy" is NOT, those drop the ' +
+      'specifics).\n' +
+      '* Polishing IS allowed: clearer wording, verb-first form, fits the 18-word cap, ' +
+      'consolidating two near-duplicate tasks, splitting one over-long task into two.\n' +
+      '* Polishing is NOT: replacing a source task\'s specific noun with a vaguer one, ' +
+      'substituting a different action verb, or collapsing a specific task into a generic SOP-template ' +
+      'equivalent.\n' +
+      '* ADDING completeness or handover tasks is FINE ("Notify the Finance Officer of the decision", ' +
+      '"Record the outcome", "Close the request") as long as you ALSO preserve every source task. ' +
+      'The bug is REPLACING source content with a vaguer substitute; ADDING tasks beside it is helpful.\n' +
+      '* SELF-CHECK for every SOURCE task: locate its match in your output. If the match has ' +
+      'dropped a specific noun (named system, named policy, qualifier like "student\'s identity"), ' +
+      'restore it. If you cannot find a match at all, the source task was dropped - add it back.\n' +
+      '* WORKED EXAMPLE (refund process regression, 4 Jun 2026):\n' +
+      '  SOURCE 1.0 "Verify the refund request" [Refunds Officer]\n' +
+      '    a Confirm the student\'s identity matches the request\n' +
+      '    b Check eligibility against the refund policy\n' +
+      '    c If eligible, action the refund\n' +
+      '    d If not eligible, send a refusal email\n' +
+      '  WRONG output 1.0 tasks:\n' +
+      '    a Confirm the details of the refund request   <- dropped "student\'s identity matches" - source specific is gone\n' +
+      '    b Review supporting documentation for accuracy   <- dropped "eligibility" and "refund policy" - source specific is gone\n' +
+      '    c Approve or reject the refund request   <- collapsed 1.0c + 1.0d into one task, lost the eligible/not-eligible branching\n' +
+      '    d Notify the Finance Officer of the decision   <- this addition is FINE on its own, but the source tasks above were dropped\n' +
+      '  RIGHT output 1.0 tasks (every source task preserved + helpful addition):\n' +
+      '    a Confirm the student\'s identity matches the request   <- preserves the source specific\n' +
+      '    b Check eligibility against the refund policy   <- preserves "eligibility" + "refund policy"\n' +
+      '    c Action the refund when eligible   <- polished from source 1.0c, same action\n' +
+      '    d Send a refusal email when not eligible   <- polished from source 1.0d, same action\n' +
+      '    e Notify the Finance Officer of the decision   <- helpful completeness addition, source content above is intact\n\n' +
+      'NEVER INVENT OR REPLACE ROLES, AND NO-ROLE ACTIVITIES ARE STILL ACTIVITIES (tracker #258, 4 Jun 2026):\n' +
+      '* NEVER invent a role name. If you are tempted to write "Finance Officer", "Coordinator", ' +
+      '"Manager", or any other role on an output activity, that role MUST appear verbatim on the ' +
+      'corresponding source activity. If the source activity has no role, the output role is "[Role TBD]".\n' +
+      '* NEVER replace a source role with a different one. If the source says [Refunds Officer], ' +
+      'the output says [Refunds Officer] - NOT [Finance Officer], NOT [Refunds Manager]. ' +
+      'Role names are NOT yours to refine.\n' +
+      '* An activity in the source WITHOUT a [Role] is NOT optional. It is NOT a transition step ' +
+      'to be absorbed into the prior activity. It is NOT a candidate for deletion or merging.\n' +
+      '* Keep no-role activities as separate activities in your output, with the same title and ' +
+      'all their tasks. Use "[Role TBD]" as the role placeholder so the missing role is visible ' +
+      'to the user.\n' +
+      '* WORKED EXAMPLE (refund process regression, 4 Jun 2026):\n' +
+      '  SOURCE: 1.0 Verify [Refunds Officer] / 2.0 Approve and action the refund (no role) / 3.0 Inform [Finance Officer]\n' +
+      '  WRONG output: 1.0 Verify [Refunds Officer] / 2.0 Inform [Finance Officer]\n' +
+      '    - silently dropped source activity 2.0 because it had no role and felt like a continuation of 1.0c\n' +
+      '    - renumbered source 3.0 as output 2.0 to hide the gap\n' +
+      '  RIGHT output: 1.0 Verify [Refunds Officer] / 2.0 Approve and action the refund [Role TBD] / 3.0 Inform [Finance Officer]\n' +
+      '    - source 2.0 preserved verbatim with all 3 of its tasks\n' +
+      '    - [Role TBD] placeholder makes the missing role visible to the user instead of fabricating one\n\n' +
+      'DO NOT PATTERN-MATCH TO YOUR TRAINING DATA (tracker #258, 4 Jun 2026):\n' +
+      'You have seen thousands of refund / onboarding / approval processes in training. Resist the ' +
+      'urge to make THIS source look more like the "average" process of its type. If the user\'s ' +
+      'source has an unusual shape, weird gap, or non-standard ordering, preserve it. The user knows ' +
+      'their context. You do not. Your polish is sentence-level, never structural.\n\n' +
       'NO INVENTED FACTUAL DETAIL - THIS IS NON-NEGOTIABLE:\n' +
       'You can enhance a half-written process by adding obvious next-step shape, but you can NEVER invent a specific noun the source doesn\'t mention.\n\n' +
       '* HARD BAN on adding specifics not in the source:\n' +
@@ -13457,11 +13517,15 @@ createChatSurface({
       '  - dollar amounts, percentages, counts, or any quantitative specifics\n' +
       '  - person names, email addresses, URLs, phone numbers\n' +
       '  - regulatory body / external party references not in the source\n\n' +
-      '* ALLOWED enhancements (use sparingly, only where the source is clearly incomplete):\n' +
+      '* ALLOWED enhancements (use judiciously):\n' +
       '  - reword existing sentences for clarity, verb-first form, and the 18-word sentence cap\n' +
       '  - consolidate near-duplicate tasks that clearly refer to the same step\n' +
-      '  - add a generic completeness step where the process clearly needs one: "Notify the requester of the outcome", "Record the decision", "File the form", "Close the request"\n' +
-      '  - any allowed addition must describe the action GENERICALLY - no specific system, person, document, or timeframe attached\n\n' +
+      '  - add a generic completeness or handover step where the process clearly needs one: ' +
+      '"Notify the requester of the outcome", "Record the decision", "File the form", ' +
+      '"Close the request", "Notify [next role] of the handover". These additions must be GENERIC - ' +
+      'no specific system, person, document, or date attached unless from the source.\n' +
+      '  - HOWEVER, an added completeness step may NEVER replace a source task. If the source already ' +
+      'has a task for that step, polish it; do not add a parallel one. See SOURCE TASK PRESERVATION above.\n\n' +
       '* PLAUSIBILITY TEST: for every NEW sentence in your output, ask "could a reviewer point at any specific noun in this and ask where it came from?" If yes and the source has no answer, delete or rewrite the sentence to remove the specific noun. If the addition is generic ("notify", "record", "close"), it can stay.\n\n' +
       '* The Process Objective and Process Background sections may be rewritten for tone but must only describe what the source actually shows. Do not infer purposes, audiences, or business context the user has not stated.\n' +
       '* If the source is genuinely missing required information, leave a visible placeholder (e.g. "[TBD]") rather than filling it in from imagination.\n' +
@@ -13612,6 +13676,26 @@ createChatSurface({
       'WRONG: Activity "Prepare spaghetti" with tasks Cook / Drain / Eat (drops Buy). ' +
       'RIGHT: Activity "Manage spaghetti meal" with tasks Buy / Cook / Drain / Eat. ' +
       'If counts don\'t match (and it isn\'t a multi-role split), redo the Process Map block.\n\n' +
+      'NEVER INVENT POINTER TASKS THAT REFERENCE A NOTE (tracker #245, 4 Jun 2026):\n' +
+      '* NEVER emit a task whose text starts with "NOTE:", "See NOTE", "See note", "Refer to the NOTE", ' +
+      '"Read the NOTE", or any equivalent phrasing that just points the reader at an adjacent NOTE. ' +
+      'If a NOTE adds important context, the context lives IN THE NOTE - it does not also need a task ' +
+      'announcing the NOTE\'s existence. The reader can see the NOTE for themselves.\n' +
+      '* NEVER invent a question-style framing (e.g. "What if it\'s Monday?") and emit it as a task. ' +
+      'Question framings belong on NOTE title lines if anywhere. They are NEVER tasks.\n' +
+      '* WRONG: SOURCE = task "Download the 7:00 AM report." + NOTE "MONDAY ONLY: Download the Sat/Sun/Mon morning reports." ' +
+      'OUTPUT = task "Download the 7:00 AM report." + task "NOTE: What if it\'s Monday?" + NOTE "MONDAY ONLY: Download...". ' +
+      'The middle task is invented - the source contains no such instruction. DELETE IT.\n' +
+      '* RIGHT: SOURCE = task "Download the 7:00 AM report." + NOTE "MONDAY ONLY: Download the Sat/Sun/Mon morning reports." ' +
+      'OUTPUT = task "Download the 7:00 AM report." + NOTE "MONDAY ONLY: Download the Sat/Sun/Mon morning reports." (same shape, no invented task).\n\n' +
+      'NEVER DUPLICATE NOTE BODY CONTENT AS A STANDALONE TASK (tracker #245, 4 Jun 2026):\n' +
+      '* If a NOTE in the source contains an instruction body (e.g. NOTE "MONDAY ONLY: Set Start Date = Friday"), ' +
+      'that instruction STAYS IN THE NOTE. Do NOT also emit a task that repeats the same instruction. ' +
+      'A reader who is doing the process on Monday will read the NOTE and act on it - they do not need ' +
+      'the same content as both a NOTE and a task.\n' +
+      '* WRONG: SOURCE = NOTE "MONDAY ONLY: Set Start Date = Friday." OUTPUT = task "Set Start Date = Friday." + NOTE "MONDAY ONLY: Set Start Date = Friday." ' +
+      'The task duplicates the NOTE body. DELETE THE TASK.\n' +
+      '* RIGHT: SOURCE = NOTE "MONDAY ONLY: Set Start Date = Friday." OUTPUT = NOTE "MONDAY ONLY: Set Start Date = Friday." (NOTE only, no twin task).\n\n' +
       'PROMOTE DROPPED CONTEXT TO NOTES - DO NOT DELETE INFORMATION:\n' +
       'When you shorten a task to hit the 18-word sentence cap, you must not silently delete useful ' +
       'context. "Useful context" = anything that tells the reader WHERE to look, WHICH specific column / ' +
@@ -14182,6 +14266,58 @@ createChatSurface({
         }
       } catch (e) {}
 
+      // Tracker #245 (4 Jun 2026): strip invented NOTE-pointer tasks and
+      // tasks that just duplicate a NOTE body. The Daily Acceptances test
+      // (4 Jun) showed the AI emitting bogus 'NOTE: What if it''s Monday?'
+      // tasks plus 'Set Start Date = Friday' tasks that already lived as
+      // NOTE bodies. Runs BEFORE the #223 count check so the count warnings
+      // reflect post-strip totals.
+      let _strippedPointerTasks = 0;
+      let _strippedNoteDupeTasks = 0;
+      try {
+        // NB: \b after the colon doesn't match (colon + following space are both
+        // non-word chars). \b only applies to the See/Refer/Read paths to
+        // disambiguate from "NOTEs" (plural). Colon path is disambiguated by
+        // the colon/dash itself.
+        const _pointerRe = /^(?:NOTE\s*[:\-\u2013]|(?:See|Refer\s+to|Read)\s+(?:the\s+)?NOTE\b)/i;
+        const _normalise = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+        for (const act of (newModel.activities || [])) {
+          if (!Array.isArray(act.tasks)) continue;
+          // Build a normalised set of NOTE bodies (and combined title+body) for this activity
+          const noteHaystacks = [];
+          for (const n of (act.notes || [])) {
+            if (n && n.body) noteHaystacks.push(_normalise(n.body));
+            if (n && n.title) noteHaystacks.push(_normalise(n.title));
+            if (n && (n.title || n.body)) noteHaystacks.push(_normalise((n.title || '') + ' ' + (n.body || '')));
+          }
+          act.tasks = act.tasks.filter(t => {
+            const raw = String(t && t.text || '').trim();
+            if (!raw) return true;
+            // 1) Pointer task that just references a NOTE
+            if (_pointerRe.test(raw)) {
+              _strippedPointerTasks++;
+              console.warn('[auto-apply detector] stripped pointer task:', raw);
+              return false;
+            }
+            // 2) Task text is verbatim (or near-verbatim) duplicate of a NOTE body in the same activity
+            const tn = _normalise(raw);
+            if (tn.length >= 8) {
+              for (const h of noteHaystacks) {
+                if (!h) continue;
+                if (h === tn || h.indexOf(tn) !== -1 || tn.indexOf(h) !== -1) {
+                  _strippedNoteDupeTasks++;
+                  console.warn('[auto-apply detector] stripped NOTE-dupe task:', raw);
+                  return false;
+                }
+              }
+            }
+            return true;
+          });
+        }
+      } catch (e) {
+        console.warn('[auto-apply detector] failed:', e);
+      }
+
       // Tracker #223 (1 Jun 2026): post-process safety net. Compare source
       // vs auto-apply output to catch the AI silently dropping tasks /
       // activities or inventing NOTEs (the spaghetti / prepare-meal / AHPRA
@@ -14228,8 +14364,55 @@ createChatSurface({
           warnings.push(longTitlesAfter.length + ' activity title' +
             (longTitlesAfter.length === 1 ? '' : 's') + ' over 10 words');
         }
+        // Tracker #245 (4 Jun 2026): report invented/duplicate tasks the detector stripped
+        if (_strippedPointerTasks > 0) {
+          warnings.push(_strippedPointerTasks + ' invented NOTE-pointer task' +
+            (_strippedPointerTasks === 1 ? '' : 's') + ' removed');
+        }
+        if (_strippedNoteDupeTasks > 0) {
+          warnings.push(_strippedNoteDupeTasks + ' task' +
+            (_strippedNoteDupeTasks === 1 ? '' : 's') + ' duplicating NOTE content removed');
+        }
 
-        if (warnings.length > 0) {
+        // Tracker #257 (4 Jun 2026): severe-drift auto-revert. When auto-apply
+        // produces structural damage too big to spot-check (entire activities
+        // missing, large chunks of tasks dropped), revert the whole model to
+        // the original snapshot instead of asking the user to triage. The
+        // refund-process test (4 Jun) showed the AI dropping activity 2.0
+        // entirely and rewriting tasks across the remaining activities. That
+        // class of regression destroys the document; warning the user is not
+        // enough.
+        const taskDropRatio = srcTaskTotal > 0 ? (srcTaskTotal - outTaskTotal) / srcTaskTotal : 0;
+        // Tracker #258 follow-up (4 Jun 2026): user feedback - invented NOTEs alone
+        // shouldn't force a full revert (Daily Acceptances NOTEs were noise, not damage).
+        // Only structural damage (activity dropped or >25% tasks missing) triggers revert.
+        // Invented NOTEs still surface in the warning toast.
+        const severeDrift = activitiesDropped || taskDropRatio > 0.25;
+
+        if (severeDrift) {
+          console.warn('[auto-apply safety net] SEVERE DRIFT - reverting to original snapshot:', {
+            source: { activities: srcActs.length, tasks: srcTaskTotal, notes: srcNoteTotal },
+            output: { activities: outActs.length, tasks: outTaskTotal, notes: outNoteTotal },
+            warnings: warnings
+          });
+          // Deep clone the original so newModel becomes a fresh independent copy
+          // and any downstream mutations don't bleed back into originalSnapshot.
+          try {
+            const reverted = JSON.parse(JSON.stringify(originalSnapshot.model));
+            // Replace properties in-place so any caller holding a reference to
+            // newModel still sees the reverted contents.
+            Object.keys(newModel).forEach(k => { delete newModel[k]; });
+            Object.assign(newModel, reverted);
+            window._autoApplyReverted = true;
+          } catch (cloneErr) {
+            console.warn('[auto-apply safety net] revert clone failed:', cloneErr);
+          }
+          const severeMsg = 'Auto-apply changed too much (' + warnings.join(', ') +
+            '). Restored your original. Try editing the flagged items manually instead.';
+          if (typeof showToast === 'function') {
+            showToast(severeMsg, 'error', 14000);
+          }
+        } else if (warnings.length > 0) {
           console.warn('[auto-apply safety net] differences vs source:', {
             source: { activities: srcActs.length, tasks: srcTaskTotal, notes: srcNoteTotal },
             output: { activities: outActs.length, tasks: outTaskTotal, notes: outNoteTotal },
@@ -15159,14 +15342,4 @@ createChatSurface({
         const firstDiv = actEl.querySelector(':scope > div');
         if (firstDiv) {
           // Strip the .num text from the start
-          let fullText = extractText(firstDiv);
-          if (numEl) fullText = fullText.replace(number, '').trim();
-          title = fullText;
-        }
-        const roleEl = actEl.querySelector('.role');
-        let role = roleEl ? stripLabel(extractText(roleEl), 'Role') : '';
-        // Ignore the "Click to add accountable role" placeholder - treat as empty
-        // so we don't accidentally export the placeholder text as the role.
-        if (/^\[?\s*click to add accountable role\s*\]?$/i.test(role.trim())) {
-          role = '';
-       
+          

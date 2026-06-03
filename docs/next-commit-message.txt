@@ -1,12 +1,17 @@
-Parser robustness: markdown headings + capital-letter activities
+Parser robustness + NOTE-pointer defence + severe-drift revert + prompt hardening
 
-Tracker #243 (4 Jun 2026): Testers pasted content using formats
-PAT didn't recognise (markdown from Confluence/Notion, capital-letter
-outlines). Either the parse came back empty or the AI-structuring
-modal popped on content that already had perfectly good structure.
+Four 4 Jun 2026 fixes bundled. Trackers #243 (parser), #245
+(auto-apply NOTE-pointer + dupe), #257 (severe-drift revert),
+#258 (prompt hardening - task anchoring + no-role rule).
 
-1. New parser handlers in parseStructuredText
-=============================================
+1. Parser robustness (#243)
+===========================
+Testers pasted content using formats PAT didn't recognise (markdown
+from Confluence/Notion, capital-letter outlines). Either the parse
+came back empty or the AI-structuring modal popped on content that
+already had perfectly good structure.
+
+New parser handlers in parseStructuredText
 - markdownHeadingRe: /^(#{1,4})\s+(.+?)\s*#*\s*$/
   Single '# Title' becomes the process title (if not already set).
   '##' / '###' / '####' become activities, auto-numbered N.0 from
@@ -14,27 +19,177 @@ modal popped on content that already had perfectly good structure.
   Confluence, Notion, GitHub issues, README-style sources.
 - capitalLetterActRe: /^([A-Z])[\.\)]\s+(.+)$/
   'A. Title', 'B) Title' style. Letter converted to ordinal so
-  'B.' becomes activity 2.0. Common in legal / contractual / outline
-  content.
+  'B.' becomes activity 2.0.
 
-Both handlers run after activityRe and stepActivityRe in the main
-parse loop, so existing numeric formats are unchanged. Tasks under
-the new activity styles still use the existing taskRe / numericTaskRe
-/ bulletTaskRe matchers.
+looksLikeRoughNotes stays consistent
+- activityPattern now also matches #{1,4}\s+\S and [A-Z][.)]\s+\S
+  so the AI-structuring modal doesn't trigger on content
+  parseStructuredText now handles natively.
 
-Verified with 4 unit cases: markdown h1+h2 with tasks, markdown
-h2-only (no title), capital letters only, hybrid h1+capital letters.
-All produce correct title + activity numbering + task assignment.
+Verified with 4 unit cases.
 
-2. looksLikeRoughNotes stays consistent
-=======================================
-Without this, parseStructuredText would parse the markdown / capital
-letter content fine but looksLikeRoughNotes would still trip first
-and offer "want me to structure this?" on already-structured input.
+2. Auto-apply: stop inventing NOTE-pointer tasks (#245)
+=======================================================
+Daily Acceptances Report test (4 Jun) showed two regressions in
+auto-apply output:
+- AI invented question-style 'NOTE: What if it's Monday?' tasks
+  pointing at adjacent NOTEs (the phrase was not in the source).
+- AI promoted NOTE body content into a standalone duplicate task
+  ('Set Start Date = Friday' appeared as both a NOTE body AND a
+  task, alongside the legit NOTE).
 
-Added markdown (#{1,4}\s+\S) and capital-letter ([A-Z][.)]\s+\S)
-branches to the activityPattern regex. Modal now only triggers on
-genuinely prose-only input, matching the new parser surface.
+Both bypassed the #223 count safety net because the AI made up
+new tasks to replace dropped real tasks - net count stayed the
+same or went up.
 
-Tracker: item 78 in docs/PAT-pilot-feedback-tracker.txt
-Files: public/index.html (parser block + looksLikeRoughNotes regex)
+Prompt: two new rule blocks
+- NEVER INVENT POINTER TASKS THAT REFERENCE A NOTE. Tasks whose
+  text starts with 'NOTE:', 'See NOTE', 'Refer to (the) NOTE',
+  'Read (the) NOTE', or any equivalent pointer phrasing must be
+  deleted. Worked example uses the Daily Acceptances Monday case.
+- NEVER DUPLICATE NOTE BODY CONTENT AS A STANDALONE TASK. Worked
+  example: NOTE 'MONDAY ONLY: Set Start Date = Friday' must not
+  also appear as task 'Set Start Date = Friday'.
+
+Post-process detector (deterministic backstop)
+- Runs after the AI output is parsed and BEFORE the #223 count
+  safety net so subsequent count warnings reflect post-strip
+  totals.
+- Pointer regex:
+    /^(?:NOTE\s*[:\-–]|(?:See|Refer\s+to|Read)\s+(?:the\s+)?NOTE\b)/i
+  (NB: \b after the colon doesn't match because both : and
+  following space are non-word chars; \b is only on the
+  See/Refer/Read paths.)
+- Dupe check: normalises task text and each NOTE's title/body to
+  lowercase alphanumeric, then strips any task whose normalised
+  text == / is contained in / contains any NOTE haystack on the
+  same activity (8-char minimum to avoid false positives).
+
+Verified
+- Pointer regex: 12/12 wording cases.
+- End-to-end detector: 3/3 activity-level tests pass.
+
+3. Severe-drift auto-revert (#257, threshold revised)
+======================================================
+sample-test-process A (4) PDF test (4 Jun) showed catastrophic
+auto-apply drift:
+- Source: 3 activities (1.0 Verify refund [Refunds Officer],
+  2.0 Approve and action [no role], 3.0 Inform [Finance Officer]),
+  9 tasks, 0 NOTEs.
+- Output: 2 activities, 7 tasks, 1 invented NOTE. Activity 2.0
+  dropped entirely. Activities 1.0 and 3.0 had tasks extensively
+  rewritten or invented.
+
+Cause: semantic overlap between 1.0c 'If eligible, action the
+refund' and 2.0 'Approve and action the refund' triggered an AI
+merge. The no-role status on source 2.0 made it 'feel' droppable.
+
+The existing #223 toast DID fire ('1 activity missing, 2 tasks
+missing, 1 new NOTE added') but a warning is insufficient for
+damage this severe - the document is largely fabricated and the
+user has no way to recover the dropped activity short of re-pasting.
+
+Fix
+- Added severity tier check before the existing warning toast.
+- Final threshold (revised per user feedback - invented NOTEs
+  alone aren't structural damage):
+  severeDrift = activitiesDropped
+                 || (srcTaskTotal - outTaskTotal) / srcTaskTotal > 0.25
+- When severe: deep-clone originalSnapshot.model over newModel
+  in-place (preserves caller references holding newModel), set
+  window._autoApplyReverted = true, show an 'error' (not
+  'warning') toast for 14s:
+    'Auto-apply changed too much (...). Restored your original.
+     Try editing the flagged items manually instead.'
+- Sub-severe drift keeps the existing 10s warning toast unchanged.
+  Invented NOTEs surface in that warning but never trigger
+  full revert.
+
+Verified with 8 classifier tests
+- Refund regression: severe (activity dropped).
+- Daily Acceptances #245 test: not severe.
+- 1-task drop: not severe.
+- 25% task-drop edge: not severe.
+- 38% task-drop edge: severe.
+- 3 invented NOTEs (revised): not severe (per user feedback).
+- Multi-role split adding activities: not severe (activities
+  CAN increase; we only check for drops).
+- Clean run: not severe.
+
+4. Prompt hardening: SOURCE TASK PRESERVATION + roles (#258, revised)
+======================================================================
+Cause analysis on the refund regression identified the auto-apply
+prompt as the root cause of the structural drift. The post-process
+safety net was working as designed (severe-drift revert handles the
+worst cases), but ideally the prompt should not produce drift this
+bad in the first place. First-pass fix was too restrictive (banned
+all task additions). User feedback corrected: the 'Notify the
+Finance Officer of the decision' ADDITION was fine; the actual bugs
+were (a) REPLACING source content ('Check eligibility against the
+refund policy' -> 'Review supporting documentation for accuracy')
+and (b) DROPPING the no-role activity 2.0 entirely.
+
+Revised final state - three top-priority rule blocks inserted
+BEFORE 'NO INVENTED FACTUAL DETAIL' (right after the Indigenous
+content section):
+
+(a) SOURCE TASK PRESERVATION
+    Direction reversed from the first-pass attempt. Every SOURCE
+    task must have a matching task in the output that preserves
+    its specific verb, object, and qualifiers. Polishing IS
+    allowed; replacing source content with a vaguer substitute
+    is not. Adding completeness or handover tasks (like 'Notify
+    the Finance Officer of the decision') is explicitly fine
+    AS LONG AS source tasks are still present.
+    Worked example covers the refund 1.0a-d cascade:
+      SOURCE 1.0a 'Confirm the student's identity matches the
+      request' -> WRONG 'Confirm the details of the refund
+      request' (dropped 'student's identity matches', specific
+      gone); RIGHT preserves the source specific. Plus shows
+      RIGHT output keeping the helpful 'Notify Finance Officer'
+      addition as a 5th task BESIDE the 4 preserved source
+      tasks.
+
+(b) NEVER INVENT OR REPLACE ROLES, AND NO-ROLE ACTIVITIES ARE
+    STILL ACTIVITIES
+    Explicit ban on inventing role names: 'If you are tempted
+    to write Finance Officer, Coordinator, Manager, or any
+    other role on an output activity, that role MUST appear
+    verbatim on the corresponding source activity.' Plus ban
+    on replacing source roles ([Refunds Officer] cannot become
+    [Refunds Manager]). Plus the no-role-still-activities rule
+    + [Role TBD] placeholder mandate. Worked example uses the
+    refund 1.0/2.0/3.0 structure and shows the wrong output
+    (drop 2.0, renumber 3.0) vs right (keep 2.0 with [Role TBD]).
+
+(c) DO NOT PATTERN-MATCH TO YOUR TRAINING DATA
+    Anti-SOP instinct rule. 'You have seen thousands of refund /
+    onboarding / approval processes in training. Resist the urge
+    to make THIS source look more like the average... Your polish
+    is sentence-level, never structural.'
+
+Restored (per user feedback - first-pass was too aggressive): the
+'add a generic completeness or handover step' allowance under
+'NO INVENTED FACTUAL DETAIL'. The allowance now carries an
+explicit constraint: 'an added completeness step may NEVER
+replace a source task. If the source already has a task for
+that step, polish it; do not add a parallel one.' Cross-references
+SOURCE TASK PRESERVATION.
+
+Net effect: the prompt now has three top-priority rules
+specifically targeting the refund-regression failure modes
+(source-content replacement, activity-merging-when-no-role,
+training-data-pattern-matching), while still permitting helpful
+completeness additions when source content is preserved.
+Combined with the #245 NOTE-pointer detector (deterministic
+strip) and the #257 severe-drift revert (deterministic backstop),
+this gives 3-layer defence: prompt -> deterministic strip ->
+severe-drift revert.
+
+Also covers tracker item #246 (auto-apply reworded detailed
+task into generic placeholder) - same root cause as the refund
+regression, same SOURCE TASK PRESERVATION rule prevents it.
+
+Tracker: items 78 (#243), 80 (#245), 91 (#257), 92 (#258) in
+docs/PAT-pilot-feedback-tracker.txt.
+Files: public/index.html
