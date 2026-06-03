@@ -6227,9 +6227,9 @@ async function _doAnalyse() {
         if (userProvidedTitle) {
           model.title = userProvidedTitle;
         } else if (!model.title || !model.title.trim()) {
-          showToast("I couldn't find a process name in your file. Add one in the Process name field above and try again.", 'error', 7000);
-          flagTitleInput();
-          return;
+          // Tracker (2 Jun 2026): default + let auto-apply suggest.
+          model.title = 'Untitled process';
+          model.titleInferred = true;
         }
       } else {
         const txt = document.getElementById('pasteArea').value.trim();
@@ -6260,14 +6260,13 @@ async function _doAnalyse() {
   // Validate the parsed result:
   //  - Title is required (either typed in the input, in the textarea, or extracted from a file)
   //  - At least one activity / task must be present
-  const hasTitle = !!(model.title && model.title.trim());
+  // Tracker (2 Jun 2026): default title to 'Untitled process' instead of blocking.
+  if (!model.title || !model.title.trim()) {
+    model.title = 'Untitled process';
+    model.titleInferred = true;
+  }
   const hasActivities = Array.isArray(model.activities) &&
     model.activities.some(a => (a.title && a.title.trim()) || (a.tasks && a.tasks.length > 0));
-  if (!hasTitle) {
-    showToast('Please add a process name to continue.', 'error', 5000);
-    if (!formShown) flagTitleInput();
-    return;
-  }
   if (!hasActivities) {
     const msg = uploadedFile
       ? "I couldn't find any activities in your file. Make sure your content includes activity headers (like '1.0 Activity name') with tasks under each."
@@ -6422,11 +6421,9 @@ async function _parseAndValidateInput() {
       if (userProvidedTitle) {
         model.title = userProvidedTitle;
       } else if (!model.title || !model.title.trim()) {
-        if (typeof showToast === 'function') {
-          showToast("I couldn't find a process name in your file. Add one in the Process name field above and try again.", 'error', 7000);
-        }
-        flagTitleInput();
-        return null;
+        // Tracker (2 Jun 2026): default + let auto-apply suggest.
+        model.title = 'Untitled process';
+        model.titleInferred = true;
       }
     } else {
       const txt = document.getElementById('pasteArea').value.trim();
@@ -6459,14 +6456,10 @@ async function _parseAndValidateInput() {
     }
     return null;
   }
-  // Title required
-  const hasTitle = !!(model.title && model.title.trim());
-  if (!hasTitle) {
-    if (typeof showToast === 'function') {
-      showToast('Please add a process name to continue.', 'error', 5000);
-    }
-    if (!formShown) flagTitleInput();
-    return null;
+  // Tracker (2 Jun 2026): missing title no longer blocks. Default + suggest.
+  if (!model.title || !model.title.trim()) {
+    model.title = 'Untitled process';
+    model.titleInferred = true;
   }
   // At least one activity / task required
   const hasActivities = Array.isArray(model.activities) &&
