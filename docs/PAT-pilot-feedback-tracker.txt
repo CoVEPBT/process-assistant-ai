@@ -986,6 +986,146 @@ PENDING (post-pilot backlog - new features, bigger work)
     fallback. Stale no-trigger / no-inputs / no-outputs entries
     left in the map with a comment pointing to tracker #232.
 
+
+
+============================================================
+PENDING - From 2 Jun 2026 pilot user testing
+============================================================
+Source: User Testing Feedback Log (Live Sessions) + Internal
+        Testing Log CSVs from Natalie's pilot session.
+
+78. P1: Parser robustness - non-standard numbering
+    Source: Live #2
+    Status: [PENDING]
+    Testers want PAT to parse content even when it doesn't use
+    rigid 1.0/a/b/c format. Variations like '1.', '2)', plain
+    bullets, prose-only sections should still produce a usable
+    model. AI should suggest options when ambiguous, not block
+    with an error.
+
+79. P1: QRG parsing - check whether all 14 numbered steps are captured
+    Source: Live #6 (QRG sample analysed 2 Jun 2026)
+    Status: [PENDING - needs PAT output diff]
+    UPDATED 2 Jun: 'yellow' is NOT a hallucination. QRG step 8
+    in the Out-of-Pocket Expense Report PDF says 'click on the
+    yellow Add button'. The tester missed it. Strike the
+    hallucination half.
+    Remaining concern: 'missed sections'. QRG has 14 numbered
+    steps. Need to verify PAT captures all of them as activities
+    (or tasks) - QRGs use flat top-level numbering with short
+    single-action steps, which may interact with the
+    allFlatNumbered logic from #224.
+
+80. P1: Auto-apply created duplicate task for content in NOTE
+    Source: Internal #2 + screenshot 4 (2 Jun 2026)
+    Status: [PENDING - confirmed by screenshot]
+    CONFIRMED: source Activity 1.0 'Submit class cap amendment
+    request' has task 'a. Request class cap change via email or
+    Teams chat' + NOTE 'Class details to be included: Program
+    Code, Term, RMIT Course Code, Section Code/Class Number,'
+    'New cap size'. Auto-apply added a NEW task 'b. Enter class
+    details: Program Code, Term, RMIT Course Code,...' which
+    duplicates the NOTE body verbatim. NOTE was retained too.
+    Fix: prompt rule to detect NOTE-body overlap and skip the
+    task creation, OR post-process safety net diff that flags
+    any new task whose text matches a NOTE body on the same
+    activity.
+
+81. P1: Auto-apply reworded detailed task into generic placeholder
+    Source: Internal #6 + screenshots 2 & 3 (2 Jun 2026)
+    Status: [PENDING - upgraded severity, escapes safety net]
+    CONFIRMED + worse than first reported. The AI did NOT just
+    drop content - it REWORDED a detailed task into a generic
+    placeholder. Task count stayed at 4, so safety net #223
+    didn't fire.
+      SOURCE task 2.0c: 'Possible scenarios:' followed by 3
+        sub-bullets including: 'If room capacity cannot
+        accommodate the request, proceed to step d. However, in
+        addition to informing the requestor, include VE
+        timetabling support (ve.tts@rmit.edu.au) requesting a
+        larger room be sourced...'
+      OUTPUT task 2.0c: 'Determine scenarios for actioning the
+        request'
+    Lost: 3 scenario branches + the ve.tts@rmit.edu.au email.
+    Fix needs CONTENT-AWARE check, not count-based:
+      (a) Per-task length-ratio guard: if output task is < 30%
+          of source task's word count, flag as 'possibly stripped'.
+      (b) Email-restoration pass extended to detect emails in
+          source tasks that are missing from output.
+      (c) Prompt rule: 'When a task has sub-bullets or numbered
+          sub-points, those are SCENARIO CONTENT. Promote each to
+          a separate NOTE under the activity. Do NOT collapse
+          them into a single generic task wording.'
+
+82. P2: Detect vague tasks (no actor/recipient/method)
+    Source: Internal #4
+    Status: [PENDING]
+    Tasks like 'Request class cap change via email or teams chat'
+    are too vague. New task-vague info flag that detects lacking
+    recipient (who?), method (which channel?), or actor specificity.
+
+83. P2: Flag tasks needing a supporting guide link
+    Source: Internal #7
+    Status: [PENDING]
+    Tasks like 'Action the class cap amendment request in SAMS' -
+    a new staff member won't know HOW. Detect system-action verbs
+    + specific system name; suggest Link or NOTE to a guide.
+
+84. P2: Auto-suggest 'Notify [role]' handover task on role change
+    Source: Live #5
+    Status: [PENDING]
+    On detected role-change between activities, surface a one-
+    click button on the inline handover strip to add 'Notify
+    [next role]' at end of previous activity.
+
+85. P2: Handover-unclear rule missed task 1 -> 2 transition
+    Source: Internal #5
+    Status: [PENDING - has screenshot]
+    Rule didn't fire when it should have. Check whether comparing
+    the right things (activity role vs task-level role attribution).
+
+86. P3: Strip '+ Add task/note/activity' buttons from exports
+    Source: Live #1
+    Status: [PENDING]
+    Exports (Word, PDF, Nintex) contain user-add UI buttons.
+    Strip .doc-add-actions / .doc-add-btn before each export.
+    Same pattern as #231 extractText fix.
+
+87. P3: Save changes - autosave or clearer affordance
+    Source: Live #3
+    Status: [PENDING]
+    Save changes flow not clear. Either (a) autosave on every
+    meaningful edit + re-run rules in background, or (b) more
+    prominent Save button with 'unsaved edits' indicator.
+
+88. P3: 'Click to update role' - real button + better wording
+    Source: Live #7
+    Status: [PENDING]
+    Placeholder doesn't look like an action target. Make it a
+    real button or change wording to 'Add accountable role here'.
+
+89. P3: Verb-first warning copy - reference PAT not Nintex test
+    Source: Internal #1
+    Status: [PENDING]
+    Currently says 'Otherwise try the Nintex test:...'. Replace
+    with 'Otherwise ask PAT for a suggestion'. Quick copy change
+    in task-verb suggestion text.
+
+90. P3: NOTE pill wraps as 'NO' / 'TE' on narrow widths
+    Source: Internal #3 + screenshot 4 (2 Jun 2026)
+    Status: [DONE - 2 Jun 2026]
+    Confirmed: .note::before pill content 'NOTE' was wrapping
+    across two lines when the parent task line wrapped at narrow
+    widths. Fix: added white-space:nowrap + vertical-align:
+    baseline to .doc-preview .note::before. Pill now stays as
+    one piece regardless of parent line wrapping.
+
+POSITIVE SIGNAL (no action - just keep doing this):
+  Live #4: 'simplifies content in QRGs. Stripping out unnecessary
+  wording and making good suggestions.' Auto-apply IS working well
+  when it doesn't drop/dup. Don't over-tune.
+
+
 ============================================================
 NUMBERING CROSS-REFERENCE
 ============================================================
@@ -1006,26 +1146,16 @@ File 2 (15 items):  #1 = 9, #2 = 10, #3 = 6, #4 = 14, #5 = 12,
 SUMMARY
 ============================================================
 
-  Done                   70
+  Done                   71
   Withdrawn               1
   Needs sample input      0
   Partial / follow-up     1 (skipped - procedure-vs-process language pass)
-  Pending backlog         5
+  Pending backlog        17
   ----
-  Total                  77
+  Total                  90
 
 26 of 26 raw feedback items now shipped + 7 v2/adjacent items
 shipped. Item 30 (Admin review pack) and items 32+33 (29 May
 AI guardrail tightenings) added beyond the original 26.
 Items 53-77 (1 Jun 2026 polish pass + audit) added from the
-inline-mode + card-layout + AI-safety-net + audit P1 batch.
-
-#46 (verb-first verification) remains pending live re-test.
-
-Open backlog items from the 1 Jun 2026 conversation:
-  - Swimlane fit-to-role + auto-equal sizing (visual workflow)
-  - Visual workflow: activity box auto-resize to title
-  - Hide post-analyse layout until analysis completes
-  - Strip everything related to Process Owner / Expert
-  - Auto-apply: split long task into task + NOTE (after one
-    more pilot round of the helper-only Option A)
+inline-mode + card-layout + AI-safety-n
