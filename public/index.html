@@ -7607,9 +7607,16 @@ function parseStructuredText(text) {
     if (_numbersSeenInOrder.indexOf(n) !== -1) _anyNumberRepeat = true;
     _numbersSeenInOrder.push(n);
   }
+  // Tracker #244 (3 Jun 2026): only look at NUMBERED action lines for the
+  // flat-numbered check. The QRG test case has prose intro paragraphs
+  // ("This QRG will show...", "Please follow the steps below:") above
+  // a sequence of "1. ... 2. ... 14. ..." steps. Previously every action
+  // line had to be flat-numbered, so the intro broke the heuristic and
+  // the parser treated only step 1 as an activity and steps 2-14 as tasks.
+  const _numberedActionLines = _actionLines.filter(l => _flatNumRe.test(l));
   const allFlatNumbered =
-    _actionLines.length >= 2 &&
-    _actionLines.every(l => _flatNumRe.test(l) && !_decimalActRe.test(l) && !_stepActRe.test(l)) &&
+    _numberedActionLines.length >= 2 &&
+    _numberedActionLines.every(l => !_decimalActRe.test(l) && !_stepActRe.test(l)) &&
     !_actionLines.some(l => _letterTaskRe.test(l) || _bulletRe.test(l)) &&
     !_anyIndentedNumbered &&
     !_anyNumberRepeat;
