@@ -5973,8 +5973,12 @@ function looksLikeRoughNotes(text) {
   if (typeof looksLikeProcedureTextExport === 'function' && looksLikeProcedureTextExport(text)) {
     return false;
   }
-  // Match common activity markers: "1.0 Title", "1.", "1)", "Activity 1", "Step 1"
-  const activityPattern = /^(?:\d+(?:\.\d+)?\s*[.):-]?\s*\S|activity\s+\d+|step\s+\d+)/i;
+  // Match common activity markers: "1.0 Title", "1.", "1)", "Activity 1", "Step 1",
+  // markdown headings (#, ##, ###, ####), and capital-letter activities (A. / B. / C.).
+  // Tracker #243 (4 Jun 2026): added markdown + capital-letter recognition so the
+  // AI-structuring modal doesn't trigger on content that parseStructuredText now
+  // handles natively.
+  const activityPattern = /^(?:\d+(?:\.\d+)?\s*[.):-]?\s*\S|activity\s+\d+|step\s+\d+|#{1,4}\s+\S|[A-Z][.)]\s+\S)/i;
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
   return !lines.some(l => activityPattern.test(l));
 }
@@ -7647,6 +7651,14 @@ function parseStructuredText(text) {
   // "Step N - Title" / "Step N : Title" / "Activity N - Title". Word documents often
   // use this phrasing instead of bare numbers. Matches hyphen, en/em dash, or colon.
   const stepActivityRe = /^(?:step|activity|stage|phase)\s+(\d+)\s*[\-–—:]\s*(.+)$/i;
+  // Tracker #243 (3 Jun 2026): Markdown headings (# / ## / ###). Common in
+  // pasted content from Confluence, Notion, GitHub issues, etc. The first
+  // `# Title` becomes the process title; subsequent `##`/`###` headings
+  // become activities (each its own heading).
+  const markdownHeadingRe = /^(#{1,4})\s+(.+?)\s*#*\s*$/;
+  // Tracker #243 (3 Jun 2026): Capital-letter activities (A. Title, B. Title).
+  // Common in legal / contractual content and structured outlines.
+  const capitalLetterActRe = /^([A-Z])[\.\)]\s+(.+)$/;
   const roleRe = /^Role\s*[:\-]\s*(.+)$/i;
   const taskRe = /^([a-z])[\.\)]?\s+(.+)$/;
   // Numbered tasks on a single line ("1. Open the workbook", "1) Copy data", "1: Refresh", "1 - Open")
@@ -7778,6 +7790,35 @@ function parseStructuredText(text) {
     if (sm) {
       if (current) model.activities.push(current);
       current = { number: sm[1] + '.0', title: sm[2].trim(), role: '', tasks: [], notes: [], links: [] };
+      currentNote = null; inNote = false;
+      inProcedure = true;
+      continue;
+    }
+    // Tracker #243 (3 Jun 2026): Markdown headings. Single # = process title
+    // if not set yet; ## / ### / #### = activity heading. The heading text
+    // is captured as the title; activity numbering is auto-assigned (N.0).
+    const mdh = line.match(markdownHeadingRe);
+    if (mdh) {
+      const level = mdh[1].length;
+      const text = mdh[2].trim();
+      if (level === 1 && !model.title) {
+        model.title = text;
+        continue;
+      }
+      if (current) model.activities.push(current);
+      const actNum = (model.activities.length + 1) + '.0';
+      current = { number: actNum, title: text, role: '', tasks: [], notes: [], links: [] };
+      currentNote = null; inNote = false;
+      inProcedure = true;
+      continue;
+    }
+    // Tracker #243 (3 Jun 2026): Capital-letter activities (A. / B. / C.).
+    // Convert letter to ordinal so 'A. Foo' becomes activity 1.0 'Foo'.
+    const cap = line.match(capitalLetterActRe);
+    if (cap) {
+      if (current) model.activities.push(current);
+      const ordinal = cap[1].charCodeAt(0) - 'A'.charCodeAt(0) + 1;
+      current = { number: ordinal + '.0', title: cap[2].trim(), role: '', tasks: [], notes: [], links: [] };
       currentNote = null; inNote = false;
       inProcedure = true;
       continue;

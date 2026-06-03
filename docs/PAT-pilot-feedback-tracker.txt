@@ -996,12 +996,24 @@ Source: User Testing Feedback Log (Live Sessions) + Internal
 
 78. P1: Parser robustness - non-standard numbering
     Source: Live #2
-    Status: [PENDING]
+    Status: [DONE 4 Jun - markdown + capital letters added]
     Testers want PAT to parse content even when it doesn't use
     rigid 1.0/a/b/c format. Variations like '1.', '2)', plain
     bullets, prose-only sections should still produce a usable
     model. AI should suggest options when ambiguous, not block
     with an error.
+    FIX (4 Jun): Two new regex patterns in parseStructuredText:
+      - markdownHeadingRe: # / ## / ### / #### headings. First
+        '# Title' becomes the process title; subsequent ## / ###
+        become activities (auto-numbered N.0).
+      - capitalLetterActRe: 'A. Title' / 'B. Title' style
+        activities. Letter converted to ordinal (A=1, B=2).
+    Verified with 4 unit cases: markdown with h1+h2, markdown
+    h2-only, capital letters only, hybrid h1+capital letters.
+    Other variants (1., 2), bullets) already supported by
+    existing activityRe / stepActivityRe / numericTaskRe /
+    bulletTaskRe. Prose-only inputs continue to route through
+    looksLikeRoughNotes -> AI structuring as before.
 
 79. P1: QRG parsing - check whether all 14 numbered steps are captured
     Source: Live #6 (QRG sample analysed 2 Jun 2026)
@@ -1146,11 +1158,11 @@ File 2 (15 items):  #1 = 9, #2 = 10, #3 = 6, #4 = 14, #5 = 12,
 SUMMARY
 ============================================================
 
-  Done                   71
+  Done                   72
   Withdrawn               1
   Needs sample input      0
   Partial / follow-up     1 (skipped - procedure-vs-process language pass)
-  Pending backlog        17
+  Pending backlog        16
   ----
   Total                  90
 
