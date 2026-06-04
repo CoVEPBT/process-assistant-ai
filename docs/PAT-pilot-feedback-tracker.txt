@@ -1155,6 +1155,58 @@ Source: User Testing Feedback Log (Live Sessions) + Internal
     baseline to .doc-preview .note::before. Pill now stays as
     one piece regardless of parent line wrapping.
 
+93. P1: Smoking gun - TASK COUNT INVARIANT contradicted PRESERVATION example
+    Source: same refund-process regression test after item 92
+            prompt patches went live; user reported AI was STILL
+            making things up and dropping tasks worse than yesterday
+    Status: [DONE 4 Jun - rule reframed as SOURCE TASK FLOOR]
+    Sub-agent audit found the root cause: the SOURCE TASK
+    PRESERVATION worked example (added today) shows 5 output
+    tasks for 4 source tasks (RIGHT case adds 'Notify the
+    Finance Officer' as a 5th task). TASK COUNT INVARIANT a
+    few rules below said 'count the tasks ... They must match
+    EXACTLY'. The AI was resolving the contradiction by
+    DROPPING source tasks to make output count match the
+    expanded structure shown in the example. Exactly opposite
+    of what the rule intended.
+    Internal inconsistency: same rule said both 'must match
+    EXACTLY' and 'the output has at least 4 tasks' three lines
+    apart. The strict 'EXACTLY' reading won when paired with
+    a worked example showing additions.
+    FIX (4 Jun): Renamed TASK COUNT INVARIANT to SOURCE TASK
+    FLOOR. New wording: 'count the tasks in the source. Your
+    output must contain AT LEAST that many tasks AND must
+    include EVERY source task (preserved per SOURCE TASK
+    PRESERVATION above). Additions beyond the source count are
+    FINE if they are genuine completeness / handover steps.'
+    Worked example updated: SOURCE 4 spaghetti tasks; WRONG
+    drops Buy; RIGHT has all 4; ALSO RIGHT has all 4 + 'Wash
+    dishes' as added completeness step. Old 'redo if counts
+    don't match' replaced with 'redo if any source task is
+    missing'.
+    Broader audit findings (still pending decision):
+      - Two #245 NOTE-pointer rules duplicate each other, could
+        merge into one 4-line rule (~30 lines saved)
+      - RESPECT FOR INDIGENOUS CULTURES block ships in every
+        request (~1,500 chars / 400 tokens) even when source
+        has no Indigenous content - could be conditional like
+        protectedNamesBlock
+      - Standalone L13781 MANDATORY SELF-CHECK duplicates
+        L13736 EXAMPLES YOU MUST GET RIGHT - both teach the
+        same 6 failure modes, keep one
+      - ACTIVITY / TASK / NOTE COUNT INVARIANTS belong in JS
+        post-process code, not prompt - existing safety net
+        (#223 + #257) already counts and warns/reverts; moving
+        them out of prompt saves ~120 lines and is more
+        reliable than asking the model to count
+    Total prompt currently ~10,500 tokens with 17 worked
+    examples and 9 'MANDATORY SELF-CHECK' anchors - above the
+    threshold where gpt-4o-mini instruction recall starts
+    degrading. User observed Nintex PDFs work fine but
+    looser-structured example processes don't - consistent
+    with the model picking up the contradictory signals on
+    inputs where structure is ambiguous.
+
 92. P1: Prompt hardening - SOURCE TASK PRESERVATION + roles + anti-SOP
     Source: same refund-process regression as item 91 (Tracker #258)
     Status: [DONE 4 Jun - 3 new prompt rules, then revised per
@@ -1296,7 +1348,7 @@ File 2 (15 items):  #1 = 9, #2 = 10, #3 = 6, #4 = 14, #5 = 12,
 SUMMARY
 ============================================================
 
-  Done                   75
+  Done                   76
   Withdrawn               1
   Needs sample input      0
   Partial / follow-up     1 (skipped - procedure-vs-process language pass)

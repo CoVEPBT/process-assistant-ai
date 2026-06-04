@@ -13668,14 +13668,21 @@ createChatSurface({
       'under activity 4. NOT 4, NOT 2. **If the source has ZERO NOTEs under an activity, the output also has ZERO NOTEs under that activity** - you may NOT add a helpful NOTE about serving size, or scope, or any other context the source did not write. ' +
       'If a NOTE would be helpful but the source did not include one, you do NOT add it. Period. ' +
       'If counts don\'t match, redo the Process Map block.\n' +
-      '* MANDATORY SELF-CHECK before emitting blocks - TASK COUNT INVARIANT: count the tasks (a, b, c, ... lines) in the source and count the tasks in your output. They must match EXACTLY ' +
-      '(plus any tasks added by an allowed multi-role split - see SPLIT MULTI-ROLE ACTIVITIES below). ' +
-      '**You may NEVER silently drop a source task** because it looks redundant, obvious, off-topic, or out of scope for the activity title you chose. ' +
-      'If the source has 4 tasks (a, b, c, d) the output has at least 4 tasks. If you cannot fit a task under the activity title, change the activity title - do NOT drop the task. ' +
-      'Worked example: SOURCE = "1. Buy spaghetti. 2. Cook spaghetti. 3. Drain spaghetti. 4. Eat spaghetti." OUTPUT MUST contain all four actions as tasks. ' +
-      'WRONG: Activity "Prepare spaghetti" with tasks Cook / Drain / Eat (drops Buy). ' +
-      'RIGHT: Activity "Manage spaghetti meal" with tasks Buy / Cook / Drain / Eat. ' +
-      'If counts don\'t match (and it isn\'t a multi-role split), redo the Process Map block.\n\n' +
+      '* MANDATORY SELF-CHECK before emitting blocks - SOURCE TASK FLOOR (revised 4 Jun 2026): ' +
+      'count the tasks (a, b, c, ... lines) in the source. Your output must contain AT LEAST that ' +
+      'many tasks AND must include EVERY source task (preserved per SOURCE TASK PRESERVATION above). ' +
+      'Additions beyond the source count are FINE if they are genuine completeness / handover steps - ' +
+      'see ALLOWED enhancements under NO INVENTED FACTUAL DETAIL.\n' +
+      '**You may NEVER silently drop a source task** because it looks redundant, obvious, off-topic, ' +
+      'a completeness addition replaces it, or out of scope for the activity title you chose. ' +
+      'If you cannot fit a source task under the activity title, change the activity title - do ' +
+      'NOT drop the task.\n' +
+      'Worked example: SOURCE = "1. Buy spaghetti. 2. Cook spaghetti. 3. Drain spaghetti. 4. Eat spaghetti." ' +
+      'OUTPUT MUST contain all four actions as tasks (may also add helpful steps). ' +
+      'WRONG: Activity with tasks Cook / Drain / Eat (drops Buy). ' +
+      'RIGHT: Activity with tasks Buy / Cook / Drain / Eat (all 4 source tasks present). ' +
+      'ALSO RIGHT: Activity with tasks Buy / Cook / Drain / Eat / Wash dishes (4 source + 1 added completeness).\n' +
+      'If any source task is missing from your output, redo the Process Map block.\n\n' +
       'NEVER INVENT POINTER TASKS THAT REFERENCE A NOTE (tracker #245, 4 Jun 2026):\n' +
       '* NEVER emit a task whose text starts with "NOTE:", "See NOTE", "See note", "Refer to the NOTE", ' +
       '"Read the NOTE", or any equivalent phrasing that just points the reader at an adjacent NOTE. ' +

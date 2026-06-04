@@ -1,8 +1,10 @@
-Parser robustness + NOTE-pointer defence + severe-drift revert + prompt hardening
+Parser robustness + NOTE-pointer + severe-drift revert + prompt hardening + smoking-gun fix
 
-Four 4 Jun 2026 fixes bundled. Trackers #243 (parser), #245
+Five 4 Jun 2026 fixes bundled. Trackers #243 (parser), #245
 (auto-apply NOTE-pointer + dupe), #257 (severe-drift revert),
-#258 (prompt hardening - task anchoring + no-role rule).
+#258 (prompt hardening - SOURCE TASK PRESERVATION + no-role rule),
+#259 (TASK COUNT INVARIANT smoking-gun - rule reframed as
+SOURCE TASK FLOOR).
 
 1. Parser robustness (#243)
 ===========================
@@ -190,6 +192,59 @@ Also covers tracker item #246 (auto-apply reworded detailed
 task into generic placeholder) - same root cause as the refund
 regression, same SOURCE TASK PRESERVATION rule prevents it.
 
-Tracker: items 78 (#243), 80 (#245), 91 (#257), 92 (#258) in
-docs/PAT-pilot-feedback-tracker.txt.
+5. Smoking-gun: TASK COUNT INVARIANT contradicted PRESERVATION (#259)
+=====================================================================
+After #258 went live, user re-tested and reported the AI was
+making MORE stuff up and dropping MORE tasks than yesterday.
+Sub-agent prompt audit found the cause: the new SOURCE TASK
+PRESERVATION worked example (added by #258) shows 5 output
+tasks for 4 source tasks (RIGHT case adds 'Notify the Finance
+Officer' as a 5th task). TASK COUNT INVARIANT a few rules
+below said 'count the tasks ... They must match EXACTLY'.
+The model resolved this contradiction by DROPPING source tasks
+to keep output count matching the strict invariant - opposite
+of what the rule intended. The same rule was internally
+inconsistent: said both 'must match EXACTLY' and 'output has
+at least 4 tasks' three lines apart.
+
+Fix
+- Renamed 'TASK COUNT INVARIANT' to 'SOURCE TASK FLOOR' to
+  reflect the actual semantics (floor, not equality).
+- New wording: 'count the tasks in the source. Your output
+  must contain AT LEAST that many tasks AND must include
+  EVERY source task (preserved per SOURCE TASK PRESERVATION
+  above). Additions beyond the source count are FINE if they
+  are genuine completeness / handover steps - see ALLOWED
+  enhancements under NO INVENTED FACTUAL DETAIL.'
+- Worked example updated: SOURCE 4 spaghetti tasks; WRONG
+  drops Buy; RIGHT has all 4; ALSO RIGHT has all 4 + 'Wash
+  dishes' as added completeness step.
+- Old 'redo the Process Map block if counts don't match'
+  replaced with 'redo if any source task is missing'.
+
+Broader audit findings (not yet acted on, parked for follow-up)
+- Auto-apply prompt is currently ~10,500 tokens / 17 worked
+  examples / 9 'MANDATORY SELF-CHECK' anchors - above the
+  threshold where gpt-4o-mini instruction recall starts
+  degrading.
+- Two #245 NOTE-pointer rules could merge into one (~30 lines
+  saved).
+- RESPECT FOR INDIGENOUS CULTURES block ships in every
+  request (~1,500 chars / 400 tokens) even when source has
+  no Indigenous content - could be conditional like
+  protectedNamesBlock.
+- Standalone MANDATORY SELF-CHECK duplicates EXAMPLES YOU
+  MUST GET RIGHT.
+- ACTIVITY / TASK / NOTE COUNT INVARIANTS could move from
+  prompt to JS post-process code - existing safety net
+  (#223 + #257) already counts and warns/reverts.
+
+User observation: Nintex-exported PDFs work fine; the looser-
+structured example/test processes show the drift. Consistent
+with the contradictory signals being picked up most strongly
+on inputs where structure is ambiguous (e.g. an activity
+without a [Role]).
+
+Tracker: items 78 (#243), 80 (#245), 91 (#257), 92 (#258),
+93 (#259) in docs/PAT-pilot-feedback-tracker.txt.
 Files: public/index.html
