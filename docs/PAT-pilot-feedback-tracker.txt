@@ -1155,6 +1155,34 @@ Source: User Testing Feedback Log (Live Sessions) + Internal
     baseline to .doc-preview .note::before. Pill now stays as
     one piece regardless of parent line wrapping.
 
+94. P1: Auto-apply temperature clamp to 0.1 (Tracker #260)
+    Source: same refund-process regression test after #259
+            SOURCE TASK FLOOR fix went live; user re-tested and
+            reported the AI was 'still pretty rogue'
+    Status: [DONE 4 Jun - server clamps temperature to 0.1 on
+            auto-apply detection]
+    Server was sending all OpenAI requests at temperature 0.4
+    (default). At 0.4 with a ~10.5k-token prompt of overlapping
+    'preserve / don't drop' rules, gpt-4o-mini was producing
+    creative substitutions of source content. Sub-agent prompt
+    audit had already flagged the prompt was over the model's
+    instruction-recall threshold; high temperature compounded it.
+    FIX (4 Jun): server/index.js detects auto-apply requests
+    by scanning any message for the 'SYSTEM OVERRIDE - Auto-apply
+    tool action.' header that the auto-apply prompt always begins
+    with. When detected and incoming temperature > 0.1, clamps
+    to 0.1. Logs '[auto-apply detected] clamping temperature
+    from X to 0.1' for visibility. Chat requests unaffected
+    (still default 0.4).
+    Bigger picture: this is a band-aid. The underlying issue is
+    the prompt has grown to ~10.5k tokens with 17 worked
+    examples and 9 self-check anchors. Audit recommends
+    structural consolidation (merge duplicate NOTE-pointer
+    rules, conditionally inject Indigenous block, delete
+    redundant self-check, move count invariants to JS). Parked
+    pending verification that this band-aid is enough on the
+    user's broader test set.
+
 93. P1: Smoking gun - TASK COUNT INVARIANT contradicted PRESERVATION example
     Source: same refund-process regression test after item 92
             prompt patches went live; user reported AI was STILL
@@ -1348,7 +1376,7 @@ File 2 (15 items):  #1 = 9, #2 = 10, #3 = 6, #4 = 14, #5 = 12,
 SUMMARY
 ============================================================
 
-  Done                   76
+  Done                   77
   Withdrawn               1
   Needs sample input      0
   Partial / follow-up     1 (skipped - procedure-vs-process language pass)

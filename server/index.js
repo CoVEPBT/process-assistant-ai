@@ -541,10 +541,25 @@ app.post('/api/chat', async (req, res) => {
       Math.max(parseInt(max_tokens, 10) || 1500, 256),
       4000
     );
-    const safeTemperature = (typeof temperature === 'number'
+    let safeTemperature = (typeof temperature === 'number'
       && temperature >= 0 && temperature <= 2)
       ? temperature
       : 0.4;
+    // Tracker #260 (4 Jun 2026): auto-apply requests must be deterministic.
+    // The prompt is ~10.5k tokens with many "preserve / don't drop" rules;
+    // at temperature 0.4 gpt-4o-mini was producing creative substitutions
+    // (e.g. "Check eligibility against the refund policy" -> "Review supporting
+    // documentation for accuracy"). Detect auto-apply by the "SYSTEM OVERRIDE
+    // - Auto-apply tool action." header that the auto-apply prompt always
+    // starts with, and clamp temperature to 0.1 for those requests.
+    const isAutoApply = (messages || []).some(m =>
+      m && typeof m.content === 'string' &&
+      m.content.indexOf('SYSTEM OVERRIDE - Auto-apply tool action.') !== -1
+    );
+    if (isAutoApply && safeTemperature > 0.1) {
+      console.log('[auto-apply detected] clamping temperature from ' + safeTemperature + ' to 0.1');
+      safeTemperature = 0.1;
+    }
     const completion = await openai.chat.completions.create({
       model: MODEL,
       messages: fullMessages,

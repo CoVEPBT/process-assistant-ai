@@ -1,10 +1,10 @@
-Parser robustness + NOTE-pointer + severe-drift revert + prompt hardening + smoking-gun fix
+Parser robustness + NOTE-pointer + severe-drift revert + prompt hardening + smoking-gun + temperature clamp
 
-Five 4 Jun 2026 fixes bundled. Trackers #243 (parser), #245
+Six 4 Jun 2026 fixes bundled. Trackers #243 (parser), #245
 (auto-apply NOTE-pointer + dupe), #257 (severe-drift revert),
 #258 (prompt hardening - SOURCE TASK PRESERVATION + no-role rule),
 #259 (TASK COUNT INVARIANT smoking-gun - rule reframed as
-SOURCE TASK FLOOR).
+SOURCE TASK FLOOR), #260 (auto-apply temperature clamp 0.4 -> 0.1).
 
 1. Parser robustness (#243)
 ===========================
@@ -245,6 +245,33 @@ with the contradictory signals being picked up most strongly
 on inputs where structure is ambiguous (e.g. an activity
 without a [Role]).
 
+6. Auto-apply temperature clamp 0.4 -> 0.1 (#260)
+==================================================
+After #259 went live, user re-tested and reported the AI was
+'still pretty rogue'. Root cause: server was sending all OpenAI
+requests at temperature 0.4 (its default). At 0.4 with a ~10.5k
+token prompt containing many overlapping 'preserve / don't drop'
+rules, gpt-4o-mini was producing creative substitutions of
+source content - the contradictory long-prompt signals invited
+creative resolution and 0.4 gave the model latitude to take it.
+
+Fix in server/index.js
+- Detect auto-apply by scanning any message for the
+  'SYSTEM OVERRIDE - Auto-apply tool action.' header that the
+  auto-apply prompt always begins with.
+- When detected AND the incoming temperature > 0.1, clamp to 0.1.
+- Log '[auto-apply detected] clamping temperature from X to 0.1'
+  for visibility.
+- Chat requests unaffected (still default 0.4).
+
+Pending follow-up (not done this commit)
+The audit identified the prompt itself needs structural cleanup
+(~10.5k tokens, 17 worked examples, 9 self-check anchors -
+above the threshold where gpt-4o-mini instruction recall starts
+degrading). The temperature clamp is a band-aid that should
+reduce surface drift; the structural prompt cleanup is the
+durable fix and is parked pending verification.
+
 Tracker: items 78 (#243), 80 (#245), 91 (#257), 92 (#258),
-93 (#259) in docs/PAT-pilot-feedback-tracker.txt.
-Files: public/index.html
+93 (#259), 94 (#260) in docs/PAT-pilot-feedback-tracker.txt.
+Files: public/index.html, server/index.js
